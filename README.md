@@ -6,6 +6,10 @@
 ![PyPI version](https://img.shields.io/pypi/v/symb)
 ![Downloads](https://img.shields.io/pypi/dm/symb)
 
+### ⚠️ WARNING, USE WITH CAUTION: THIS IS VERY MUCH WORK IN PROGRESS ⚠️
+- There is a develpment branch, may contain more
+- Any contribution is welcome!
+
 ### Empowering Innovation Through Semantic Precision and Seamless Integration
 
 In today's rapidly evolving technological landscape, the ability to precisely define, manage, and integrate complex concepts is paramount for driving innovation and maintaining a competitive edge. The [**Symbol Framework**] addresses this critical need by providing a principled approach to representing and manipulating knowledge within software systems. By offering a robust foundation for semantic modeling, Symbol empowers organizations to:
