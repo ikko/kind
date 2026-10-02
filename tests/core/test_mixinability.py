@@ -90,3 +90,24 @@ def test_register_mixin_expands_classes():
     assert register_mixin(GreeterMixin) is True
     s = Kind("ann")
     assert (s.wave(), s.shout, s.helper()) == ("ann waves", "ANN", 42)
+
+
+def test_apply_mixin_to_instance_binds_self_to_that_kind():
+    from kind.core.mixinability import apply_mixin_to_instance
+
+    def hello(self) -> str:
+        return f"hi {self.name}"
+
+    class Extras:
+        def wave(self) -> str:
+            return f"{self.name} waves"
+
+        @property
+        def shout(self) -> str:
+            return self.name.upper()
+
+    a, b = Kind("a"), Kind("b")
+    apply_mixin_to_instance(a, hello)
+    apply_mixin_to_instance(a, Extras)
+    assert (a.hello(), a.wave(), a.shout) == ("hi a", "a waves", "A")
+    assert callable(b.hello) and b.hello is not a.hello  # b only has the relation verb, not the mixin

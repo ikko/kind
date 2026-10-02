@@ -18,7 +18,7 @@ def test_parse_timestamp():
     dt2 = KindTimeDimMixin._parse_timestamp(s2)
     assert dt2 == datetime.datetime(2023, 3, 20, 0, 0, 0)
 
-    # A name that is not a date or time has no timestamp (no silent "today")
+    # A name that is not an ISO 8601 date or datetime has no timestamp (no silent "today")
     assert KindTimeDimMixin._parse_timestamp(Kind("invalid-date")) is None
 
 def test_kind_time_dim_properties():

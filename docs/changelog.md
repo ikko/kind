@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.3.0] - 2026-10-02
+### Fixed (found by verifying the documentation against the code)
+- **Identity is fixed**: assigning `name`, `children`, `parents` or another identity or structure slot raises `AttributeError` with a hint. Before, `kind.name = 'z'` silently broke the pool and the hash.
+- **Edges are symmetric**: `reparent()` used to leave one-sided edges, and mishandled self-loops. It now detaches the Kind completely; a property test checks every edge on both ends after any sequence of edits.
+- **Freezing and closed spaces cover every change**: `unrelate`, `reparent`, deleting a neighbour, the index, and direct calls on `children`/`parents`/relation sets. Multi-step edits check every Kind they touch before changing any.
+- **Reads iterate snapshots** taken under the space lock, so a concurrent `relate` no longer breaks `to_mmd`/`to_json`/traversals. `KindIndex` mutations take the space lock.
+- **`to_ascii` marks parent lines** (`^ name`) and prints each family edge once, so `from_ascii` restores the family component of any Kind from depth-first output.
+- **Entering a closed space** raises `SpaceError` instead of making the closed space current.
+- **Time**: a space mixing naive and aware datetimes raises `ValueError` with a hint, and time-only names are non-temporal (the message says "date or datetime").
+- **`kind-scheduler`**: a `Scheduler` with a schedule file refuses, at add time, jobs whose function a file cannot name (lambda, nested function, method).
+### Changed
+- `FrozenKindError` is exported from `kind`.
+- **Documentation restructured for engineers.** Pages: README; concepts (the contract); API reference; errors (every message checked by a test); performance (one complexity table); architecture; tutorial; how-to guides; examples; history. Gates check that every page is reachable from the README, that the API reference covers the public surface, and that claims are precise (no filler words, no "DAG", no unscoped "thread-safe").
+
 ## [v0.2.0] - 2026-10-02
 ### Added
 - **`KindSpace`** (`from kind import KindSpace, current_space, SpaceError`): a separate universe of names with its own pool, creation order, counters, lock and `max_kinds`. `Kind(name)` uses the current space (a context variable: right for asyncio/trio tasks and anyio worker threads; plain threads need `contextvars.copy_context().run`). Leaving `with KindSpace():` closes the space: its Kinds are dropped, and survivors are read-only. Edges across spaces raise `SpaceError`; equality is name *and* space; `kind.space` names a Kind's space.

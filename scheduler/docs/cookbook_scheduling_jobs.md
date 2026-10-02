@@ -1,14 +1,10 @@
 # `kind-scheduler` cookbook
 
-**Recipes for Symbolic Mastery**
-
----
-
-> ⚠ _This module is under development and incomplete. Features may differ from what's written here. Should you use it, test comprehensively, especially before using `async batch` features_
+> ⚠ _This package is under development. Where this page and the code differ, the code is right; test your schedules, especially the async batch functions._
  
 # Recipe: Scheduling Jobs with `kind_scheduler`
 
-This recipe demonstrates how to use the `kind_scheduler` package (distribution `kind-scheduler`, separate from `kind`) to schedule and manage jobs within your applications. It provides a robust and flexible way to execute functions at specified times or intervals.
+A `Scheduler` runs each `ScheduledJob` when its next run is due: once for a datetime, date, time or ISO 8601 string, repeatedly for a cron expression. The package is `kind_scheduler` (distribution `kind-scheduler`, separate from `kind`).
 
 ## 1. Understanding `kind_scheduler`
 
@@ -212,24 +208,6 @@ graph TD
     P --> Q[Read Jobs from File]
     Q --> E
 
-    %% Style definitions - Warm, dark color scheme with fine gradients
-    classDef start fill:#8B4513,stroke:#663300,color:white
-    classDef end_ fill:#A52A2A,stroke:#8B0000,color:white 
-    classDef method fill:#B8860B,stroke:#996600,color:black
-    classDef job fill:#9932CC,stroke:#7B2C9D,color:white
-    classDef loop fill:#CD853F,stroke:#B8732F,color:black
-    classDef check fill:#DAA520,stroke:#B8860B,color:black
-    classDef file fill:#8B4726,stroke:#6B3015,color:white
-
-    %% Apply styles
-    class A start
-    class L end_
-    class B,C,F,K,M,N,P method
-    class D,E job
-    class G,I,J loop
-    class H check
-    class O,Q file
-
 ```
 
 
@@ -262,7 +240,5 @@ classDiagram
     }
     Scheduler "1" -- "*" ScheduledJob : manages
 
-    style ScheduledJob fill:#6A1B9A,stroke:#4A148C,color:white
-    style Scheduler fill:#0D47A1,stroke:#0A3880,color:white
 ```
 

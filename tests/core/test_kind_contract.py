@@ -278,7 +278,7 @@ def test_time_head_and_tail_order_temporal_kinds_only():
 
 
 def test_time_properties_refuse_names_that_are_not_dates():
-    with pytest.raises(ValueError, match="not a date or time"):
+    with pytest.raises(ValueError, match="not an ISO 8601 date or datetime"):
         Kind("tuesday-ish").as_date
 
 

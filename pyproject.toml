@@ -1,6 +1,6 @@
 [project]
 name = "kind"
-version = "0.2.0"
+version = "0.3.0"
 description = "Interned, name-identified Kinds: categories as data, in a lazy, graph-oriented, freezable model"
 dependencies = [
     "orjson>=3.10.0",

@@ -1,12 +1,12 @@
 # Scheduling: Event-Driven Automation with kind-scheduler
 
-`kind-scheduler` (package `kind_scheduler`), a distribution separate from `kind`, provides a robust scheduling mechanism, enabling the deferred and automated execution of tasks. This feature is critical for building event-driven architectures, automating workflows, and managing background processes within applications. The scheduler is designed for flexibility, supporting various scheduling paradigms from precise time dimension triggers to recurring cron-like expressions.
+`kind-scheduler` (package `kind_scheduler`, a distribution separate from `kind`) runs a callable once at a datetime, date or time, or repeatedly on a cron expression. Jobs live in a heap ordered by next run; `run_due_jobs()` runs every job due now in one deterministic step, and `start()` repeats that step in an anyio task.
 
 ## Core Components: ScheduledJob and Scheduler
 
 The scheduling system is built around two primary components:
 
-1.  **`ScheduledJob`**: This class encapsulates a single task to be executed. It holds references to the callable function (`func`), its arguments (`args`, `kwargs`), and crucially, the `schedule` on which it should run. Its signature is `ScheduledJob(func, args=(), kwargs=None, schedule=None, id=None, now=None)`; `schedule` is required (`None` raises `TypeError`), and `now` is the base time for the first cron `next_run`. The `schedule` can be a `datetime.datetime`, `datetime.date` or `datetime.time` (or an ISO 8601 string) for one-off tasks, a `cron` string for recurring jobs, or even a `Kind` instance whose name represents an ISO 8601 datetime string.
+1.  **`ScheduledJob`**: This class encapsulates a single task to be executed. It holds references to the callable function (`func`), its arguments (`args`, `kwargs`), and the `schedule` on which it should run. Its signature is `ScheduledJob(func, args=(), kwargs=None, schedule=None, id=None, now=None)`; `schedule` is required (`None` raises `TypeError`), and `now` is the base time for the first cron `next_run`. The `schedule` can be a `datetime.datetime`, `datetime.date` or `datetime.time` (or an ISO 8601 string) for one-off tasks, a `cron` string for recurring jobs, or even a `Kind` instance whose name represents an ISO 8601 datetime string.
 
     ```mermaid
     graph TD
@@ -15,11 +15,6 @@ The scheduling system is built around two primary components:
             D[Schedule #40;datetime, date, time, cron string, Kind#41;] --> B;
             B -- "Calculates" --> E[Next Run Time];
     
-        style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
-        style B fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
-        style C fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
-        style D fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
-        style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
     ```
 2.  **`Scheduler`**: This class manages a collection of `ScheduledJob` instances: `Scheduler(schedule_file=None, allowed_modules=(), now=datetime.datetime.now)`. `await scheduler.start(task_group)` runs its loop as a task in an `anyio` task group, executing jobs when their `next_run` time arrives (sync functions in a worker thread, async ones awaited); `await scheduler.run_due_jobs()` is one deterministic step of that loop, and the clock `now` is injectable. The `Scheduler` uses a min-heap (`_schedule`) to efficiently retrieve the next job to be executed, ensuring timely processing. It also supports persistence, allowing the schedule to be saved to and loaded from a file, thus surviving application restarts. A schedule file names functions by dotted path, so loading one runs code: only functions from `allowed_modules` are resolved (CLI: `kind-scheduler -f FILE -m MODULE add|list|remove|run`).
 
@@ -31,12 +26,6 @@ The scheduling system is built around two primary components:
         D -- "Executes Job" --> E[Callable Function];
         E -- "If Recurring" --> F[Reschedules Job];
 
-      style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
-      style B fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
-      style C fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
-      style D fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
-      style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
-      style F fill:#FF1493,stroke:#333,stroke-width:2px,color:#FFFFFF;
     ```
 
 ## Illustrative Examples
@@ -88,10 +77,6 @@ graph TD
         B -- "Recurring" --> A;
     end
 
-    style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
-    style B fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style C fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
-    style D fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
 ```
 
 Automated Report Generation
@@ -150,13 +135,8 @@ graph TD
         C[Weekly Inventory Summary] --> B;
         B -- "Triggers Weekly" --> C;
     end
-    style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
-    style B fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style C fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
 ```
-## Conclusion
-
-The scheduling capabilities of `kind-scheduler` provide a powerful and flexible foundation for automating tasks and orchestrating complex processes. By offering diverse scheduling options and robust job management, it empowers developers to build highly responsive and efficient systems, from sophisticated microservice deployments to routine business operations. The persistence feature further enhances its utility by ensuring that scheduled tasks are not lost across application lifecycles.
+## Flow
 
 For a visual representation of the scheduling process, refer to the [Scheduling Flow Diagram](scheduling_flow.mmd).
 

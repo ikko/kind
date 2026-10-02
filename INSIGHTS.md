@@ -3,6 +3,32 @@
 Lessons from building and repairing `kind`, kept because each one cost something to learn.
 Newest first.
 
+## 2026-10-02 (evening) — verifying the documentation found the bugs
+
+**Check every claim in the docs against the code before rewriting a sentence.** A review for senior
+engineers, done by probing each claim, found code defects behind the promises:
+- `kind.name = 'z'` corrupted the pool;
+- `reparent()` left one-sided edges;
+- freeze missed `unrelate`, neighbour deletes and direct set mutation;
+- reading a missing key of frozen `metadata` *inserted* it, through `DefDict.__missing__` behind a
+  `MappingProxyType`;
+- a closed space could be re-entered.
+
+Fixing the code was cheaper than documenting the defects, and the docs could then state the
+guarantee without caveats.
+
+**A guarantee holds without exception only if there is one way to break it.** Edge symmetry held for
+the methods, but anyone could call `kind.children.add` directly. Making the edge sets accept changes
+only from inside Kind's own methods (a `ContextVar` flag) turned "usually symmetric" into
+"symmetric", and the property test now holds for any sequence of edits.
+
+**Property tests find the case a person would not write.** `a -> b, b -> b, b.reparent()` (a
+self-loop) broke edge symmetry. It took a different random seed to surface it, so the property now
+runs 400 examples.
+
+**A text format is round-trippable only in the order it was designed for.** An indented outline is
+unambiguous in depth-first order. Breadth-first output interleaves branches, so it is display-only.
+
 ## 2026-10-02 (afternoon) — making the global state explicit
 
 **A class attribute is a global variable with a nicer name.** The pool, order, counters, lock and cap

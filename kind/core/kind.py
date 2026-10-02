@@ -1,15 +1,18 @@
 """This module defines Kind: an interned, name-identified graph node.
 
 A Kind stands for a category as data. It has one identity per name (see BaseKind),
-children and parents (an ordered DAG), named relations with inverses, lazily created
+children and parents (a directed graph; cycles allowed), named relations with inverses, lazily created
 metadata/context/index, attributes attached at runtime, and a per-instance freeze.
 """
+import ast
 import datetime
 import inspect
 import re
 import sys
 import warnings
-from types import MappingProxyType
+import contextlib
+import contextvars
+from collections.abc import Mapping
 from collections import deque
 from itertools import chain
 from sys import getsizeof
@@ -69,6 +72,47 @@ def _is_settable(class_attribute: Any) -> bool:
     return inspect.ismemberdescriptor(class_attribute)
 
 
+_EDITING: contextvars.ContextVar[bool] = contextvars.ContextVar("kind_editing", default=False)
+
+
+@contextlib.contextmanager
+def _internal_edit():
+    """Marks a Kind method changing edge sets; outside it, the sets refuse changes."""
+    token = _EDITING.set(True)
+    try:
+        yield
+    finally:
+        _EDITING.reset(token)
+
+
+class _SettledMapping(Mapping):
+    """metadata/context of a frozen Kind or a closed space: reading never creates a key,
+    writing raises the same error as any other change. Nested values stay mutable."""
+
+    def __init__(self, mapping: Any, owner: 'Kind'):
+        self._mapping, self._owner = mapping, owner
+
+    def __getitem__(self, key: Any) -> Any:
+        if key in self._mapping:  # never through DefDict.__missing__, which would insert the key
+            return self._mapping[key]
+        raise KeyError(key)
+
+    def __iter__(self):
+        return iter(self._mapping)
+
+    def __len__(self) -> int:
+        return len(self._mapping)
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        self._owner._ensure_mutable()
+
+    def __delitem__(self, key: Any) -> None:
+        self._owner._ensure_mutable()
+
+    def __repr__(self) -> str:
+        return f"{type(self._mapping).__name__}(settled, {dict(self._mapping)!r})"
+
+
 class FrozenKindError(AttributeError):
     """Raised when a frozen Kind is asked to change."""
 
@@ -86,8 +130,8 @@ class Kind(BaseKind):
     def _init_slots(self, name: str, origin: Optional[Any], space: KindSpace) -> None:
         super()._init_slots(name, origin, space)
         set_slot = object.__setattr__
-        set_slot(self, 'parents', OrderedKindSet(guard=self._ensure_mutable))
-        set_slot(self, 'children', OrderedKindSet(guard=self._ensure_mutable))
+        set_slot(self, 'parents', OrderedKindSet(guard=self._guard_edge_set))
+        set_slot(self, 'children', OrderedKindSet(guard=self._guard_edge_set))
         set_slot(self, '_elevated_attributes', {})
         set_slot(self, '_index', SENTINEL)
         set_slot(self, '_metadata', SENTINEL)
@@ -118,7 +162,7 @@ class Kind(BaseKind):
         return self._read_only_if_settled(self._context)
 
     def _read_only_if_settled(self, mapping: DefDict) -> Any:
-        return MappingProxyType(mapping) if self._frozen or self._space.closed else mapping
+        return _SettledMapping(mapping, self) if self._frozen or self._space.closed else mapping
 
     @property
     def relations(self) -> Relations:
@@ -186,6 +230,15 @@ class Kind(BaseKind):
         object.__setattr__(self, '_frozen', True)
         return self
 
+    def _guard_edge_set(self) -> None:
+        """Run by children/parents/relation sets before a change: only Kind's own edge methods may
+        change them, because those keep both ends of every edge in step."""
+        if not _EDITING.get():
+            raise AttributeError(f"The edge sets of Kind {self.name!r} change only through append, insert, relate, "
+                                 f"unrelate, reparent and delete, which keep both ends of every edge. "
+                                 f"Hint: call one of those instead of changing children/parents/relations directly.")
+        self._ensure_mutable()
+
     def _ensure_mutable(self) -> None:
         if object.__getattribute__(self, '_space').closed:
             raise SpaceError(f"Kind {self.name!r} belongs to a closed space; it can be read but not changed.")
@@ -216,7 +269,7 @@ class Kind(BaseKind):
         """Links `child` under this Kind (idempotent) and returns the child."""
         child = self._coerce(child)
         self._same_space(child)
-        with self._lock:
+        with self._lock, _internal_edit():
             self._ensure_mutable()
             child._ensure_mutable()
             self.children.add(child)
@@ -232,7 +285,7 @@ class Kind(BaseKind):
         """Places `child` at index `at` among the children (moving it if already there)."""
         child = self._coerce(child)
         self._same_space(child)
-        with self._lock:
+        with self._lock, _internal_edit():
             self._ensure_mutable()
             child._ensure_mutable()
             self.children.discard(child)
@@ -252,7 +305,7 @@ class Kind(BaseKind):
         Afterwards this Kind has no parents and no children, and every edge exists on both ends.
         A self-loop is dropped with the rest of this Kind's edges.
         """
-        with self._lock:
+        with self._lock, _internal_edit():
             parents = [parent for parent in self.parents if parent is not self]
             children = [child for child in self.children if child is not self]
             self._ensure_all_mutable([self, *parents, *children])
@@ -278,7 +331,7 @@ class Kind(BaseKind):
 
     def delete(self) -> None:
         """Removes this Kind from the graph and the pool; its children move up to its parents."""
-        with self._lock:
+        with self._lock, _internal_edit():
             related = [k for _, kinds in self.relations.items() for k in kinds]
             self._ensure_all_mutable([self, *self.parents, *self.children, *related])
             self.reparent()
@@ -402,8 +455,16 @@ class Kind(BaseKind):
 
         Names are interned: a node named like an existing Kind extends that Kind.
         """
+        if not isinstance(nodes, list):
+            raise ValueError(f"{source} input must be a list of nodes, got {type(nodes).__name__}. "
+                             f"Hint: produce it with to_{source.lower()}().")
         if not nodes:
             raise ValueError(f"No kinds found in the {source} input.")
+        for position, node in enumerate(nodes):
+            if not isinstance(node, dict) or not isinstance(node.get("name"), str) \
+                    or not isinstance(node.get("children", []), list) or not isinstance(node.get("relations", {}), dict):
+                raise ValueError(f"{source} node {position} is not {{'name': str, 'children': [str], "
+                                 f"'relations': {{how: [str]}}}}: {node!r}. Hint: produce it with to_{source.lower()}().")
         kinds = {node["name"]: cls(node["name"]) for node in nodes}
         for node in nodes:
             current = kinds[node["name"]]
@@ -505,7 +566,7 @@ class Kind(BaseKind):
     def relate(self, other: 'Kind', how: str = 'related') -> 'Kind':
         """Relates this Kind to `other` under `how`, recording the inverse on `other`."""
         self._same_space(other)
-        with self._lock:
+        with self._lock, _internal_edit():
             self._ensure_mutable()
             other._ensure_mutable()
             self.relations.add(how, other)
@@ -514,7 +575,7 @@ class Kind(BaseKind):
 
     def unrelate(self, other: 'Kind', how: Optional[str] = None) -> 'Kind':
         """Removes the relation(s) to `other`: one `how`, or all of them."""
-        with self._lock:
+        with self._lock, _internal_edit():
             self._ensure_all_mutable([self, other])
             hows = [how] if how is not None else [h for h, kinds in self.relations.items()
                                                   if other in kinds and not h.startswith(INVERSE_PREFIX)]
@@ -640,13 +701,21 @@ class Kind(BaseKind):
         return kind
 
     def to(self, target_type: Type[T]) -> T:
-        """Converts the Kind's name back to a value of `target_type`."""
+        """Converts the Kind's name back to a value of `target_type`.
+
+        The name is read as JSON, or else as a Python literal (`ast.literal_eval`, which evaluates
+        no code), so the names `from_object` produces — `'True'`, `'None'`, `"{'a': 1}"` — convert back.
+        """
         if target_type is str:
             return self.name  # type: ignore[return-value]  # T is str here
         try:
             value = orjson.loads(self.name)
         except orjson.JSONDecodeError:
-            raise TypeError(f"Cannot convert Kind '{self.name}' to {target_type.__name__}") from None
+            try:
+                value = ast.literal_eval(self.name)
+            except (ValueError, SyntaxError):
+                raise TypeError(f"Cannot convert Kind '{self.name}' to {target_type.__name__}: the name is neither "
+                                f"JSON nor a Python literal.") from None
         converter: Any = target_type
         return value if isinstance(value, target_type) else converter(value)
 

@@ -43,7 +43,7 @@ class Relations:
     def add(self, how, related_kind):
         """Strong, ordered references: a relation keeps its target alive, like a child link does."""
         if how not in self._relations:
-            self._relations[how] = OrderedKindSet(guard=self._owner._ensure_mutable)
+            self._relations[how] = OrderedKindSet(guard=self._owner._guard_edge_set)
         self._relations[how].add(related_kind)
 
     def get(self, how):

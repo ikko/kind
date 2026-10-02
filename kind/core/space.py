@@ -60,6 +60,8 @@ class KindSpace:
     # --- lifetime -------------------------------------------------------------
 
     def __enter__(self) -> 'KindSpace':
+        if self.closed:
+            raise SpaceError(f"{self!r} is closed and cannot be entered again. Hint: open a new KindSpace().")
         self._tokens.append(_current.set(self))
         return self
 

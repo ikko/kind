@@ -46,11 +46,8 @@ def frozen_pair():
     lambda p, c: p.unrelate(c),
     lambda p, c: c.reparent(),
     lambda p, c: c.delete(),                       # would change the frozen parent's children
-    lambda p, c: p.children.add(Kind("sneak")),    # direct mutation of the set
-    lambda p, c: p.children.clear(),
-    lambda p, c: p.relations.get("likes").add(Kind("sneak")),
     lambda p, c: p.index.insert(Kind("x"), 1.0),
-], ids=["unrelate", "reparent child", "delete child", "children.add", "children.clear", "relations add", "index"])
+], ids=["unrelate", "reparent child", "delete child", "index"])
 def test_a_frozen_kind_refuses_every_change(change):
     parent, child = frozen_pair()
     parent.freeze()
@@ -58,6 +55,22 @@ def test_a_frozen_kind_refuses_every_change(change):
     with pytest.raises(FrozenKindError):
         change(parent, child)
     assert (list(parent.children), list(child.parents), list(parent.relations.get("likes"))) == before
+
+
+@pytest.mark.parametrize("frozen", [False, True])
+@pytest.mark.parametrize("change", [
+    lambda p, c: p.children.add(Kind("sneak")),
+    lambda p, c: p.children.clear(),
+    lambda p, c: c.parents.discard(p),          # would leave p -> c one-sided
+    lambda p, c: p.relations.get("likes").add(Kind("sneak")),
+], ids=["children.add", "children.clear", "parents.discard", "relations add"])
+def test_edge_sets_change_only_through_kind_methods(change, frozen):
+    parent, child = frozen_pair()
+    if frozen:
+        parent.freeze()
+    with pytest.raises(AttributeError, match="change only through append"):
+        change(parent, child)
+    assert list(parent.children) == [child] and list(child.parents) == [parent]
 
 
 def test_patching_from_a_frozen_kind_is_refused_before_any_change():
@@ -120,7 +133,7 @@ def test_mixed_naive_and_aware_names_explain_the_problem():
 
 def test_time_only_names_are_not_temporal():
     noon = Kind("12:00:00")
-    with pytest.raises(ValueError, match="not a date or time"):
+    with pytest.raises(ValueError, match="not an ISO 8601 date or datetime"):
         noon.hour
     assert noon not in list(Kind("2024-01-01").time_head)
 
@@ -140,3 +153,31 @@ def test_from_ascii_reads_parent_lines_back_as_parents():
         rebuilt = Kind.from_ascii(text)
         assert rebuilt.name == "b" and [p.name for p in rebuilt.parents] == ["a"]
         assert sorted(child.name for child in Kind("a").children) == ["b", "c"]
+
+
+@pytest.mark.parametrize("name, target, value", [
+    ("True", bool, True), ("None", type(None), None), ("{'a': 1}", dict, {"a": 1}), ("(1, 'x')", tuple, (1, "x")),
+    ("[1, 2]", list, [1, 2]), ("2.5", float, 2.5),
+])
+def test_to_reads_back_the_names_from_object_produces(name, target, value):
+    assert Kind(name).to(target) == value
+    assert Kind.from_object(value).to(target) == value
+
+
+def test_to_never_evaluates_code():
+    with pytest.raises(TypeError, match="neither JSON nor a Python literal"):
+        Kind("__import__('os').getcwd()").to(str.__class__)
+
+
+@pytest.mark.parametrize("text", ['[{"nm": 1}]', '[1, 2]', '[{"name": "a", "children": "b"}]', '[{"name": 3}]',
+                                  '{"name": "a"}', '3'])
+def test_malformed_serialized_input_is_a_value_error(text):
+    with pytest.raises(ValueError, match="Hint: produce it with to_json"):
+        Kind.from_json(text)
+
+
+@pytest.mark.parametrize("load, text", [(Kind.from_toml, "kinds = 3"), (Kind.from_yaml, "name: a"),
+                                        (Kind.from_toml, "kinds = [1]")])
+def test_malformed_toml_and_yaml_are_value_errors_too(load, text):
+    with pytest.raises(ValueError, match="Hint: produce it with to_"):
+        load(text)

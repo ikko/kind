@@ -19,11 +19,12 @@ class KindIndex:
         self._weights: dict = {}  # kind -> the weight it was inserted with
 
     def insert(self, kind: 'Kind', weight: Union[float, Callable]):
-        self.owner._ensure_mutable()
-        if kind in self._weights:
-            self.remove(kind)
-        self._weights[kind] = weight
-        self.tree.add(kind, weight)
+        with self.owner._lock:
+            self.owner._ensure_mutable()
+            if kind in self._weights:
+                self.remove(kind)
+            self._weights[kind] = weight
+            self.tree.add(kind, weight)
 
     def map(self, fn: Callable[['Kind'], Any]) -> list[Any]:
         return [fn(kind) for kind in self.traverse(order="in")]
@@ -39,10 +40,11 @@ class KindIndex:
         raise NotImplementedError(f"Traversal order '{order}' not implemented for KindIndex.")
 
     def remove(self, kind: 'Kind') -> None:
-        self.owner._ensure_mutable()
-        weight = self._weights.pop(kind, None)
-        if weight is not None:
-            self.tree.remove(weight(kind) if callable(weight) else weight, kind)
+        with self.owner._lock:
+            self.owner._ensure_mutable()
+            weight = self._weights.pop(kind, None)
+            if weight is not None:
+                self.tree.remove(weight(kind) if callable(weight) else weight, kind)
 
     def ascii(self):
         return self.tree.to_ascii()

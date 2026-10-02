@@ -1,7 +1,7 @@
 ## `kind_scheduler.batch` Module
 
 
-> ⚠ _This module is under development and incomplete. Features may differ from what's written here. Should you use it, test comprehensively, especially before using `async batch` features_
+> ⚠ _This package is under development. Where this page and the code differ, the code is right; test your schedules, especially the async batch functions._
  
 
 This module provides functions for processing batches of items concurrently: sync functions run in worker threads, async functions run as tasks. Results keep the order of the input.

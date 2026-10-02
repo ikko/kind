@@ -121,15 +121,26 @@ def get_applied_mixins() -> Dict[str, Any]:
 
 
 def apply_mixin_to_instance(instance: 'Kind', mixin: Any) -> None:
-    """Attaches a mixin's public members to one Kind only (stored in its elevated attributes)."""
+    """Attaches a mixin to one Kind only, bound to that Kind like a method.
+
+    A function becomes `instance.<name>()` with `self` = the Kind; a class contributes its public
+    functions (bound to the Kind), properties (evaluated now, on the Kind) and other attributes.
+    """
+    import types
     instance._ensure_mutable()
-    if inspect.isclass(mixin):
-        mixin_instance = mixin()
-        for attr_name in dir(mixin_instance):
-            if not attr_name.startswith('_'):
-                instance._elevated_attributes[attr_name] = getattr(mixin_instance, attr_name)
-    elif hasattr(mixin, '__name__'):
-        instance._elevated_attributes[mixin.__name__] = mixin
+    members = ([(attr, inspect.getattr_static(mixin, attr)) for attr in dir(mixin) if not attr.startswith('_')]
+               if inspect.isclass(mixin) else [(mixin.__name__, mixin)])
+    for name, member in members:
+        value: Any
+        if isinstance(member, staticmethod):
+            value = member.__func__
+        elif isinstance(member, property):
+            value = member.fget(instance) if member.fget else None
+        elif inspect.isfunction(member):
+            value = types.MethodType(member, instance)
+        else:
+            value = member
+        instance._elevated_attributes[name] = value
 
 
 def _snapshot_for_testing() -> dict:

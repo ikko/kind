@@ -6,7 +6,7 @@ import anyio
 import anyio.to_thread
 import pytest
 
-from kind import Kind, KindSpace, SpaceError, current_space
+from kind import FrozenKindError, Kind, KindSpace, SpaceError, current_space
 from kind.core.space import DEFAULT_SPACE
 
 
@@ -28,9 +28,10 @@ def test_closing_a_space_drops_its_kinds_and_freezes_the_survivors():
     assert survivor.name == "survivor" and [c.name for c in survivor.children] == ["child"]  # still readable
     with pytest.raises(SpaceError, match="closed space"):
         survivor.append(Kind("another"))
-    with pytest.raises(SpaceError, match="closed"):
+    with pytest.raises(SpaceError, match="cannot be entered again"):
         with space:
             Kind("new")
+    assert current_space() is not space  # the failed entry did not make it current
 
 
 def test_edges_across_spaces_are_refused():
@@ -124,13 +125,22 @@ def test_concurrent_linking_keeps_both_ends_consistent():
 
 @pytest.mark.parametrize("settle", ["freeze", "close space"])
 def test_metadata_and_context_become_read_only_once_settled(settle):
-    with KindSpace():
-        kind = Kind("k")
-        kind.metadata["kept"] = 1
-        kind.context["note"] = "x"
-        if settle == "freeze":
-            kind.freeze()
+    def build():
+        made = Kind("k")
+        made.metadata["kept"] = 1
+        made.context["note"] = "x"
+        return made
+
+    if settle == "freeze":
+        kind = build().freeze()          # in the open test space: only the freeze applies
+    else:
+        with KindSpace():
+            kind = build()               # leaving the block closes the space
+    expected = FrozenKindError if settle == "freeze" else SpaceError
     for mapping in (kind.metadata, kind.context):
-        with pytest.raises(TypeError):
+        with pytest.raises(expected):
             mapping["new"] = 2
+        with pytest.raises(KeyError):
+            mapping["missing"]                      # reading a missing key ...
+        assert "missing" not in mapping              # ... does not create it
     assert kind.metadata["kept"] == 1 and kind.context["note"] == "x"

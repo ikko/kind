@@ -1,7 +1,7 @@
 """This module gives Kinds a time dimension: a Kind named like an ISO 8601 date or time.
 
 `kind.as_date`, `kind.hour`, ... read the time from the name and raise ValueError when
-the name is not a date or time. `kind.time_head` / `kind.time_tail` are views over every
+the name is not an ISO 8601 date or datetime. `kind.time_head` / `kind.time_tail` are views over every
 pooled Kind that *is* a date or time, earliest or latest first. A view offers four kinds of
 operation, each named for what it returns:
 
@@ -38,7 +38,7 @@ def when(kind: 'Kind') -> datetime.datetime:
     """The datetime of a temporal Kind; ValueError for any other Kind."""
     moment = parse_timestamp(kind.name)
     if moment is None:
-        raise ValueError(f"Kind {kind.name!r} is not a date or time. "
+        raise ValueError(f"Kind {kind.name!r} is not an ISO 8601 date or datetime. "
                          f"Hint: time properties need an ISO 8601 name such as '2026-10-02' or '2026-10-02T13:45:00'.")
     return moment
 

@@ -8,7 +8,7 @@ from kind.core.space import current_space
 from kind.core.kind import tomllib  # stdlib on 3.11+, the tomli backport on 3.10
 import yaml
 
-from kind import Kind
+from kind import Kind, KindSpace
 
 FORMATS = {
     "json": (Kind.to_json, Kind.from_json, orjson.loads),
@@ -69,9 +69,8 @@ def test_loading_merges_into_existing_kinds_by_name(fmt):
     """Interning is the point: a parsed name *is* the live Kind of that name."""
     dump, load, _ = FORMATS[fmt]
     victim = Kind("victim")
-    text = dump(Kind("victim").add(Kind("evil")))
-    victim.children.clear()
-    Kind("evil").parents.clear()
+    with KindSpace():
+        text = dump(Kind("victim").add(Kind("evil")))
     load(text)
     assert [child.name for child in victim.children] == ["evil"]
 

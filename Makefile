@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: install test lint typecheck security check build clean
+.PHONY: install test lint typecheck security check readme build clean
 
 VENV_PATH := $(HOME)/.virtualenvs/kind
 PYTHON ?= python3  # the interpreter the venv is built from (CI: the matrix version)
@@ -22,6 +22,9 @@ security:  # static security scan (bandit); config in pyproject [tool.bandit]
 	$(VENV_PATH)/bin/python -m bandit -q -c pyproject.toml -r kind scheduler/kind_scheduler
 
 check: lint typecheck security test
+
+readme:  # the PyPI readme: README.md with repository-relative links made absolute
+	$(VENV_PATH)/bin/python tools/update.py --input-md README.md --output-md docs/package/README.md --repo https://github.com/ikko/kind/blob/master/
 
 build:
 	uv build && uv build scheduler
