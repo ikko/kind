@@ -54,7 +54,6 @@ The most common way to share your mixin is by packaging it as an independent Pyt
     [project.optional-dependencies]
     dev = [
         "pytest",
-        "pytest-anyio",
     ]
     ```
 
@@ -78,7 +77,7 @@ The most common way to share your mixin is by packaging it as an independent Pyt
 
 ## 2. Contributing to the `kind` Standard Library
 
-If your mixin provides fundamental functionality, is widely applicable, and meets the high quality standards of the `kind` project, you might consider contributing it to the `kind` standard library (e.g., `kind.builtins`).
+If your mixin provides fundamental functionality, is widely applicable, and meets the high quality standards of the `kind` project, you might consider contributing it to the `kind` standard library (e.g., `kind.builtin`).
 
 ### Criteria for Standard Library Inclusion:
 

@@ -1,8 +1,8 @@
 graph TD
     subgraph "Memory-Aware Maturing Process #40;immute#40;#41;#41;"
         H[Kind.metadata #40;DefDict#41;] --> I[Dynamic Key-Value Store];
-        J[deep_del#40;#41;] --> K[Recursive Attribute Deletion];
-        L[gc.collect#40;#41;] --> M[Explicit Garbage Collection];
+        J[slim#40;#41;] --> K[Drops SENTINEL Elevated Attributes];
+        L[freeze#40;#41;] --> M[Per-Instance Immutability: FrozenKindError];
         N[_apply_merge_strategy#40;#41;] --> O[Handles Attribute Overwrites];
     end
 

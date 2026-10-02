@@ -13,13 +13,12 @@ Understanding the internal structure and expected protocols of a mixin is crucia
 
 While mixins can vary in complexity, they generally adhere to a common structure:
 
-1.  **Initialization (`__init__`)**: A mixin's `__init__` method typically takes the `Kind` instance it is being mixed into as its primary argument. This allows the mixin to establish a reference to the `Kind` object and perform any necessary setup or state initialization related to that specific `Kind`.
+1.  **`self` is the Kind**: Once registered with `register_mixin`, a mixin's public methods are attached to the `Kind` class, so their first parameter, `self`, is the `Kind` instance itself. A mixin needs no `__init__` and keeps no reference to its `Kind`; per-Kind state belongs in the Kind (e.g. `self.metadata`). Private and dunder names are never registered.
 
     ```python
     class MyMixin:
-        def __init__(self, kind_instance: Kind):
-            self.kind = kind_instance
-            # Initialize mixin-specific state
+        def describe(self) -> str:
+            return f"{self.name} has {len(self.children)} children"
     ```
 
 2.  **Methods**: These are the functionalities that the mixin contributes to the `Kind` object. Methods can be synchronous or asynchronous, following the `a_` prefix convention for asynchronous operations.
@@ -29,12 +28,12 @@ While mixins can vary in complexity, they generally adhere to a common structure
         # ...
         def sync_operation(self, data):
             # Synchronous logic
-            return f"Processed {data} synchronously for {self.kind.name}"
+            return f"Processed {data} synchronously for {self.name}"
 
         async def a_async_operation(self, data):
             # Asynchronous logic
             await anyio.sleep(0.01) # Simulate async work
-            return f"Processed {data} asynchronously for {self.kind.name}"
+            return f"Processed {data} asynchronously for {self.name}"
     ```
 
 3.  **Properties (Optional)**: Mixins can also expose properties that provide computed attributes or controlled access to internal state.
@@ -55,36 +54,29 @@ To ensure type safety and facilitate better code analysis, `kind` mixins often l
 For example, the `KindVisualProtocol` in `kind.core.protocols` defines the interface for mixins that provide visualization capabilities:
 
 ```python
-from typing import Protocol, Literal, runtime_checkable
+from abc import abstractmethod
+from typing import Protocol
 
-@runtime_checkable
 class KindVisualProtocol(Protocol):
-    def to_dot(self, mode: Literal["tree", "graph"]) -> str:
+    @abstractmethod
+    def to_dot(self, mode: str = "tree") -> str:
         ...
 
-    async def a_to_svg(self, mode: Literal["tree", "graph"]) -> str:
+    @abstractmethod
+    def to_svg(self, mode: str = "tree") -> str:
         ...
 
-    def to_svg(self, mode: Literal["tree", "graph"]) -> str:
-        ...
-
-    async def a_to_png(self, mode: Literal["tree", "graph"]) -> bytes:
-        ...
-
-    def to_png(self, mode: Literal["tree", "graph"]) -> bytes:
-        ...
-
-    def to_mmd(self, mode: Literal["tree", "graph"]) -> str:
-        ...
-
-    def to_ascii(self, mode: Literal["tree", "graph"]) -> str:
+    @abstractmethod
+    def to_png(self, mode: str = "tree") -> bytes:
         ...
 ```
 
-When implementing a mixin, it's highly recommended to declare that it adheres to a relevant protocol (if one exists) using `@runtime_checkable` and inheriting from `Protocol`. This provides a clear contract for how the mixin interacts with the `Kind` framework and other components.
+Mermaid and ASCII rendering (`to_mmd()`, `to_ascii()`) are not part of this protocol: they are methods of `Kind` itself.
+
+When implementing a mixin, it's highly recommended to declare that it adheres to a relevant protocol (if one exists), e.g. by implementing the protocol's methods with the same signatures. This provides a clear contract for how the mixin interacts with the `Kind` framework and other components.
 
 ## Mixin Validation
 
-The `kind` framework includes mechanisms to validate mixins, ensuring they conform to expected structures and behaviors. This validation process helps catch common errors early in development and ensures the stability of the system when new mixins are introduced. The `MixinValidationResult` and `validate_mixin_callable` (from `kind.core.mixin_validator`) are used internally to ensure mixins are correctly structured and their methods are callable.
+`register_mixin(value, name=None, target_class=None, safe=True, expand=True)` (from `kind.core.mixinability`) guards the core API rather than the code: strings are refused (nothing is evaluated), private and dunder names are always refused, names that already exist in the `Kind` API are refused unless `safe=False`, a previously registered mixin may be replaced, and after `lock_mixins()` nothing more can be registered in the process. For functions, `validate_mixin_callable` (from `kind.core.mixin_validator`, returning a `MixinValidationResult`) checks only the signature: the first parameter must be `self`. It does not detect unsafe code — a mixin is trusted code, like any method of the class.
 
 By understanding these core components and adhering to established protocols, developers can create powerful, maintainable, and well-integrated mixins for the `kind` framework.

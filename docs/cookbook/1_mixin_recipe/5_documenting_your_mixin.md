@@ -34,16 +34,9 @@ class DescendantCounterMixin:
 
     This mixin adds both synchronous and asynchronous methods to traverse
     the kind's graph and determine the total number of unique descendant kinds.
+    Register it with `register_mixin(DescendantCounterMixin)`; `self` is then the Kind.
     """
-    def __init__(self, kind_instance: Kind):
-        """Initializes the DescendantCounterMixin.
-
-        Args:
-            kind_instance: The Kind instance to which this mixin is applied.
-        """
-        self.kind = kind_instance
-
-    def count_descendants(self) -> int:
+    def count_descendants(self: Kind) -> int:
         """Counts the total number of unique descendants for this kind.
 
         Performs a breadth-first search starting from the kind's children
@@ -54,7 +47,7 @@ class DescendantCounterMixin:
         """
         # ... implementation ...
 
-    async def a_count_descendants(self) -> int:
+    async def a_count_descendants(self: Kind) -> int:
         """Asynchronously counts the total number of unique descendants.
 
         This asynchronous version provides a non-blocking way to perform

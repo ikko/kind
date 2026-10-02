@@ -4,28 +4,32 @@ The `Kind` framework introduces a sophisticated mixinability mechanism, enabling
 
 ## Dynamic Extension and Validation
 
-At its core, mixinability in `Kind` is managed through the `register_mixin` function, which facilitates the attachment of new functionalities (methods, properties, or even data attributes) to the `Kind` class. A critical aspect of this process is the rigorous validation performed by `kind.core.mixin_validator`. This module employs static analysis, leveraging `LibCST`, to ensure that proposed mixins adhere to a predefined interface and do not introduce security vulnerabilities or architectural inconsistencies.
+At its core, mixinability in `Kind` is managed through the `register_mixin(value, name=None, target_class=None, safe=True, expand=True)` function, which attaches new functionalities (functions, classes and modules expanded into their public members) to `BaseKind` by default, so every `Kind` sees them. A mixin is trusted code: registering one is the same as editing the class. What `register_mixin` guarantees is that a mixin cannot silently replace the core API.
 
 ### Validation Process
-The validation process encompasses several key checks:
-- **Signature Conformance**: Ensures that mixin functions correctly accept `self` as their first argument, maintaining consistency with instance methods.
-- **Asynchronous Consistency**: Verifies that asynchronous mixins are properly declared with `async` and that synchronous mixins are not mistakenly marked as asynchronous.
-- **Forbidden Operations**: Scans for potentially unsafe operations or imports (e.g., direct file system access via `os` or `subprocess` modules), mitigating risks in dynamic code injection.
+The checks are:
+- **No evaluation of strings**: a string `value` raises `TypeError`; pass the function, class or module object itself.
+- **Reserved names**: private and dunder names (`_x`, `__x__`) are always refused.
+- **Core names**: a name the target class (or a subclass) already defines is refused unless `safe=False`; replacing a previously registered mixin is allowed.
+- **Signature Conformance**: `kind.core.mixin_validator.validate_mixin_callable` checks that a mixin function takes `self` as its first parameter. It inspects the signature only; it does not judge what the code does and does not detect unsafe code.
 
-This proactive validation ensures the robustness and integrity of the `Kind` ecosystem, preventing the introduction of malformed or malicious code.
+A refused registration logs the reason and returns `False`.
 
 ```mermaid
 
 graph TD
-    A[Proposed Mixin] --> B{validate_mixin_callable};
-    B -- "Static Analysis &#40LibCST&#41" --> C{Checks Signature};
-    B -- "Static Analysis &#40LibCST&#41" --> D{Checks Async/Await};
-    B -- "Static Analysis &#40LibCST&#41" --> E{Checks Forbidden Imports};
-    C -- "Valid" --> F[Validation Result];
-    D -- "Valid" --> F;
-    E -- "Valid" --> F;
-    F -- "is_valid = True" --> G[Mixin Registered];
-    F -- "is_valid = False" --> H[Registration Rejected];
+    A[Proposed Mixin] --> B{register_mixin};
+    B -- "string?" --> X[TypeError];
+    B --> C{Private or dunder name?};
+    B --> D{Core name and safe=True?};
+    B --> E{validate_mixin_callable: first parameter self?};
+    C -- "No" --> F[Checks passed];
+    D -- "No" --> F;
+    E -- "Yes" --> F;
+    F -- "returns True" --> G[Mixin Registered];
+    C -- "Yes" --> H[Registration Refused: logged, returns False];
+    D -- "Yes" --> H;
+    E -- "No" --> H;
 
     style A fill:#193370,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style B fill:#4169e1,stroke:#333,stroke-width:2px,color:#FFFFFF;
@@ -35,18 +39,21 @@ graph TD
     style F fill:#6495ed,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style G fill:#2a4d9e,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style H fill:#2a4d9e,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style X fill:#2a4d9e,stroke:#333,stroke-width:2px,color:#FFFFFF;
 
 ```
 ## Freezing Mechanism
 
-To ensure stability and prevent unintended modifications in production environments, the `Kind` framework provides a `freeze()` mechanism. Once invoked, `freeze()` prevents any further registration or modification of mixins, effectively locking down the `Kind` class's behavior. This is particularly valuable in long-running applications or systems where dynamic changes could lead to unpredictable states.
+To ensure stability and prevent unintended modifications in production environments, `kind.core.mixinability.lock_mixins()` locks the mixin registry for the whole process: further registrations are refused (`mixins_locked()` reports the state). This is particularly valuable in long-running applications or systems where dynamic changes could lead to unpredictable states.
+
+Freezing a single Kind is a separate, per-instance operation: `kind.freeze()` (or `kind.immute()`, which elevates, slims and then freezes) makes that Kind raise `FrozenKindError` on any attribute, edge or relation change; `kind.frozen` reports it. To attach a mixin to one Kind only, use `apply_mixin_to_instance(kind, mixin)`.
 
 ## Examples
 
 **High-Tech: Dynamic Feature Flagging in SaaS Platforms**
 ```python
 from kind import Kind, k
-from kind.core.mixinability import register_mixin, freeze
+from kind.core.mixinability import lock_mixins, register_mixin
 
 class FeatureMixins:
     def enable_premium_analytics(self):
@@ -55,8 +62,8 @@ class FeatureMixins:
     def enable_beta_ui(self):
         return f"Beta UI enabled for {self.name}"
 
-register_mixin(Kind, "premium_analytics", FeatureMixins.enable_premium_analytics)
-register_mixin(Kind, "beta_ui", FeatureMixins.enable_beta_ui)
+register_mixin(FeatureMixins.enable_premium_analytics, "premium_analytics")
+register_mixin(FeatureMixins.enable_beta_ui, "beta_ui")
 
 user_premium = k.user_premium_tier
 user_beta = k.user_beta_tester
@@ -64,9 +71,9 @@ user_beta = k.user_beta_tester
 print(user_premium.premium_analytics())
 print(user_beta.beta_ui())
 
-freeze()
-if not register_mixin(Kind, "new_feature", lambda self: "New feature"):
-    print("Failed to register new_feature: Kind class is frozen.")
+lock_mixins()
+if not register_mixin(lambda self: "New feature", "new_feature"):
+    print("Failed to register new_feature: the mixin registry is locked.")
 ```
 
 ```mermaid
@@ -93,7 +100,7 @@ graph TD
 In an inventory management system, different types of products might have unique behaviors (e.g., perishable items needing expiration date tracking, electronics needing warranty information). Mixinability allows these behaviors to be attached dynamically.
 
 ```python
-from kind import Kind
+from kind import k
 from kind.core.mixinability import register_mixin
 
 class ProductMixins:
@@ -109,8 +116,8 @@ apple = k.Apple
 laptop = k.Laptop
 
 # Apply mixins based on product type
-register_mixin(Kind, "expiration_date", ProductMixins.get_expiration_date)
-register_mixin(Kind, "warranty_period", ProductMixins.get_warranty_period)
+register_mixin(ProductMixins.get_expiration_date, "expiration_date")
+register_mixin(ProductMixins.get_warranty_period, "warranty_period")
 
 # Access product-specific behaviors
 print(f"Apple expiration: {apple.expiration_date()}")
@@ -141,7 +148,7 @@ graph TD
 ```
 ## Conclusion
 
-Mixinability in the `Kind` framework provides a powerful and secure mechanism for dynamic extensibility. By combining runtime flexibility with static validation and a freezing capability, it enables developers to build highly modular, adaptable, and robust systems across various domains, from complex high-tech applications to traditional enterprise solutions.
+Mixinability in the `Kind` framework provides a powerful and guarded mechanism for dynamic extensibility. By combining runtime flexibility with name and signature checks, a process-wide registry lock and per-instance freezing, it enables developers to build highly modular, adaptable, and robust systems across various domains, from complex high-tech applications to traditional enterprise solutions.
 
 For a visual representation of the mixin application flow, refer to the [Mixinability Flow Diagram](mixinability_flow.mmd).
 

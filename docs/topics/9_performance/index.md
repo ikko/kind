@@ -4,11 +4,11 @@ The `Kind` framework is engineered for high performance, particularly in scenari
 
 ## O(1) Kind Instantiation (Intern Pool)
 
-Kind instantiation is a constant-time operation, achieved through the implementation of an interning pool (a variation of the Flyweight design pattern). When a `Kind` is requested via `Kind(name)`, the framework first checks if a `Kind` with that `name` already exists in a global pool. If it does, the existing instance is returned; otherwise, a new instance is created and added to the pool. This ensures that each unique symbolic name maps to a single, canonical `Kind` object, leading to significant memory savings and guaranteeing object identity.
+Kind instantiation is an average constant-time operation (one dictionary lookup under a lock), achieved through the implementation of an interning pool (a variation of the Flyweight design pattern). When a `Kind` is requested via `Kind(name)`, the framework first checks if a `Kind` with that `name` already exists in the pool, one for all classes. If it does, the existing instance is returned; otherwise, a new instance is created and added to the pool. This ensures that each unique symbolic name maps to a single, canonical `Kind` object, leading to significant memory savings and guaranteeing object identity while the Kind is referenced: the pool is weak, so an unreferenced Kind is collected and a later `Kind(name)` creates a fresh one.
 
 ### Mechanism
-- **`Kind._pool`**: A dictionary-like structure that stores `Kind` instances, keyed by their `name`.
-- **`__new__` method**: Overridden to implement the interning logic, ensuring that `Kind('A') is Kind('A')` evaluates to `True`.
+- **`BaseKind._pool`**: A `weakref.WeakValueDictionary` that stores `Kind` instances, keyed by their `name`.
+- **`BaseKind.__new__` method**: Overridden to implement the interning logic, ensuring that `Kind('A') is Kind('A')` evaluates to `True`.
 
 ### Code Example
 ```python
@@ -22,7 +22,7 @@ s3 = Kind('another_data_point')
 print(f"s1 is s2: {s1 is s2}") # Expected: True (O(1) lookup)
 print(f"s1 is s3: {s1 is s3}") # Expected: False
 
-# Demonstrating the constant time nature (conceptual)
+# Repeated construction is a pool lookup
 import time
 
 start_time = time.perf_counter_ns()
@@ -37,17 +37,19 @@ print(f"Time for 100,000 Kind instantiations: {(end_time - start_time) / 1_000_0
 ```text
 s1 is s2: True
 s1 is s3: False
-Time for 100,000 Kind instantiations: 0.00 ms
+Time for 100,000 Kind instantiations: 296.10 ms
 ```
+
+Timings are one measured run; they vary by machine.
 </details>
 
 ### Diagram
 ```mermaid
 graph TD
-    A[Request Kind&#40name&#41] --> B{Check Kind._pool};
+    A[Request Kind&#40name&#41] --> B{Check BaseKind._pool #40;weak#41;};
     B -- "Found" --> C[Return Existing Kind];
     B -- "Not Found" --> D[Create New Kind];
-    D --> E[Add to Kind._pool];
+    D --> E[Add to BaseKind._pool];
     E --> C;
 
     style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
@@ -58,10 +60,10 @@ graph TD
 ```
 ## O(1) Relationship Linking
 
-Establishing relationships between `Kind` instances (e.g., via `append()`) is also a constant-time operation. This is primarily due to the use of Python's native list appends for managing `children` and `parents` relationships. Appending an element to a list typically involves amortized O(1) time complexity, making graph construction highly efficient.
+Establishing relationships between `Kind` instances (e.g., via `append()`) is also an amortized constant-time operation. `children` and `parents` are `OrderedKindSet`s: a list for order plus a set for O(1) membership, so appending is an amortized O(1) list append and a repeated `append()` is an O(1) no-op. Placing a child at a position (`insert(child, at)`) and removing one are O(n) in the number of children.
 
 ### Mechanism
-- **`Kind.children` and `Kind.parents`**: These are Python lists that store direct references to related `Kind` objects.
+- **`Kind.children` and `Kind.parents`**: `OrderedKindSet`s (ordered, no duplicates, O(1) membership) that store direct references to related `Kind` objects.
 - **`append()` method**: Directly adds a `Kind` to the `children` list of the current kind and adds the current kind to the `parents` list of the child kind.
 
 ### Code Example
@@ -89,7 +91,7 @@ print(f"Time for 2 relationship links: {(end_time - start_time) / 1_000_000:.2f}
 ```text
 Root children: ['ChildA', 'ChildB']
 ChildA parents: ['Root']
-Time for 2 relationship links: 0.00 ms
+Time for 2 relationship links: 0.01 ms
 ```
 </details>
 
@@ -97,8 +99,8 @@ Time for 2 relationship links: 0.00 ms
 ```mermaid
 graph TD
     A[Source Kind] --> B{append&#40Target Kind&#41};
-    B -- "Add Target to Source.children" --> C[Source.children List];
-    B -- "Add Source to Target.parents" --> D[Target.parents List];
+    B -- "Add Target to Source.children" --> C[Source.children OrderedKindSet];
+    B -- "Add Source to Target.parents" --> D[Target.parents OrderedKindSet];
     C --> E[O#40;1#41; Operation];
     D --> E;
 
@@ -108,13 +110,13 @@ graph TD
     style D fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
 ```
-## O(1) Traversal with Cache and Float-based Cursor Insertion
+## O(1) Sequence Steps and Float-based Positions
 
-While full graph traversals (e.g., `tree()`, `graph()`) are inherently dependent on the number of nodes and edges (typically O(V+E)), the `Kind` framework optimizes certain traversal-related operations to achieve effective O(1) performance for specific use cases. This is facilitated by caching mechanisms and a unique float-based cursor insertion system.
+While full graph traversals (e.g., `tree()`, `graph()`) are inherently dependent on the number of nodes and edges (O(V+E)), stepping along the `Kind.next()` chain is O(1), and creation order is kept by float positions in an AVL tree. There is no length cache: `Kind.len()` counts the live Kinds, O(n).
 
 ### Mechanism
-- **Cached Lengths**: The `_length_cache` attribute on `Kind` instances can store the length of `children` lists, avoiding repeated `len()` calls.
-- **Float-based Cursor Insertion (`_write_cursor`, `_position`)**: For sequential kind generation (e.g., `Kind.next()`), a float-based cursor (`_write_cursor`) allows for efficient insertion of new kinds into a conceptual ordered sequence without requiring re-indexing of existing elements. This is particularly useful for maintaining insertion order in a dynamic list of kinds.
+- **Linked Sequence (`_prev`, `_next`)**: `Kind.next()` creates `kind_0`, `kind_1`, ... and links each to the previous one, so a step along the chain is O(1).
+- **Float-based Positions (`_write_cursor`, `_position`)**: Every new Kind gets the next float position from `_write_cursor` and is added to a weak AVL tree (`BaseKind._numbered`) without re-indexing existing elements. `Kind.first()`/`last()`/`seek(pos)` read it in O(log n), and `Kind.each(start)` iterates the live Kinds in creation order.
 
 ### Code Example (Conceptual for Float-based Cursor)
 ```python
@@ -148,15 +150,14 @@ kind2._prev is kind1: True
 ### Diagram
 ```mermaid
 graph TD
-    A[Traversal Operation] --> B{Check Cache};
-    B -- "Cache Hit" --> C[Return Cached Value #40;O#40;1#41;#41;];
-    B -- "Cache Miss" --> D[Perform Traversal #40;O#40;V+E#41;#41;];
-    D --> E[Update Cache];
-    E --> C;
+    A[Sequence Operation] --> B{Kind.next#40;#41; Chain};
+    B -- "_next / _prev" --> C[One Step #40;O#40;1#41;#41;];
+    A --> D[Full Traversal #40;O#40;V+E#41;#41;];
+    D --> E[tree#40;#41; / graph#40;#41;];
 
     X[New Kind Insertion] --> Y{Assign Float Position};
     Y --> Z[Maintain Conceptual Order];
-    Z --> AA[Avoid Re-indexing #40;O#40;1#41; for sequential#41;];
+    Z --> AA[AVL Tree by Position #40;O#40;log n#41; seek#41;];
     style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
     style B fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style C fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
@@ -168,20 +169,19 @@ graph TD
     style Z fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style AA fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
 ```
-## O(log n) Insert/Search when extended to use bisect-based insertion order
+## O(log n) Insert/Search with the AVL-backed KindIndex
 
-While core relationship linking is O(1), the `Kind` framework is designed to integrate with more advanced data structures for scenarios requiring ordered insertion and efficient searching within larger collections of kinds. Specifically, when extended with built-in modules like `kind.builtins.index` (which can leverage `AVLTree` or `RedBlackTree`), operations like ordered insertion and searching within a sorted collection of kinds can achieve O(log n) time complexity.
+While core relationship linking is O(1), the `Kind` framework is designed to integrate with more advanced data structures for scenarios requiring ordered insertion and efficient searching within larger collections of kinds. Specifically, `kind.builtin.index` (backed by `AVLTree`) keeps a Kind's indexed kinds sorted by weight, so ordered insertion and searching by weight achieve O(log n) time complexity.
 
 ### Mechanism
-- **`KindIndex`**: A specialized index (likely within `kind.builtins.index`) that can maintain kinds in a sorted order.
-- **Balanced Binary Search Trees (e.g., AVL Tree, Red-Black Tree)**: These data structures (implemented in `kind.builtins.avl_tree` and `kind.builtins.red_black_tree`) provide logarithmic time complexity for insertion, deletion, and search operations by maintaining a balanced tree structure.
+- **`KindIndex`**: A per-Kind index (`kind.builtin.index`, reached as `kind.index`) that maintains kinds in weight order.
+- **Balanced Binary Search Tree (AVL Tree)**: Implemented in `kind.builtin.avl_tree`, it provides logarithmic time complexity for insertion, deletion, and search by weight by maintaining a balanced tree structure.
 
 ### Code Example (Conceptual with KindIndex)
 
 ```python
 from kind import Kind, k
 from kind.builtin import apply_builtins
-from kind.builtin.index import KindIndex
 
 apply_builtins()
 
@@ -194,9 +194,8 @@ root_kind.index.insert(k.Banana, 0.2)
 
 print(f"Kinds in index (sorted): {[s.name for s in root_kind.index.traverse()]}")
 
-# Search for a kind in the index (O(log n))
-# The KindIndex.find method is not directly available,
-# so we'll simulate a search by checking if the kind is in the traversed list.
+# KindIndex has no search by name; this scan over the sorted list is O(n).
+# Search by weight is O(log n) on the underlying tree: root_kind.index.tree.search(0.1)
 found_kind = next((s for s in root_kind.index.traverse() if s.name == 'Apple'), None)
 print(f"Found Apple: {found_kind.name if found_kind else 'Not Found'}")
 ```
@@ -213,7 +212,7 @@ Found Apple: Apple
 ```mermaid
 graph TD
     A[Collection of Kinds] --> B{KindIndex};
-    B -- "Uses" --> C[Balanced BST #40;AVL/Red-Black#41;];
+    B -- "Uses" --> C[Balanced BST #40;AVL#41;];
     C -- "Insert" --> D[O#40;log n#41;];
     C -- "Search" --> E[O#40;log n#41;];
     C -- "Delete" --> F[O#40;log n#41;];
@@ -227,6 +226,6 @@ graph TD
 ```
 ## Conclusion
 
-The `Kind` framework's performance characteristics are a direct result of its thoughtful design, leveraging efficient data structures and algorithms. By employing interning for constant-time instantiation, utilizing native list operations for O(1) relationship linking, and providing hooks for logarithmic-time ordered operations through specialized indices, `Kind` delivers a high-performance foundation for building and manipulating complex symbolic graphs. These optimizations are crucial for ensuring scalability and responsiveness in demanding applications.
+The `Kind` framework's performance characteristics are a direct result of its thoughtful design, leveraging efficient data structures and algorithms. By employing interning for constant-time instantiation, utilizing ordered sets for amortized O(1) relationship linking, and providing hooks for logarithmic-time ordered operations through specialized indices, `Kind` delivers a high-performance foundation for building and manipulating complex symbolic graphs. These optimizations are crucial for ensuring scalability and responsiveness in demanding applications.
 
 For a comprehensive overview of the Kind's performance aspects, refer to the [Performance Overview Diagram](performance_overview.mmd).

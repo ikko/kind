@@ -38,18 +38,19 @@ Exchange = k.Exchange
 Corporation = k.Corporation
 Country = k.Country
 
-# Establish relationships
-Financial_Instrument.has_type(Stock)
-Financial_Instrument.has_type(Bond)
+# Establish relationships: any public name is a relation verb
+Financial_Instrument.has_kind(Stock)
+Financial_Instrument.has_kind(Bond)
 Stock.traded_on(Exchange)
 Bond.issued_by(Corporation)
 Exchange.located_in(Country)
 Corporation.located_in(Country)
 
-# Set node shapes, `round` is default
+# Set node shapes (a rectangle is the default)
 Financial_Instrument.node_shape = "subroutine"
 Exchange.node_shape = "rhombus"
 Corporation.node_shape = "subroutine"
+Stock.node_shape = Bond.node_shape = Country.node_shape = "round"
 
 # Generate the Mermaid diagram source
 mermaid_source = Financial_Instrument.to_mmd()
@@ -64,20 +65,20 @@ print(mermaid_source)
 <details>
 <summary>that leads to diagram representation</summary>
 
-```css
+```text
 graph LR
 Bond(Bond)
-Corporation[Corporation]
+Corporation[[Corporation]]
 Country(Country)
 Exchange{Exchange}
-Financial_Instrument[Financial_Instrument]
+Financial_Instrument[[Financial_Instrument]]
 Stock(Stock)
-    Financial_Instrument -- has type --> Stock
-    Stock -- traded on --> Exchange
-    Exchange -- located in --> Country
-    Financial_Instrument -- has type --> Bond
-    Bond -- issued by --> Corporation
-    Corporation -- located in --> Country 
+    Financial_Instrument -- has_kind --> Bond
+    Bond -- issued_by --> Corporation
+    Corporation -- located_in --> Country
+    Financial_Instrument -- has_kind --> Stock
+    Stock -- traded_on --> Exchange
+    Exchange -- located_in --> Country
 ```
 
 </details>
@@ -145,12 +146,8 @@ Built_in_Mixins.extends(Kind_Objects)
 Custom_Mixins.extends(Kind_Objects)
 Kind_Objects.persists_to(Data_Storage_Persistence)
 
-# Set node shapes, default is "round"
-User_Developer.node_shape = "square"
+# Set node shapes (a rectangle is the default)
 Core_Kind_Logic.node_shape = "rhombus"
-Built_in_Mixins.node_shape = "square"
-Custom_Mixins.node_shape = "square"
-Kind_Objects.node_shape = "square"
 
 # Generate the Mermaid diagram source
 mermaid_source = User_Developer.to_mmd()
@@ -165,8 +162,8 @@ print(mermaid_source)
 <details>
 <summary>that leads to diagram representation</summary>
 
-```css
-graph TB
+```text
+graph LR
 Built_in_Mixins[Built_in_Mixins]
 Core_Kind_Logic{Core_Kind_Logic}
 Custom_Mixins[Custom_Mixins]
@@ -174,13 +171,13 @@ Data_Storage_Persistence[Data_Storage_Persistence]
 Kind_API[Kind_API]
 Kind_Objects[Kind_Objects]
 User_Developer[User_Developer]
-    User_Developer -- interacts with --> Kind_API
+    User_Developer -- interacts_with --> Kind_API
     Kind_API -- uses --> Core_Kind_Logic
     Core_Kind_Logic -- integrates --> Built_in_Mixins
-    Core_Kind_Logic -- integrates --> Custom_Mixins
     Built_in_Mixins -- extends --> Kind_Objects
+    Kind_Objects -- persists_to --> Data_Storage_Persistence
+    Core_Kind_Logic -- integrates --> Custom_Mixins
     Custom_Mixins -- extends --> Kind_Objects
-    Kind_Objects -- persists to --> Data_Storage_Persistence
 ```
 
 </details>
@@ -271,7 +268,7 @@ _**Disclaimer:**_
 : Provides a detailed overview of the `kind` library's architecture, including its core components and layered structure. It explains how the framework separates concerns to promote modularity and extensibility. This document is essential for contributors and architects interested in the internal workings, dependencies, and design principles that guide the development of the `kind` framework.
 
 🔄 [Conversion To and From](https://github.com/ikko/kind/blob/master/docs/development/conversion_to_and_from.md)
-: Outlines the mechanisms for converting standard Python types to `Kind` objects and vice-versa, enhancing the framework's interoperability and ease of use. It covers primitive and collection types, and nested conversions. This document provides examples of `Kind.from_<type>` class methods and the `to_kind()` global function, illustrating seamless data integration.
+: Outlines the mechanisms for converting standard Python types to `Kind` objects and vice-versa, enhancing the framework's interoperability and ease of use. It covers primitive and collection types, and nested conversions. This document provides examples of the `Kind.from_object()` class method and the `to_kind()` global function, illustrating seamless data integration.
 
 🗺 [Directory_validation_lr diagram](https://github.com/ikko/kind/blob/master/docs/development/directory_validation_lr.mmd)️
 : A Mermaid diagram illustrating the architecture of a directory validation system, focusing on its components and their interactions in a left-to-right flow. This visual aid helps in understanding the system's structure, including matching engines, project detection, learning analytics, and performance caching.
@@ -298,7 +295,7 @@ _**Disclaimer:**_
 : Provides detailed instructions on how to build and publish the `kind` package to PyPI (Python Package Index) using `uv` and `twine`. It covers prerequisites, publication steps, and troubleshooting. This guide is essential for maintainers and contributors responsible for releasing new versions of the `kind` library, ensuring a smooth and secure publication process.
 
 🏛 [Structure_overview](https://github.com/ikko/kind/blob/master/docs/development/structure_overview.md)️
-: Outlines the project's organizational structure, dividing it into `kind.core` (essential components) and `kind.builtins` (optional, high-level extensions). It includes Mermaid diagrams for visual clarity. This document helps developers understand the modular design and the separation of concerns within the `kind` library, facilitating navigation and contribution.
+: Outlines the project's organizational structure, dividing it into `kind.core` (essential components) and `kind.builtin` (optional, high-level extensions). It includes Mermaid diagrams for visual clarity. This document helps developers understand the modular design and the separation of concerns within the `kind` library, facilitating navigation and contribution.
 
 </details>
 
@@ -318,20 +315,23 @@ _**Disclaimer:**_
 🧱 [the fundamental building block](https://github.com/ikko/kind/blob/master/docs/topics/1_kind_fundamental_building_block/index.md)
 : Explores the `Kind` object as the atomic unit of the framework, detailing its uniqueness through interning and its role as a node in a dynamic, directed acyclic graph. It covers efficient relationship management and extensibility. This document provides a foundational understanding of how `Kind` instances form the basis for complex data structures and symbolic manipulation tasks, with examples in supply chain modeling and knowledge graphs.
 
+⚖️ [Kind vs type](https://github.com/ikko/kind/blob/master/docs/topics/1_kind_fundamental_building_block/kind_vs_type.md)
+: What a Kind shares with a type and where it differs: identity by name, membership as a `has_kind` edge instead of `isinstance`, a category that is also a thing (OWL punning), and why the word *kind* here is not a Haskell kind. Every example on the page runs in the test suite.
+
 🔗 [relationships diagram](https://github.com/ikko/kind/blob/master/docs/topics/1_kind_fundamental_building_block/kind_relationships.mmd)
-: A Mermaid diagram illustrating the core relationships within a `Kind` object, including children, parents, `related_to`, and `related_how`. This visual aid helps in understanding how `Kind` instances connect to form complex graph structures and represent semantic information.
+: A Mermaid diagram illustrating the core relationships within a `Kind` object, including children, parents and named relations (`relate(other, how=...)`). This visual aid helps in understanding how `Kind` instances connect to form complex graph structures and represent semantic information.
 
 🧠 [memory_awareness](https://github.com/ikko/kind/blob/master/docs/topics/10_memory_awareness/index.md)
-: Details the `Kind` framework's meticulous design for memory efficiency, covering GC-aware deletion, proactive memory management for the `context` attribute via `deep_del`, and the `MEMORY_AWARE_DELETE` flag. This document explains how `Kind` minimizes its memory footprint and ensures robust, predictable behavior in large-scale, interconnected systems.
+: Details the `Kind` framework's meticulous design for memory efficiency, covering the weak intern pool, lazily created parts (`metadata`, `context`, `index`, `relations`), `clear_context()`, and maturing. This document explains how `Kind` minimizes its memory footprint and ensures robust, predictable behavior in large-scale, interconnected systems.
 
 📊 [memory_awareness_overview diagram](https://github.com/ikko/kind/blob/master/docs/topics/10_memory_awareness/memory_awareness_overview.mmd)
-: A Mermaid diagram providing an overview of the `Kind`'s memory awareness mechanisms, including GC-aware deletion, proactive context cleanup, and the maturing process. This visual aid helps in understanding the various strategies employed to minimize memory footprint and ensure efficient resource management.
+: A Mermaid diagram providing an overview of the `Kind`'s memory awareness mechanisms, including the weak intern pool, context cleanup, and the maturing process. This visual aid helps in understanding the various strategies employed to minimize memory footprint and ensure efficient resource management.
 
 🧩 [extensibility_overview diagram](https://github.com/ikko/kind/blob/master/docs/topics/11_extensibility/extensibility_overview.mmd)
-: A Mermaid diagram illustrating the `Kind` framework's extensibility mechanisms, including the `Kindable` protocol, `MixinFunction` protocol, `KindAdapter` concept, enum reflection compatibility, and external DSL input. This visual aid helps in understanding how `Kind` can be adapted and integrated into a wide array of applications and domains.
+: A Mermaid diagram illustrating the `Kind` framework's extensibility mechanisms, including the mixin protocols, `register_mixin()`, enum reflection compatibility, and external DSL input. This visual aid helps in understanding how `Kind` can be adapted and integrated into a wide array of applications and domains.
 
 🔌 [extensibility](https://github.com/ikko/kind/blob/master/docs/topics/11_extensibility/index.md)
-: Explores the `Kind` framework's strong emphasis on extensibility, detailing how it adapts to diverse domains through well-defined protocols, dynamic mixin capabilities, and compatibility with external data formats. This document covers the `Kindable` type for robust callable integration, `MixinFunction` protocol for formal mixin interfaces, and compatibility with enum reflection and external DSL inputs.
+: Explores the `Kind` framework's strong emphasis on extensibility, detailing how it adapts to diverse domains through well-defined protocols, dynamic mixin capabilities, and compatibility with external data formats. This document covers the `typing.Protocol` contracts for mixins, `register_mixin()` and `apply_mixin_to_instance()`, and compatibility with enum reflection and external DSL inputs.
 
 💡 [example_use](https://github.com/ikko/kind/blob/master/docs/topics/12_example_use/index.md)
 : Illustrates several practical use cases of the `Kind` framework, demonstrating how its core features can be leveraged to solve real-world problems. Examples include basic kind creation, ESG tracking, timeline management, batch processing, and scheduling. This document provides concrete examples and diagrams, showcasing the versatility and power of `Kind` in various application domains.
@@ -343,7 +343,7 @@ _**Disclaimer:**_
 : Explains how the `Kind` framework leverages the Flyweight design pattern to ensure the uniqueness and efficient management of `Kind` instances. It details the core principle of shared intrinsic state and its advantages. This document provides code examples and industry applications, demonstrating how Flyweight contributes to memory efficiency, consistency, and performance in `Kind`.
 
 🏗 [layered_architecture](https://github.com/ikko/kind/blob/master/docs/topics/3_layered_architecture/index.md)️
-: Describes the `Kind` framework's layered architecture, separating concerns into `kind.core` (essential building blocks) and `kind.builtins` (optional, high-level extensions). This document explains how this design ensures a lean and stable core while allowing for flexible and modular extension of functionalities, with code examples and industry applications.
+: Describes the `Kind` framework's layered architecture, separating concerns into `kind.core` (essential building blocks) and `kind.builtin` (optional, high-level extensions). This document explains how this design ensures a lean and stable core while allowing for flexible and modular extension of functionalities, with code examples and industry applications.
 
 📐 [layered_architecture-lr diagram](https://github.com/ikko/kind/blob/master/docs/topics/3_layered_architecture/layered_architecture-lr.mmd)
 : A Mermaid diagram illustrating the `Kind` framework's layered architecture in a left-to-right flow, distinguishing between the core and builtin extension layers. This visual aid helps in understanding the modularity and controlled dependencies within the framework.
@@ -358,7 +358,7 @@ _**Disclaimer:**_
 : A Mermaid diagram illustrating the per-instance indexing mechanism, showing how a `Kind` instance owns a private `KindIndex` that references other kinds with associated weights. This visual aid helps in understanding the localized, internal data storage for complex, contextual associations.
 
 🧩 [mixinability](https://github.com/ikko/kind/blob/master/docs/topics/5_mixinability/index.md)
-: Describes the `Kind` framework's sophisticated mixinability mechanism, enabling the dynamic extension of `Kind` instances at runtime. It covers dynamic extension, validation, and the freezing mechanism. This document provides illustrative examples and diagrams, showcasing how mixinability contributes to building highly adaptable and modular systems.
+: Describes the `Kind` framework's sophisticated mixinability mechanism, enabling the dynamic extension of `Kind` instances at runtime. It covers dynamic extension, signature validation, the process-wide mixin lock (`lock_mixins()`) and per-instance freezing (`kind.freeze()`). This document provides illustrative examples and diagrams, showcasing how mixinability contributes to building highly adaptable and modular systems.
 
 🔄 [mixinability_flow diagram](https://github.com/ikko/kind/blob/master/docs/topics/5_mixinability/mixinability_flow.mmd)
 : A Mermaid diagram illustrating the flow of mixin application in the `Kind` framework, including the validation process and the outcomes of successful or rejected registrations. This visual aid helps in understanding how new functionalities are dynamically attached to `Kind` instances.
@@ -370,7 +370,7 @@ _**Disclaimer:**_
 : A Mermaid diagram illustrating the memory-aware maturing process (`immute()`), showing the sequential execution of `elevate()`, `slim()`, and `freeze()`. This visual aid helps in understanding the optimization steps for `Kind` instances.
 
 ⚙ [maturing_process_2 diagram](https://github.com/ikko/kind/blob/master/docs/topics/6_memory_aware_maturing/maturing_process_2.mmd)️
-: A Mermaid diagram detailing the internal mechanisms involved in the memory-aware maturing process, such as `Kind.metadata`, `deep_del()`, `gc.collect()`, and `_apply_merge_strategy()`. This visual aid helps in understanding the technical underpinnings of memory optimization.
+: A Mermaid diagram detailing the internal mechanisms involved in the memory-aware maturing process, such as `Kind.metadata`, `SENTINEL` and `_apply_merge_strategy()`. This visual aid helps in understanding the technical underpinnings of memory optimization.
 
 ✨ [maturing_process_3 diagram](https://github.com/ikko/kind/blob/master/docs/topics/6_memory_aware_maturing/maturing_process_3.mmd)
 : A Mermaid diagram highlighting the benefits of the memory-aware maturing process, including reduced memory footprint, improved performance, stability, and clear lifecycle management. This visual aid helps in understanding the advantages gained from optimizing `Kind` instances.
@@ -385,13 +385,13 @@ _**Disclaimer:**_
 : A Mermaid diagram providing an overview of the `Kind` API highlights, categorizing methods by core constructors, relationship management, traversal, lifecycle management, visualization, and utility. This visual aid helps in quickly grasping the breadth of `Kind`'s functionality.
 
 💡 [api_highlights](https://github.com/ikko/kind/blob/master/docs/topics/8_api_highlights/index.md)
-: Details the key methods and properties that form the backbone of the `Kind` framework's functionality. It covers `Kind()` constructor, `Kind.next()`, `append()`, `relate_to()`, traversal methods, `patch()`, visualization, `delete()`, `elevate()`, `slim()`, `immute()`, `ref`, and `Scheduler.add_job()`. This document offers insights into their design principles and practical applications, with code examples and diagrams.
+: Details the key methods and properties that form the backbone of the `Kind` framework's functionality. It covers `Kind()` constructor, `Kind.next()`, `append()`, `relate()`, traversal methods, `patch()`, visualization, `delete()`, `elevate()`, `slim()`, `immute()`, `ref`, and `Scheduler.add_job()`. This document offers insights into their design principles and practical applications, with code examples and diagrams.
 
 ⚡ [Performance](https://github.com/ikko/kind/blob/master/docs/topics/9_performance/index.md)
-: Explains how the `Kind` framework is engineered for high performance, detailing algorithmic and architectural optimizations for efficient instantiation, relationship management, and traversal. This document covers O(1) kind instantiation (intern pool), O(1) relationship linking, O(1) traversal with cache, and O(log n) insert/search with bisect-based insertion order, with code examples and diagrams.
+: Explains how the `Kind` framework is engineered for high performance, detailing algorithmic and architectural optimizations for efficient instantiation, relationship management, and traversal. This document covers O(1) kind instantiation (intern pool), O(1) relationship linking, O(V+E) traversal, and O(log n) creation-order insert/search (AVL tree), with code examples and diagrams.
 
 🚀 [Performance_overview diagram](https://github.com/ikko/kind/blob/master/docs/topics/9_performance/performance_overview.mmd)
-: A Mermaid diagram providing an overview of the `Kind`'s performance characteristics, including O(1) instantiation, O(1) linking, O(1) cached traversal, and O(log n) indexed operations. This visual aid helps in understanding the underlying mechanisms that contribute to `Kind`'s favorable time complexities.
+: A Mermaid diagram providing an overview of the `Kind`'s performance characteristics, including O(1) instantiation, O(1) linking, O(V+E) traversal, and O(log n) indexed operations. This visual aid helps in understanding the underlying mechanisms that contribute to `Kind`'s favorable time complexities.
 
 ✅ [conclusion](https://github.com/ikko/kind/blob/master/docs/topics/13_conclusion/index.md)
 : Summarizes the `Kind` framework as a high-performance, semantically rich, and thread-safe kind abstraction. It highlights its role as a robust foundation for building DSLs, runtime graphs, and knowledge trees. This document emphasizes the core design principles of structural clarity, cache efficiency, and symbolic extensibility, positioning `Kind` as a valuable tool for modern software engineering challenges.

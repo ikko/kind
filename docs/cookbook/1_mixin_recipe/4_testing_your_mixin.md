@@ -25,12 +25,13 @@ Let's create a test file (e.g., `tests/test_descendant_counter_mixin.py`) for th
 # tests/test_descendant_counter_mixin.py
 
 import pytest
-import anyio
 from kind import Kind
+from kind.core.mixinability import register_mixin
 from my_counter_mixin import DescendantCounterMixin # Assuming my_counter_mixin.py is in your PYTHONPATH
 
 @pytest.fixture
 def sample_kind_graph():
+    register_mixin(DescendantCounterMixin)  # idempotent: re-registering replaces the same mixin
     # A
     # |\
     # B C
@@ -53,63 +54,46 @@ def sample_kind_graph():
 def test_count_descendants_sync(sample_kind_graph):
     a, b, c, d, e = sample_kind_graph
 
+    # Isolation: call the mixin's function directly with a Kind as `self`
+    assert DescendantCounterMixin.count_descendants(a) == 3
+
+    # Integration: the registered method on the Kind itself
     # Test A: should have B, C, D as descendants (3 unique)
-    mixin_a = DescendantCounterMixin(a)
-    assert mixin_a.count_descendants() == 3
+    assert a.count_descendants() == 3
 
     # Test B: should have D as descendant (1 unique)
-    mixin_b = DescendantCounterMixin(b)
-    assert mixin_b.count_descendants() == 1
+    assert b.count_descendants() == 1
 
     # Test C: should have no descendants in this specific graph setup
-    mixin_c = DescendantCounterMixin(c)
-    assert mixin_c.count_descendants() == 0
+    assert c.count_descendants() == 0
 
     # Test D and E: no descendants
-    mixin_d = DescendantCounterMixin(d)
-    assert mixin_d.count_descendants() == 0
-    mixin_e = DescendantCounterMixin(e)
-    assert mixin_e.count_descendants() == 0
+    assert d.count_descendants() == 0
+    assert e.count_descendants() == 0
 
 @pytest.mark.anyio
 async def test_a_count_descendants_async(sample_kind_graph):
     a, b, c, d, e = sample_kind_graph
 
     # Test A
-    mixin_a = DescendantCounterMixin(a)
-    assert await mixin_a.a_count_descendants() == 3
+    assert await a.a_count_descendants() == 3
 
     # Test B
-    mixin_b = DescendantCounterMixin(b)
-    assert await mixin_b.a_count_descendants() == 1
+    assert await b.a_count_descendants() == 1
 
     # Test C
-    mixin_c = DescendantCounterMixin(c)
-    assert await mixin_c.a_count_descendants() == 0
+    assert await c.a_count_descendants() == 0
 
     # Test D and E
-    mixin_d = DescendantCounterMixin(d)
-    assert await mixin_d.a_count_descendants() == 0
-    mixin_e = DescendantCounterMixin(e)
-    assert await mixin_e.a_count_descendants() == 0
-
-# Example of testing integration if mixin methods were directly applied to Kind
-# This would depend on how mixins are applied in your specific Kind setup
-# @pytest.mark.anyio
-# async def test_kind_with_mixin_integration(sample_kind_graph):
-#     a, _, _, _, _ = sample_kind_graph
-#     # Assuming a mechanism to apply mixin methods directly to Kind instances
-#     # For example, if Kind had an 'apply_mixin' method:
-#     # a.apply_mixin(DescendantCounterMixin)
-#     # assert a.count_descendants() == 3
-#     # assert await a.a_count_descendants() == 3
+    assert await d.a_count_descendants() == 0
+    assert await e.a_count_descendants() == 0
 ```
 
 **Explanation:**
 
-*   **`@pytest.fixture` `sample_kind_graph`:** This fixture sets up a consistent `Kind` graph for all tests, ensuring reproducibility.
-*   **`test_count_descendants_sync`:** This test function verifies the synchronous `count_descendants` method for various `Kind` instances within the graph.
-*   **`@pytest.mark.anyio` `test_a_count_descendants_async`:** This test function verifies the asynchronous `a_count_descendants` method. The `@pytest.mark.anyio` decorator is essential for running asynchronous test functions.
+*   **`@pytest.fixture` `sample_kind_graph`:** This fixture registers the mixin and sets up a consistent `Kind` graph for all tests, ensuring reproducibility. Kinds are interned by name for the whole process, so use names that no other test gives a different shape.
+*   **`test_count_descendants_sync`:** This test function verifies the synchronous `count_descendants` method, once in isolation (the plain function with a `Kind` as `self`) and once integrated (called on the `Kind`).
+*   **`@pytest.mark.anyio` `test_a_count_descendants_async`:** This test function verifies the asynchronous `a_count_descendants` method. The `@pytest.mark.anyio` decorator (from the pytest plugin that ships with `anyio`) is essential for running asynchronous test functions.
 *   **Assertions:** We use `assert` statements to compare the actual results from the mixin methods with the expected values.
 
 ## Running the Tests

@@ -1,10 +1,10 @@
 # 1.2 Flyweight Design: Optimizing Kind Instantiation
 
-NThe `Kind` framework leverages the **Flyweight design pattern** to ensure the uniqueness and efficient management of `Kind` instances. This pattern is particularly effective in scenarios where a large number of objects share common state, allowing for significant memory savings and improved performance.
+The `Kind` framework leverages the **Flyweight design pattern** to ensure the uniqueness and efficient management of `Kind` instances. This pattern is particularly effective in scenarios where a large number of objects share common state, allowing for significant memory savings and improved performance.
 
 ## Core Principle: Shared Intrinsic State
 
-In the context of `Kind`, the intrinsic state—the `name` of the kind—is shared. When a request is made to create a `Kind` with a specific name (e.g., `Kind('apple')`), the system first checks if a `Kind` with that name already exists in a central pool. If it does, the existing instance is returned; otherwise, a new instance is created and added to the pool.
+In the context of `Kind`, the intrinsic state—the `name` of the kind—is shared. When a request is made to create a `Kind` with a specific name (e.g., `Kind('apple')`), the system first checks if a `Kind` with that name already exists in a central pool. If it does, the existing instance is returned; otherwise, a new instance is created and added to the pool. There is one pool for all classes, and it is weak: a Kind stays in it only while something references it.
 
 ```mermaid
 graph TD
@@ -12,7 +12,7 @@ graph TD
     B -- "'apple' exists?" --> C{Yes};
     C --> D[Return existing Kind#40;'apple'#41;];
     B -- "'apple' exists?" --> E{No};
-    E --> F[New Kind 'B'];
+    E --> F[New Kind 'apple'];
     F --> G[Add to Kind Pool];
     G --> D;
 
@@ -27,7 +27,7 @@ graph TD
 ## Advantages of Flyweight in Kind
 
 -   **Memory Efficiency**: By ensuring that only one instance of a `Kind` exists for each unique name, the framework drastically reduces memory consumption, especially in applications dealing with vast numbers of symbolic representations (e.g., large knowledge graphs, extensive ontologies).
--   **Consistency and Identity**: The Flyweight pattern guarantees referential equality for kinds with the same name. This means `Kind('A') is Kind('A')` will always evaluate to `True`, simplifying identity checks and ensuring that all references to a particular concept point to the exact same object.
+-   **Consistency and Identity**: The Flyweight pattern guarantees referential equality for kinds with the same name. This means `Kind('A') is Kind('A')` evaluates to `True` (for as long as the Kind is referenced), simplifying identity checks and ensuring that all references to a particular concept point to the exact same object.
 -   **Performance**: Reduced object creation overhead and direct memory address comparisons contribute to faster operations, particularly in graph traversal and relationship management.
 
 ### Code Example: Demonstrating Flyweight Behavior
@@ -52,9 +52,9 @@ print(f"Are kind1 and kind3 the same object? {kind1 is kind3}") # Expected: Fals
 <summary>Outcome</summary>
 
 ```text
-kind1: <Kind: product_id_123>
-kind2: <Kind: product_id_123>
-kind3: <Kind: user_session_abc>
+kind1: product_id_123
+kind2: product_id_123
+kind3: user_session_abc
 Are kind1 and kind2 the same object? True
 Are kind1 and kind3 the same object? False
 ```
@@ -99,9 +99,11 @@ print(f"First 'The' is same as third 'The': {document_words[0] is document_words
 <summary>Outcome</summary>
 
 ```text
-First 'The' is same as second 'The': True
+First 'The' is same as second 'The': False
 First 'The' is same as third 'The': True
 ```
+
+Names are case-sensitive: `k.the` (index 6) is a different Kind from `k.The`.
 </details>
 
 ## Conclusion

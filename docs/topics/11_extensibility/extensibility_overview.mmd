@@ -1,15 +1,15 @@
 graph LR
     subgraph "Kind Extensibility"
-        A[Kindable Type] --> B[Robust Callable Integration];
-        A --> C[Defines __call__ method];
+        A[register_mixin] --> B[Robust Callable Integration];
+        A --> C[First Parameter self];
 
-        D[MixinFunction Protocol] --> E[Formal Mixin Interface];
-        D --> F[Supports Async, Process/Thread Execution];
+        D[Async Mixins] --> E[async def Methods];
+        D --> F[Awaited by the Caller];
 
-        G[KindAdapter - Mixinable Interface] --> H[Enables Different Logical Structures];
-        G --> I[Implemented via Mixinability];
+        G[Adapters via Mixins] --> H[Enables Different Logical Structures];
+        G --> I[apply_mixin_to_instance for One Kind];
 
-        J[Compatible with Enum Reflection] --> K[Kind.from_enum#40#41; Method];
+        J[Compatible with Enum Reflection] --> K[Kind#40member.name, origin=member#41;];
         K --> L[Converts Enum Members to Kinds];
 
         M[External DSL Inputs] --> N[Flexible Parsing];

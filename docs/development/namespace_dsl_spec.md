@@ -6,40 +6,36 @@ tags: [DSL, Symbolic Computation, Graphs, Lazy Evaluation, Python]
 
 ## Overview
 
-`kind.py` implements a **lazy, graph-oriented, immutable kind system** designed as a foundational primitive for domain-specific languages (DSLs), graph transformations, and semantic metadata modeling.
+`kind.py` implements a **lazy, graph-oriented, freezable kind system** designed as a foundational primitive for domain-specific languages (DSLs), graph transformations, and semantic metadata modeling.
 
-It supports symbolic interning, ordered chaining (`que`), DAG tree modeling (`tree`), and polymorphic cross-linking (`relate`), with efficient caching and memory-awareness.
+It supports symbolic interning, ordered chaining (`Kind.next()`), DAG tree modeling (`tree`), and polymorphic cross-linking (`relate`), with lazily created parts, per-instance freezing (`freeze()`, `immute()`) and memory-awareness.
 
 ## Motivation
 
 - Avoid string duplication in symbolic identities
 - Enable semantic modeling via structural relationships
 - Design graph-based, introspectable DSLs
-- Support polymorphic relationship tagging (`related_how`)
+- Support polymorphic relationship tagging (`how`)
 - Optimize evaluation lazily with O(1) reads and O(log n) inserts
 - Track symbolic origin (`.origin`) and memory state
 
 ## Core Components
 
 - `Kind`: atomic unit, uniquely interned string identity
-- `KindNamespace`: attribute-based creation (e.g. `k.user`)
-- `OrderedKindSet`: length-cached deduplicated set
-- `GraphTraversal`: lazy, cycle-safe traversal abstraction
-- `KindAdapter`: modular traversal and relation modeler
+- `KindNamespace`: attribute-based creation (e.g. `k.user`, with `from kind import k`)
+- `OrderedKindSet`: ordered, deduplicated set with O(1) membership (backs `children` and `parents`)
+- `GraphTraversal`: iterative, cycle-safe DFS/BFS traversal (`traverse_mode`, `family_mode`)
 
 ## Relations
 
-- **que**: sequential (`next` / `prev`)
-- **tree**: parent-child DAG
-- **relate**: polymorphic, typed edge with `.related_how`
+- **next**: sequential: `Kind.next()` creates `kind_0`, `kind_1`, ... chained via `_prev` / `_next` (there is no `que()` method)
+- **tree**: parent-child DAG (`kind.tree()` = children only; `kind.graph()` = children, parents and relations)
+- **relate**: polymorphic, typed edge: `a.relate(b, how='x')`, `a.unrelate(b)`, or a dynamic verb such as `a.uses(b)`; stored in `a.relations` by `how`
 
 ## Highlights
 
 ```python
-
-from kind.core.kind_namespace import KindNamespace
-
-k = KindNamespace()
+from kind import k
 
 k.page.append(k.header).append(k.footer)
 k.backend.uses(k.database)
@@ -50,16 +46,19 @@ print(k.page.to_mmd())  # Mermaid.js format
 <summary>Outcome</summary>
 
 ```text
-graph TD
+graph LR
+footer[footer]
+header[header]
+page[page]
     page --> header
-    page --> footer
+    header --> footer
 ```
 </details>
 
 ## Render Pipelines
 
 - `.to_mmd()` — Markdown/HTML embeddable [Mermaid](https://mermaid.js.org) output
-- `.to_svg()` / `.to_png()` — Graphviz-based visualization (via `graphviz` Python binding)
+- `.to_dot()` / `.to_svg()` / `.to_png()` — Graphviz-based visualization (via `graphviz` Python binding), mixins from `kind.builtin.visual`
 - Requires optional extra: `kind[visual]`
 
 ## Installation
@@ -79,17 +78,17 @@ Installing collected packages
 
 - Kind lookup: **O(1)** (intern pool)
 - Tree/graph linking: **O(1)**
-- Cache-aware traversal: amortized **O(1)** after first pass
-- Insert: **O(log n)** if using sorted/positional structure
+- Traversal: **O(V + E)**, iterative and cycle-safe
+- Creation-order index (AVL tree): **O(log n)** insert
 
 ## Memory Behavior
 
-- Controlled origin retention (`Kind.origin`)
-- GC-aware deletion (respecting `ENABLE_ORIGIN`, `MEMORY_AWARE_DELETE`)
+- Controlled origin retention (`Kind.origin`; the first non-None origin given wins)
+- Weak pool: a Kind keeps its identity only while something references it
 
 ## Extensibility
 
-- `KindAdapter` plugins for new traversal topologies
+- Mixins (`register_mixin`) add behaviour to every Kind
 - Async-ready traversal engine (planned)
 - Frontend-ready output formats (Mermaid, SVG, PNG)
 

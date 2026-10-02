@@ -2,7 +2,7 @@ graph TB
     subgraph "Kind Framework Architecture"
         A[User Application] --> B[Kind Package];
         B --> C[kind.core];
-        B --> D[kind.builtins];
+        B --> D[kind.builtin];
     end
 
     subgraph "Core Layer #40;kind.core#41;"
@@ -18,10 +18,12 @@ graph TB
         D --> D4[Pathfinding Extensions];
         D --> D5[Visualization Extensions];
         D --> D6[Timeline Extensions];
+        D --> D7[AVL Tree #40;creation order#41;];
     end
 
     C2 -- "uses #40;controlled dependency#41;" --> D3;
     C2 -- "uses [controlled dependency]" --> D1;
+    C1 -- "uses [controlled dependency]" --> D7;
 
     %% Framework architecture styles
     style A fill:#d5b05d,stroke:#333,stroke-width:2px,color:#000000;
@@ -41,3 +43,4 @@ graph TB
     style D4 fill:#f4a261,stroke:#333,stroke-width:2px,color:#000000;
     style D5 fill:#f4a261,stroke:#333,stroke-width:2px,color:#000000;
     style D6 fill:#f4a261,stroke:#333,stroke-width:2px,color:#000000;
+    style D7 fill:#f4a261,stroke:#333,stroke-width:2px,color:#000000;

@@ -4,7 +4,7 @@ The `Kind` framework introduces the concept of **per-instance indexing**, where 
 
 ## The `KindIndex` Mechanism
 
-At the heart of per-instance indexing is the `KindIndex` class, located in `kind/builtins/index.py`. Each `Kind` instance is initialized with its own `KindIndex` object (as seen in `kind/core/kind.py` within the `__new__` method). This `KindIndex` acts as a localized, internal data store for the `Kind`, allowing it to maintain a structured collection of references to other `Kind` instances, potentially with associated weights or metadata.
+At the heart of per-instance indexing is the `KindIndex` class, located in `kind/builtin/index.py`. Each `Kind` instance gets its own `KindIndex` object, created lazily on first access to `kind.index` (see the `index` property in `kind/core/kind.py`); the index keeps its Kinds sorted by weight in an AVL tree. This `KindIndex` acts as a localized, internal data store for the `Kind`, allowing it to maintain a structured collection of references to other `Kind` instances, potentially with associated weights or metadata.
 
 ```mermaid
 graph TD
@@ -46,29 +46,25 @@ feature_ssd = k.SSD
 feature_ram = k.RAM
 feature_gpu = k.GPU
 
-# Initialize KindIndex for the product (this happens automatically in Kind.__new__)
-# product_laptop.index = KindIndex(product_laptop) # Conceptual, already done
+# The product's KindIndex is created on first access to product_laptop.index
+importance = {feature_ssd: 0.8, feature_ram: 0.6, feature_gpu: 0.9}
 
 # Insert features into the product's private index with weights
-product_laptop.index.insert(feature_ssd, weight=0.8)  # High importance
-product_laptop.index.insert(feature_ram, weight=0.6)  # Medium importance
-product_laptop.index.insert(feature_gpu, weight=0.9)  # Very high importance
+for feature, weight in importance.items():
+    product_laptop.index.insert(feature, weight=weight)
 
-# Traverse the product's index (e.g., by weight)
+# Traverse the product's index in weight order (the AVL tree stays balanced on insert)
 print("Laptop features by importance:")
 for feature_kind in product_laptop.index.traverse(order="in"):
-    print(f"- {feature_kind.name} (Weight: {product_laptop.index._function_map[feature_kind.name].eval_weight()})")
-
-# Rebalance the index based on weight (conceptual, KindIndex supports this)
-# product_laptop.index.rebalance(strategy='weight')
+    print(f"- {feature_kind.name} (Weight: {importance[feature_kind]})")
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
 Laptop features by importance:
-- SSD (Weight: 0.8)
 - RAM (Weight: 0.6)
+- SSD (Weight: 0.8)
 - GPU (Weight: 0.9)
 ```
 </details>

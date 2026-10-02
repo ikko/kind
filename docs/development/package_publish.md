@@ -23,7 +23,6 @@ Before building, it's good practice to clean up any old build artifacts. This en
 rm -rf build/ dist/ kind.egg-info/
 ```
 
-Alternatively, the `publish.py` script handles this automatically.
 
 ### 2. Build the Package
 
@@ -37,14 +36,14 @@ This command will create a `dist/` directory containing the generated package fi
 
 ### 3. Publish the Package
 
-Use the `publish.py` script to upload your package. This script simplifies the process and allows you to easily switch between TestPyPI and the official PyPI.
+Use the `publish.sh` script to upload your package: it runs `twine check dist/*` and then `twine upload dist/*`. Twine reads the target repository and credentials from its environment variables, which lets you switch between TestPyPI and the official PyPI.
 
 #### Publishing to TestPyPI (Recommended for Testing)
 
 It is highly recommended to test your publication process on [TestPyPI](https://test.pypi.org/) first. This allows you to verify that your package builds and uploads correctly without affecting the official PyPI.
 
 ```bash
-python publish.py --test --username __token__ --password <your_testpypi_api_token>
+TWINE_REPOSITORY=testpypi TWINE_USERNAME=__token__ TWINE_PASSWORD=<your_testpypi_api_token> ./publish.sh
 ```
 
 Replace `<your_testpypi_api_token>` with your actual API token from TestPyPI.
@@ -54,7 +53,7 @@ Replace `<your_testpypi_api_token>` with your actual API token from TestPyPI.
 Once you have successfully published to TestPyPI and are confident, you can publish to the official PyPI.
 
 ```bash
-python publish.py --username __token__ --password <your_pypi_api_token>
+TWINE_USERNAME=__token__ TWINE_PASSWORD=<your_pypi_api_token> ./publish.sh
 ```
 
 Replace `<your_pypi_api_token>` with your actual API token from PyPI.
@@ -68,7 +67,7 @@ After successful publication, you can verify your package on:
 *   **TestPyPI**: `https://test.pypi.org/project/kind/<version>`
 *   **PyPI**: `https://pypi.org/project/kind/<version>`
 
-Replace `<version>` with the actual version number of your package (e.g., `0.0.1`).
+Replace `<version>` with the actual version number of your package (e.g., `0.1.0`).
 
 ## Troubleshooting
 

@@ -26,7 +26,7 @@ Let's start with a simple example: scheduling a function to run every minute.
 ```python
 import kind
 import datetime
-import time
+import anyio
 
 # 1. Define the function to be scheduled
 def my_scheduled_task(message: str):
@@ -39,84 +39,98 @@ scheduler = kind.schedule.Scheduler()
 # 3. Add a job
 #    The schedule can be a cron string (e.g., "* * * * *" for every minute)
 #    or an ISO 8601 timestamp for a one-time execution.
-job_id = scheduler.add_job(
+job = kind.schedule.ScheduledJob(
     func=my_scheduled_task,
     args=("Hello from scheduler!",),
     schedule="* * * * *" # Run every minute
 )
-print(f"Job '{job_id}' added to the scheduler.")
+scheduler.add_job(job)
+print(f"Job '{job.id}' added to the scheduler.")
 
-# 4. Start the scheduler (this will block until stopped)
+# 4. Start the scheduler in a task group (this will block until stopped)
+async def main():
+    async with anyio.create_task_group() as task_group:
+        await scheduler.start(task_group)
+
 print("Starting scheduler. Press Ctrl+C to stop.")
 try:
-    scheduler.start()
-    # In a real application, you might run this in a separate thread or process
-    # For demonstration, we'll keep it simple and block.
-    while True:
-        time.sleep(1) # Keep the main thread alive
+    anyio.run(main)
 except KeyboardInterrupt:
     print("Scheduler stopped.")
-finally:
-    scheduler.stop() # Ensure the scheduler is stopped cleanly
 ```
 
 ### Explanation:
 
 -   We define `my_scheduled_task` as the function to be executed.
 -   A `Scheduler` instance is created.
--   `scheduler.add_job()` is used to register `my_scheduled_task` with a cron schedule `"* * * * *"`.
--   `scheduler.start()` begins the scheduling loop. The `try...except KeyboardInterrupt` block allows for graceful shutdown.
+-   A `ScheduledJob` wraps `my_scheduled_task` with a cron schedule `"* * * * *"`; `scheduler.add_job()` registers it.
+-   `scheduler.start(task_group)` begins the scheduling loop as a task. The `try...except KeyboardInterrupt` block allows for graceful shutdown; `await scheduler.stop()` ends the loop from inside the application.
 
-## 3. Managing Jobs: Listing and Removing
+## 3. Managing Jobs: Listing, Removing and Stepping
 
-You can inspect and manage the jobs currently in the scheduler.
+You can inspect and manage the jobs currently in the scheduler. With an injected clock (`now=`) and `run_due_jobs()`, which runs one deterministic step of the loop, no waiting is needed.
 
 ```python
 import kind
 import datetime
-import time
+import anyio
 
 def another_task():
-    print(f"[{datetime.datetime.now()}] Another task executed.")
+    print("Another task executed.")
 
-scheduler = kind.schedule.Scheduler()
+def one_time_task():
+    print("One-time job!")
 
-job1_id = scheduler.add_job(another_task, schedule="*/5 * * * *") # Every 5 minutes
-job2_id = scheduler.add_job(lambda: print("One-time job!"), schedule=datetime.datetime.now() + datetime.timedelta(seconds=10))
+clock = [datetime.datetime(2026, 1, 1, 12, 0)]
+scheduler = kind.schedule.Scheduler(now=lambda: clock[0])
 
-print("\n--- Current Jobs ---")
+job1 = kind.schedule.ScheduledJob(another_task, schedule="*/5 * * * *", now=clock[0]) # Every 5 minutes
+job2 = kind.schedule.ScheduledJob(one_time_task, schedule=clock[0] + datetime.timedelta(seconds=10), now=clock[0])
+scheduler.add_jobs([job1, job2])
+
+print("--- Current Jobs ---")
 for job_id, job in scheduler.job_map.items():
-    print(f"ID: {job_id}, Next Run: {job.next_run}, Schedule: {job.schedule}, Function: {job.func.__name__}")
+    print(f"Next Run: {job.next_run}, Schedule: {job.schedule}, Function: {job.func.__name__}")
 
 # Remove a job
-scheduler.remove_job(job1_id)
-print(f"\nJob '{job1_id}' removed.")
+scheduler.remove_job(job1.id)
+print(f"\nJob '{job1.func.__name__}' removed.")
 
 print("\n--- Jobs After Removal ---")
 for job_id, job in scheduler.job_map.items():
-    print(f"ID: {job_id}, Next Run: {job.next_run}, Schedule: {job.schedule}, Function: {job.func.__name__}")
+    print(f"Next Run: {job.next_run}, Schedule: {job.schedule}, Function: {job.func.__name__}")
 
-# Start and stop the scheduler briefly to see the one-time job execute
-print("\nStarting scheduler briefly...")
-try:
-    scheduler.start()
-    time.sleep(15) # Wait for the one-time job to execute
-except KeyboardInterrupt:
-    pass
-finally:
-    scheduler.stop()
-    print("Scheduler stopped.")
+# Advance the clock and run one step: the one-time job executes
+clock[0] += datetime.timedelta(seconds=10)
+ran = anyio.run(scheduler.run_due_jobs)
+print(f"\nJobs run: {ran}, jobs left: {len(scheduler.job_map)}")
 ```
+<details>
+<summary>Outcome</summary>
+
+```text
+--- Current Jobs ---
+Next Run: 2026-01-01 12:05:00, Schedule: */5 * * * *, Function: another_task
+Next Run: 2026-01-01 12:00:10, Schedule: 2026-01-01 12:00:10, Function: one_time_task
+
+Job 'another_task' removed.
+
+--- Jobs After Removal ---
+Next Run: 2026-01-01 12:00:10, Schedule: 2026-01-01 12:00:10, Function: one_time_task
+One-time job!
+
+Jobs run: 1, jobs left: 0
+```
+</details>
 
 ## 4. Persisting Schedules
 
-For long-running applications, you'll want to persist your scheduled jobs so they are not lost when the application restarts. The `Scheduler` can load and save schedules to a file.
+For long-running applications, you'll want to persist your scheduled jobs so they are not lost when the application restarts. The `Scheduler` saves the schedule to its file whenever jobs change, and loads it on creation. A schedule file names functions by dotted path, and loading it imports code, so a `Scheduler` only resolves functions from the modules listed in `allowed_modules`; anything else raises `CallableNotAllowedError`.
 
 ```python
 import kind
 import datetime
 import os
-import time
 
 SCHEDULE_FILE = "my_schedule.json"
 
@@ -127,32 +141,47 @@ def persistent_task():
 if os.path.exists(SCHEDULE_FILE):
     os.remove(SCHEDULE_FILE)
 
-# First run: Add a job and save the schedule
+# First run: Add a job (add_job saves the schedule)
 print("--- First Run: Adding and Saving Job ---")
 scheduler1 = kind.schedule.Scheduler(schedule_file=SCHEDULE_FILE)
-job_id_persistent = scheduler1.add_job(persistent_task, schedule="* * * * *")
-scheduler1.save_schedule()
-print(f"Job '{job_id_persistent}' added and schedule saved to '{SCHEDULE_FILE}'.")
-scheduler1.stop() # Stop the first scheduler instance
+scheduler1.add_job(kind.schedule.ScheduledJob(persistent_task, schedule="* * * * *"))
+print(f"Job added and schedule saved to '{SCHEDULE_FILE}'.")
 
-# Second run: Load the schedule and run
-print("\n--- Second Run: Loading and Running Job ---")
-scheduler2 = kind.schedule.Scheduler(schedule_file=SCHEDULE_FILE)
+# Second run: Loading refuses functions from modules that were not allowed
+print("\n--- Second Run: Loading the Job ---")
+try:
+    kind.schedule.Scheduler(schedule_file=SCHEDULE_FILE)
+except kind.schedule.CallableNotAllowedError:
+    print("Refused: '__main__' is not in allowed_modules.")
+
+scheduler2 = kind.schedule.Scheduler(schedule_file=SCHEDULE_FILE, allowed_modules=["__main__"])
 print("Loaded jobs:")
 for job_id, job in scheduler2.job_map.items():
-    print(f"ID: {job_id}, Next Run: {job.next_run}, Schedule: {job.schedule}, Function: {job.func.__name__}")
+    print(f"Schedule: {job.schedule}, Function: {job.func.__name__}")
 
-print("Starting scheduler. Press Ctrl+C to stop.")
-try:
-    scheduler2.start()
-    time.sleep(65) # Let it run for a bit to see the persistent task
-except KeyboardInterrupt:
-    print("Scheduler stopped.")
-finally:
-    scheduler2.stop()
-    print("Scheduler stopped.")
-    if os.path.exists(SCHEDULE_FILE):
-        os.remove(SCHEDULE_FILE) # Clean up
+os.remove(SCHEDULE_FILE) # Clean up
+```
+<details>
+<summary>Outcome</summary>
+
+```text
+--- First Run: Adding and Saving Job ---
+Job added and schedule saved to 'my_schedule.json'.
+
+--- Second Run: Loading the Job ---
+Refused: '__main__' is not in allowed_modules.
+Loaded jobs:
+Schedule: * * * * *, Function: persistent_task
+```
+</details>
+
+The same schedule file can be managed from the command line, where every module whose functions jobs may run is given with `-m` (`--allow-module`, repeatable):
+
+```bash
+kind-scheduler -f my_schedule.json -m my_module add my_module.my_function "*/5 * * * *"
+kind-scheduler -f my_schedule.json -m my_module list
+kind-scheduler -f my_schedule.json -m my_module remove JOB_ID
+kind-scheduler -f my_schedule.json -m my_module run
 ```
 
 ## 5. Diagrams
@@ -163,12 +192,12 @@ finally:
 
 graph TD
     A[Application Start] --> B{Scheduler#40;schedule_file=...#41;}
-    B --> C{add_job#40;func, args, schedule#41;}
+    B --> C{add_job#40;ScheduledJob#40;func, args, schedule#41;#41;}
     C --> D[ScheduledJob Created]
     D --> E[Job Added to Scheduler's Internal Map]
-    E --> F{scheduler.start#40;#41;}
+    E --> F{scheduler.start#40;task_group#41;}
     F --> G[Scheduler Loop Runs]
-    G --> H{Check Job Schedules}
+    G --> H{run_due_jobs#40;#41;: Check Job Schedules}
     H -- Job Due --> I[Execute Job Function]
     I --> J[Update Next Run Time]
     H -- No Job Due --> G
@@ -212,18 +241,20 @@ classDiagram
         +func: Callable
         +args: Tuple
         +kwargs: Dict
-        +schedule: str
+        +schedule: str | datetime | date | time | Kind
         +next_run: datetime
-        +last_run: datetime
-        +calculate_next_run()
+        +to_dict()
+        +from_dict(data, allowed_modules)
     }
     class Scheduler {
-        -job_map: Dict[str, ScheduledJob]
-        -schedule_file: Optional[str]
-        +add_job(func, args, kwargs, schedule)
+        +job_map: Dict[str, ScheduledJob]
+        +schedule_file: Optional[str]
+        +allowed_modules: Tuple[str]
+        +add_job(job)
+        +add_jobs(jobs)
         +remove_job(job_id)
-        +list_jobs()
-        +start()
+        +run_due_jobs()
+        +start(task_group)
         +stop()
         +save_schedule()
         +load_schedule()

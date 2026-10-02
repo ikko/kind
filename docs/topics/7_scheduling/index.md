@@ -6,13 +6,13 @@ The `Kind` framework integrates a robust scheduling mechanism, enabling the defe
 
 The scheduling system is built around two primary components:
 
-1.  **`ScheduledJob`**: This class encapsulates a single task to be executed. It holds references to the callable function (`func`), its arguments (`args`, `kwargs`), and crucially, the `schedule` on which it should run. The `schedule` can be a `datetime.datetime` object for one-off tasks, a `cron` string for recurring jobs, or even a `Kind` instance whose name represents an ISO 8601 datetime string.
+1.  **`ScheduledJob`**: This class encapsulates a single task to be executed. It holds references to the callable function (`func`), its arguments (`args`, `kwargs`), and crucially, the `schedule` on which it should run. Its signature is `ScheduledJob(func, args=(), kwargs=None, schedule="* * * * *", id=None, now=None)` (`now` is the base time for the first cron `next_run`). The `schedule` can be a `datetime.datetime`, `datetime.date` or `datetime.time` (or an ISO 8601 string) for one-off tasks, a `cron` string for recurring jobs, or even a `Kind` instance whose name represents an ISO 8601 datetime string.
 
     ```mermaid
     graph TD
             A[Callable Function] --> B[ScheduledJob];
             C[Arguments #40;args, kwargs#41;] --> B;
-            D[Schedule #40;datetime.datetime, cron string, Kind#41;] --> B;
+            D[Schedule #40;datetime, date, time, cron string, Kind#41;] --> B;
             B -- "Calculates" --> E[Next Run Time];
     
         style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
@@ -21,13 +21,13 @@ The scheduling system is built around two primary components:
         style D fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
         style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
     ```
-2.  **`Scheduler`**: This class manages a collection of `ScheduledJob` instances. It operates in a separate thread, continuously monitoring the jobs and executing them when their `next_run` time arrives. The `Scheduler` uses a min-heap (`_schedule`) to efficiently retrieve the next job to be executed, ensuring timely processing. It also supports persistence, allowing the schedule to be saved to and loaded from a file, thus surviving application restarts.
+2.  **`Scheduler`**: This class manages a collection of `ScheduledJob` instances: `Scheduler(schedule_file=None, allowed_modules=(), now=datetime.datetime.now)`. `await scheduler.start(task_group)` runs its loop as a task in an `anyio` task group, executing jobs when their `next_run` time arrives (sync functions in a worker thread, async ones awaited); `await scheduler.run_due_jobs()` is one deterministic step of that loop, and the clock `now` is injectable. The `Scheduler` uses a min-heap (`_schedule`) to efficiently retrieve the next job to be executed, ensuring timely processing. It also supports persistence, allowing the schedule to be saved to and loaded from a file, thus surviving application restarts. A schedule file names functions by dotted path, so loading one runs code: only functions from `allowed_modules` are resolved (CLI: `kind-scheduler -f FILE -m MODULE add|list|remove|run`).
 
     ```mermaid
     graph TD
         A[Scheduler] --> B{add_job#40;#41;};
         B -- "Adds Job to" --> C[Min-Heap];;
-        C -- "Monitors" --> D[Execution Thread];
+        C -- "Monitors" --> D[Loop Task #40;anyio#41;];
         D -- "Executes Job" --> E[Callable Function];
         E -- "If Recurring" --> F[Reschedules Job];
 
@@ -43,31 +43,39 @@ The scheduling system is built around two primary components:
 
 ### Microservice Orchestration
 ```python
-from kind.core.schedule import Scheduler, ScheduledJob
-import datetime, time
+import datetime
 
-def data_ingestion(): print(f"[{datetime.datetime.now()}] Data Ingestion.")
-def data_transformation(): print(f"[{datetime.datetime.now()}] Data Transformation.")
-def data_loading(): print(f"[{datetime.datetime.now()}] Data Loading.")
+import anyio
 
-scheduler = Scheduler()
-scheduler.add_job(ScheduledJob(data_ingestion, args=(), kwargs={}, schedule="* * * * *"))
-scheduler.add_job(ScheduledJob(data_transformation, args=(), kwargs={}, schedule=datetime.datetime.now() + datetime.timedelta(seconds=10)))
-scheduler.add_job(ScheduledJob(data_loading, args=(), kwargs={}, schedule=datetime.datetime.now() + datetime.timedelta(seconds=20)))
+from kind.core.schedule import ScheduledJob, Scheduler
 
-scheduler.start()
-time.sleep(5) # Run for 5 seconds
-scheduler.stop()
+clock = {"now": datetime.datetime(2026, 10, 2, 9, 0, 0)}  # an injectable clock makes runs deterministic
+now = lambda: clock["now"]
+
+def data_ingestion(): print(f"[{now()}] Data Ingestion.")
+def data_transformation(): print(f"[{now()}] Data Transformation.")
+def data_loading(): print(f"[{now()}] Data Loading.")
+
+scheduler = Scheduler(now=now)
+scheduler.add_job(ScheduledJob(data_ingestion, schedule="* * * * *", now=now()))
+scheduler.add_job(ScheduledJob(data_transformation, schedule=now() + datetime.timedelta(seconds=10)))
+scheduler.add_job(ScheduledJob(data_loading, schedule=now() + datetime.timedelta(seconds=20)))
+
+async def main():
+    for _ in range(4):  # four steps, 30 seconds apart; start(task_group) runs this loop for real
+        clock["now"] += datetime.timedelta(seconds=30)
+        await scheduler.run_due_jobs()
+
+anyio.run(main)
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
-[2025-07-06 16:25:00.000000] Data Ingestion.
-[2025-07-06 16:25:00.000000] Data Ingestion.
-[2025-07-06 16:25:00.000000] Data Ingestion.
-[2025-07-06 16:25:00.000000] Data Ingestion.
-[2025-07-06 16:25:00.000000] Data Ingestion.
+[2026-10-02 09:00:30] Data Transformation.
+[2026-10-02 09:00:30] Data Loading.
+[2026-10-02 09:01:00] Data Ingestion.
+[2026-10-02 09:02:00] Data Ingestion.
 ```
 </details>
 
@@ -91,57 +99,46 @@ Automated Report Generation
 For businesses, automated report generation is a common requirement. The `Kind` scheduler can reliably handle tasks like generating daily sales reports, weekly inventory summaries, or monthly financial statements.
 
 ```python
-from kind.core.schedule import Scheduler, ScheduledJob
 import datetime
-import time
+
+import anyio
+
+from kind.core.schedule import ScheduledJob, Scheduler
+
 
 def generate_daily_sales_report():
-    print(f"[{datetime.datetime.now()}] Generating daily sales report...")
-    # Simulate report generation logic
-    time.sleep(0.5)
-    print(f"[{datetime.datetime.now()}] Daily sales report generated.")
+    print("Generating daily sales report...")
+
 
 def generate_weekly_inventory_summary():
-    print(f"[{datetime.datetime.now()}] Generating weekly inventory summary...")
-    # Simulate report generation logic
-    time.sleep(1)
-    print(f"[{datetime.datetime.now()}] Weekly inventory summary generated.")
+    print("Generating weekly inventory summary...")
 
-scheduler = Scheduler()
 
-# Schedule daily sales report for 23:00 every day
-# Note: In a real scenario, you'd set the time more precisely, e.g., '0 23 * * *'
-# For demonstration, we'll schedule it for a few seconds from now.
-daily_report_time = datetime.datetime.now() + datetime.timedelta(seconds=5)
-job_daily = ScheduledJob(generate_daily_sales_report, args=(), kwargs={}, schedule=daily_report_time)
-scheduler.add_job(job_daily)
+async def main():
+    scheduler = Scheduler()
+    # Daily sales report at 23:00, weekly inventory summary on Mondays at 09:00
+    scheduler.add_job(ScheduledJob(generate_daily_sales_report, schedule="0 23 * * *"))
+    scheduler.add_job(ScheduledJob(generate_weekly_inventory_summary, schedule="0 9 * * MON"))
+    # A one-off job two seconds from now, to see the loop at work
+    soon = datetime.datetime.now() + datetime.timedelta(seconds=2)
+    scheduler.add_job(ScheduledJob(generate_daily_sales_report, schedule=soon))
 
-# Schedule weekly inventory summary for every Monday at 09:00
-# For demonstration, we'll use a cron string for every minute
-job_weekly = ScheduledJob(generate_weekly_inventory_summary, args=(), kwargs={}, schedule="* * * * MON")
-scheduler.add_job(job_weekly)
+    print("Starting report generation scheduler...")
+    async with anyio.create_task_group() as task_group:
+        await scheduler.start(task_group)
+        await anyio.sleep(3)  # let it run for a bit
+        await scheduler.stop()
+    print(f"Scheduler stopped. Jobs left: {len(scheduler.job_map)}")
 
-print("Starting report generation scheduler...")
-scheduler.start()
-
-try:
-    time.sleep(70) # Let it run for a bit
-except KeyboardInterrupt:
-    pass
-finally:
-    scheduler.stop()
-    print("Scheduler stopped.")
+anyio.run(main)
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
 Starting report generation scheduler...
-[2025-07-06 16:25:00.000000] Generating daily sales report...
-[2025-07-06 16:25:00.000000] Daily sales report generated.
-[2025-07-06 16:25:00.000000] Generating weekly inventory summary...
-[2025-07-06 16:25:00.000000] Weekly inventory summary generated.
-Scheduler stopped.
+Generating daily sales report...
+Scheduler stopped. Jobs left: 2
 ```
 </details>
 

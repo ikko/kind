@@ -16,17 +16,14 @@ Create a new Python file (e.g., `my_counter_mixin.py`) and define your mixin cla
 ```python
 # my_counter_mixin.py
 
-from kind.core.base_kind import Kind
+from kind.core.kind import Kind
 from typing import Set
 
 class DescendantCounterMixin:
-    def __init__(self, kind_instance: Kind):
-        self.kind = kind_instance
-
-    def count_descendants(self) -> int:
+    def count_descendants(self: Kind) -> int:
         """Counts the total number of unique descendants for this kind."""
         seen_kinds: Set[Kind] = set()
-        queue = list(self.kind.children)
+        queue = list(self.children)
 
         while queue:
             current_kind = queue.pop(0)
@@ -36,7 +33,7 @@ class DescendantCounterMixin:
                     queue.append(child)
         return len(seen_kinds)
 
-    async def a_count_descendants(self) -> int:
+    async def a_count_descendants(self: Kind) -> int:
         """Asynchronously counts the total number of unique descendants for this kind."""
         # For simplicity, this async version just calls the sync version
         # In a real-world scenario, this might involve async I/O or CPU-bound tasks
@@ -47,21 +44,23 @@ class DescendantCounterMixin:
 
 **Explanation:**
 
-*   The `DescendantCounterMixin` class takes a `kind_instance` in its `__init__`, storing a reference to the `Kind` it's extending.
+*   The `DescendantCounterMixin` class has no `__init__`: once registered, its methods live on the `Kind` class, so `self` is the `Kind` being extended.
 *   `count_descendants` is a synchronous method that performs a breadth-first search to find all unique descendants.
 *   `a_count_descendants` is the asynchronous counterpart. For this simple example, it just calls the synchronous version. In a more complex scenario, you might use `anyio.to_thread.run_sync` to offload heavy computation to a thread pool, or perform actual asynchronous operations.
 
 ## Step 2: Apply the Mixin to a Kind
 
-To use your mixin, you need to apply it to a `Kind` instance. The `kind` framework provides mechanisms for this, often through a dedicated `apply_mixin` function or by directly instantiating the mixin with the `Kind`.
-
-For demonstration purposes, let's assume a direct application:
+To use your mixin, register it with `register_mixin`, which attaches its public methods to every `Kind` (to extend a single `Kind` only, use `apply_mixin_to_instance(kind, mixin)`; both live in `kind.core.mixinability`):
 
 ```python
 # main.py (or a test file)
 
 from kind.core.kind import Kind
+from kind.core.mixinability import register_mixin
 from my_counter_mixin import DescendantCounterMixin
+
+# Register the mixin: count_descendants and a_count_descendants appear on every Kind
+register_mixin(DescendantCounterMixin)
 
 # Create some kinds to form a graph
 a = Kind("A")
@@ -76,16 +75,13 @@ b.append(d)
 c.append(e)
 c.append(d)  # D is also a descendant of C
 
-# Apply the mixin to Kind A
-a_with_counter = DescendantCounterMixin(a)
-
-# Now you can call the mixin methods through the mixin instance
-print(f"Kind A has {a_with_counter.count_descendants()} descendants.")
+# Now you can call the mixin methods on the Kind itself
+print(f"Kind A has {a.count_descendants()} descendants.")
 
 
 # For asynchronous methods, use await
 async def main():
-    print(f"Kind A has {await a_with_counter.a_count_descendants()} descendants (async).")
+    print(f"Kind A has {await a.a_count_descendants()} descendants (async).")
 
 
 if __name__ == "__main__":
@@ -104,7 +100,7 @@ Kind A has 4 descendants (async).
 **Explanation:**
 
 *   We create a sample `Kind` graph.
-*   An instance of `DescendantCounterMixin` is created, passing `Kind A` to its constructor.
-*   We then call `count_descendants()` and `a_count_descendants()` on the `a_with_counter` instance. Note that the `Kind` framework typically integrates mixins such that their methods appear directly on the `Kind` object itself (e.g., `a.count_descendants()`). The direct instantiation shown here is for illustrative purposes of the mixin's structure.
+*   `register_mixin(DescendantCounterMixin)` attaches the mixin's public methods to the `Kind` class. It refuses names that already belong to the `Kind` API (unless `safe=False`) and logs why.
+*   We then call `count_descendants()` and `a_count_descendants()` directly on `a`.
 
 This example demonstrates the basic process of defining a mixin and applying it to a `Kind` object. The next step will involve writing tests to ensure your mixin behaves as expected.

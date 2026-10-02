@@ -51,10 +51,10 @@ assert project_alpha is project_alpha_again
 <summary>Outcome</summary>
 
 ```text
-Project Alpha: <Kind: ProjectAlpha>
-Task Design: <Kind: TaskDesign>
-Project Beta: <Kind: ProjectBeta>
-Task Development: <Kind: TaskDevelopment>
+Project Alpha: ProjectAlpha
+Task Design: TaskDesign
+Project Beta: ProjectBeta
+Task Development: TaskDevelopment
 ```
 </details>
 
@@ -93,9 +93,14 @@ print(project_alpha.to_mmd())
 <summary>Outcome</summary>
 
 ```text
-Children of <Kind: ProjectAlpha>: [<Kind: TaskDesign>, <Kind: TaskDevelopment>]
-Parents of <Kind: TaskDesign>: [<Kind: ProjectAlpha>]
-graph TD
+Children of ProjectAlpha: [Kind('TaskDesign'), Kind('TaskDevelopment')]
+Parents of TaskDesign: [Kind('ProjectAlpha')]
+graph LR
+ProjectAlpha[ProjectAlpha]
+SubTaskCoding[SubTaskCoding]
+SubTaskTesting[SubTaskTesting]
+TaskDesign[TaskDesign]
+TaskDevelopment[TaskDevelopment]
     ProjectAlpha --> TaskDesign
     ProjectAlpha --> TaskDevelopment
     TaskDevelopment --> SubTaskCoding
@@ -123,7 +128,7 @@ graph TD
 
 #### 2.1. Enabling Built-in Mixins
 
-The `apply_builtins()` function integrates a set of standard mixins, providing common functionalities like time dimension handling, indexing, and pathfinding.
+The `apply_builtins()` function integrates a set of standard mixins: time dimension handling, pathfinding and Graphviz rendering. `import kind` already applies them; calling it again is idempotent.
 
 ```python
 
@@ -135,8 +140,8 @@ apply_builtins()
 # Example: Telecommunications (Network Event Logging)
 # Analyzing event timestamps
 
-network_event_1 = Kind("2023-10-26T14:05:10Z_ConnectionDrop")
-network_event_2 = Kind("2023-10-26T14:05:35Z_Reconnection")
+network_event_1 = Kind("2023-10-26T14:05:10")  # ConnectionDrop
+network_event_2 = Kind("2023-10-26T14:05:35")  # Reconnection
 
 print(f"Event 1 Datetime: {network_event_1.as_datetime}")
 print(f"Event 2 Datetime: {network_event_2.as_datetime}")
@@ -201,8 +206,12 @@ print(warehouse_a.to_mmd())
 <summary>Outcome</summary>
 
 ```text
-Path from Warehouse A to Retail Store D: ['<Kind: WarehouseA>', '<Kind: FactoryB>', '<Kind: DistributionCenterC>', '<Kind: RetailStoreD>']
-graph TD
+Path from Warehouse A to Retail Store D: ['WarehouseA', 'FactoryB', 'DistributionCenterC', 'RetailStoreD']
+graph LR
+DistributionCenterC[DistributionCenterC]
+FactoryB[FactoryB]
+RetailStoreD[RetailStoreD]
+WarehouseA[WarehouseA]
     WarehouseA --> FactoryB
     FactoryB --> DistributionCenterC
     DistributionCenterC --> RetailStoreD
@@ -251,7 +260,7 @@ print(f"Assets by risk (in-order): {[str(kind) for kind in portfolio.index.trave
 <summary>Outcome</summary>
 
 ```text
-Assets by risk (in-order): ['<Kind: BondB>', '<Kind: MutualFundC>', '<Kind: StockA>']
+Assets by risk (in-order): ['BondB', 'MutualFundC', 'StockA']
 ```
 </details>
 

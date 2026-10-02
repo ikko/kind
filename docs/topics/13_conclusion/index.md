@@ -4,7 +4,7 @@ The `Kind` framework stands as a testament to the power of well-designed abstrac
 
 ## High-Performance and Thread-Safe Abstraction
 
-`Kind` achieves high performance through its O(1) instantiation (via interning) and efficient relationship linking. The underlying mechanisms, such as Python's native list operations and optimized data structures for indexing, contribute to its speed. Furthermore, the framework is designed to be thread-safe, ensuring consistent behavior and data integrity in concurrent environments, which is crucial for multi-threaded applications and distributed systems.
+`Kind` achieves high performance through its average O(1) instantiation (via interning) and efficient relationship linking. The underlying mechanisms, such as ordered sets (`OrderedKindSet`) for children and parents and AVL trees for indexing, contribute to its speed. Furthermore, interning and graph mutations (`append`, `insert`, `relate`, `delete`, ...) run under a process-wide re-entrant lock, ensuring consistent behavior and data integrity in multi-threaded applications.
 
 ### Diagram: Performance & Thread Safety
 ```mermaid
@@ -13,7 +13,7 @@ graph TD
     B --> C[O#40;1#41; Instantiation];
     B --> D[O#40;1#41; Linking];
     A --> E[Thread-Safe];
-    E --> F[Internal Locks];
+    E --> F[Process-wide Re-entrant Lock];
     E --> G[Consistent State];
 
     style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
@@ -52,7 +52,7 @@ These three pillars underpin the `Kind` framework's design philosophy:
 
 -   **Structural Clarity**: The explicit representation of entities as `Kind` objects and relationships as directed edges leads to highly readable and maintainable code. The graph structure is intuitive, making it easier to reason about complex data interdependencies.
 -   **Cache Efficiency**: Through mechanisms like interning and the maturing process, `Kind` optimizes for cache locality and reduces memory overhead. This translates to faster data access and improved overall application performance.
--   **Symbolic Extensibility**: The mixinability and protocol-driven design allow developers to extend `Kind`'s functionality dynamically and safely. This ensures that the framework can evolve and adapt to new requirements without compromising its core stability.
+-   **Symbolic Extensibility**: The mixinability and protocol-driven design allow developers to extend `Kind`'s functionality dynamically, while core names are guarded (mixins themselves are trusted code). This ensures that the framework can evolve and adapt to new requirements without compromising its core stability.
 
 ### Diagram: Design Pillars
 ```mermaid

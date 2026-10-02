@@ -1,27 +1,27 @@
 graph LR
     subgraph "Kind Performance Characteristics"
-        A["O(1) Kind Instantiation"] --> B["Intern Pool [Flyweight Pattern]"];
+        A["O(1) Kind Instantiation"] --> B["Weak Intern Pool [Flyweight Pattern]"];
         A --> C["Memory Efficiency"];
 
-        D["O(1) Relationship Linking"] --> E["Direct List Appends"];
+        D["O(1) Relationship Linking"] --> E["OrderedKindSet Appends"];
         D --> F["Optimized for Graph Building"];
 
-        G["O(1) Traversal with Cache"] --> H["Cached Lengths"];
-        G --> I["Float-based Cursor Insertion"];
+        G["O(1) Sequence Steps"] --> H["Kind.next() Chain (_prev/_next)"];
+        G --> I["Float-based Positions"];
         G --> J["Efficient Graph Navigation"];
 
-        K["O(log n) Insert/Search"] --> L["Bisect-based Insertion Order"];
-        K --> M["Balanced Trees (AVL/Red-Black)"];
+        K["O(log n) Insert/Search"] --> L["Weight-ordered Index"];
+        K --> M["Balanced Tree (AVL)"];
         K --> N["Scalable Indexing"];
     end
 
     subgraph "Underlying Mechanisms"
-        O["Kind._pool"] --> B;
+        O["BaseKind._pool"] --> B;
         P["Kind.children/parents"] --> E;
-        Q["GraphTraversal"] --> H;
-        R["Kind._write_cursor"] --> I;
+        Q["Kind.next()"] --> H;
+        R["BaseKind._write_cursor"] --> I;
         S["KindIndex"] --> L;
-        T["AVLTree/RedBlackTree"] --> M;
+        T["AVLTree"] --> M;
     end
 
     %% O(1) Kind Instantiation - Purple

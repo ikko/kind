@@ -1,35 +1,35 @@
 
 graph
     subgraph "Kind API Highlights"
-        A[Kind#40;name: str#41;] --> B[Globally Interned, Idempotent Constructor];
+        A[Kind#40;name: str#41;] --> B[Interned in a Weak Pool, Idempotent Constructor];
         A --> C[Kind.next#40;#41;];
         C --> D[Creates Auto-Numbered Kind];
         A --> E[kind.append#40;child#41;];
-        A --> F[kind.relate_to#40;other, how#41;];
+        A --> F[kind.relate#40;other, how#41;];
         E --> G[Link Construction];
         F --> G;
         A --> H[kind.tree#40;#41;];
-        A --> I[kind.que#40;#41;];
-        A --> J[kind.relate#40;#41;];
-        H --> K[Lazy Traversal];
+        A --> I[GraphTraversal#40;root, traverse_mode, family_mode#41;];
+        A --> J[kind.graph#40;#41;];
+        H --> K[Traversal];
         I --> K;
         J --> K;
         A --> L[kind.patch#40;other#41;];
-        L --> M[Recursive, Structural Deep Merge];
+        L --> M[Structural Merge of Direct Links];
         A --> N[kind.to_mmd#40;#41;];
         N --> O[Outputs Mermaid Diagram Syntax];
         A --> P[kind.to_ascii#40;#41;];
         P --> Q[Outputs ASCII Art Representation];
         A --> R[kind.delete#40;#41;];
-        R --> S[Removes Node and Inverse References];
+        R --> S[Removes Node, Re-parents Children];
         A --> T[kind.elevate#40;#41;];
         T --> U[Promotes Metadata to Attributes/Methods];
         A --> V[kind.slim#40;#41;];
-        V --> W[Removes Unused Dynamically Applied Mixins];
+        V --> W[Drops SENTINEL Elevated Attributes];
         A --> X[kind.immute#40;#41;];
-        X --> Y[Orchestrates Maturing Process];
+        X --> Y[Elevate, Slim, Freeze this Kind];
         A --> Z[kind.ref];
-        Z --> AA[Alias for kind.origin];
+        Z --> AA[Settable Alias for kind.origin];
         A --> AB[Scheduler.add_job#40;job#41;];
         AB --> AC[Schedules a New Job for Execution];
     end

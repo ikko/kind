@@ -1,22 +1,22 @@
 graph LR
     subgraph "Kind Memory Awareness"
-        A[GC-aware Deletion] --> B[Respects ENABLE_ORIGIN];
-        A --> C[Respects MEMORY_AWARE_DELETE];
+        A[GC-aware Deletion] --> B[Weak Intern Pool];
+        A --> C[Re-parents Children, Removes Relations];
         A --> D[Kind.delete#40#41 Method];
 
         E[Proactive Memory Management] --> F[Kind.context Attribute];
         E --> G[DefDict for Context];
         E --> H[Kind.clear_context#40#41 Method];
 
-        I[deep_del Utility] --> J[Recursively Deletes Attributes];
-        I --> K[Handles Unreferenced Objects];
-        I --> L[Used by slim#40#41; and clear_context#40#41;];
+        I[slim#40#41;] --> J[Drops SENTINEL Elevated Attributes];
+        I --> K[Leaves Collection to Python's GC];
+        I --> L[Part of immute#40#41;];
     end
 
     subgraph "Key Concepts"
         M[Python's Garbage Collector] --> N[Reference Counting];
         M --> O[Cycle Detection];
-        P[Weak References] --> Q[Avoids Strong Cycles];
+        P[Weak References] --> Q[Pool Does Not Keep Kinds Alive];
     end
 
     subgraph "Benefits"

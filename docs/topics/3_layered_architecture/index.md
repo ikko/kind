@@ -1,6 +1,6 @@
 # 1.3 Layered Architecture: Modularity and Extensibility
 
-The `Kind` framework is designed with a **layered architecture**, a fundamental principle that separates concerns into distinct, hierarchical layers. This approach ensures a lean and stable core while allowing for flexible and modular extension of functionalities. The primary distinction is between the `kind.core` package, which houses the essential building blocks, and the `kind.builtins` package, which provides optional, high-level extensions.
+The `Kind` framework is designed with a **layered architecture**, a fundamental principle that separates concerns into distinct, hierarchical layers. This approach ensures a lean and stable core while allowing for flexible and modular extension of functionalities. The primary distinction is between the `kind.core` package, which houses the essential building blocks, and the `kind.builtin` package, which provides optional, high-level extensions.
 
 ## Core Layer (`kind.core`)
 
@@ -13,32 +13,53 @@ This layer represents the foundational elements of the `Kind` framework. It cont
 ```mermaid
 graph TD
     A[kind.core] --> B[base_kind.py];
-    A --> C[kind.py];
-    A --> D[maturing.py];
-    A --> E[mixinability.py];
+    A --> C[batch_processing.py];
+    A --> D[graph_traversal.py];
+    A --> E[kind.py];
+    A --> F[kind_namespace.py];
+    A --> G[lazy_kind.py];
+    A --> H[maturing.py];
+    A --> I[mixin_validator.py];
+    A --> J[mixinability.py];
+    A --> K[mixins.py];
+    A --> L[protocols.py];
+    A --> M[relations.py];
+    A --> N[schedule.py];
+    A --> O[time_arithmetics.py];
 
     style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
     style B fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style C fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style D fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style E fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style F fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style G fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style H fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style I fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style J fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style K fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style L fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style M fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style N fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style O fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
 ```
-## Builtin Extensions Layer (`kind.builtins`)
+## Builtin Extensions Layer (`kind.builtin`)
 
 This layer comprises a collection of modular extensions that provide specialized functionalities to `Kind` objects. These extensions are designed to be plug-and-play, allowing developers to include only the features relevant to their specific application without bloating the core.
 
--   **Modularity**: Each module within `kind.builtins` addresses a specific domain (e.g., date/time, collections, visualization).
+-   **Modularity**: Each module within `kind.builtin` addresses a specific domain (e.g., date/time, collections, visualization).
 -   **Extensibility**: New functionalities can be easily added by creating new modules in this layer, adhering to the framework's extension protocols.
--   **Controlled Dependencies**: While `kind.builtins` modules depend on `kind.core`, the `kind.core` generally remains independent of `kind.builtins`, maintaining the hierarchical integrity.
+-   **Controlled Dependencies**: While `kind.builtin` modules depend on `kind.core`, the `kind.core` generally remains independent of `kind.builtin`, maintaining the hierarchical integrity.
 
 ```mermaid
 graph TD
-    A[kind.builtins] --> B[collections.py];
-    A --> C[time_dim.py];
+    A[kind.builtin] --> B[avl_tree.py];
+    A --> C[collections.py];
     A --> D[index.py];
     A --> E[path.py];
-    A --> F[visual.py];
+    A --> F[time_dim.py];
     A --> G[timeline.py];
+    A --> H[visual.py];
 
     style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
     style B fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
@@ -47,26 +68,38 @@ graph TD
     style E fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style F fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style G fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
+    style H fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
 ```
+
+The `kind-scheduler` command line tool lives in `kind.bin.scheduler`, on top of `kind.core.schedule`.
+
 ## Inter-Layer Communication
 
-The `kind.core` package, particularly `kind.py`, integrates with selected `kind.builtins` modules to enhance its fundamental capabilities. For instance, `KindIndex` from `kind.builtins.index` is used within the `Kind` class to manage per-instance indexing. This controlled dependency allows the core to leverage specialized, well-encapsulated functionalities without compromising its lean design.
+The `kind.core` package, particularly `kind.py`, integrates with selected `kind.builtin` modules to enhance its fundamental capabilities. For instance, `KindIndex` from `kind.builtin.index` is used within the `Kind` class to manage per-instance indexing, `OrderedKindSet` from `kind.builtin.collections` holds `children` and `parents`, and `AVLTree` from `kind.builtin.avl_tree` keeps the live Kinds in creation order. This controlled dependency allows the core to leverage specialized, well-encapsulated functionalities without compromising its lean design.
 
 ### Code Example: Core Leveraging Builtins
 
 ```python
-# From kind/core/kind.py
-from ..builtins.collections import OrderedKindSet
-from ..builtins.index import KindIndex
+# From kind/core/kind.py (abridged)
+from kind.builtin.collections import OrderedKindSet
+from kind.builtin.index import KindIndex
+from kind.core.base_kind import BaseKind
+from kind.core.lazy_kind import SENTINEL
+
 
 class Kind(BaseKind):
-    def __new__(cls, name: str, origin: Optional[Any] = None):
-        obj = super().__new__(cls, name, origin)
-        if not hasattr(obj, 'index'):
-            obj.index = KindIndex(obj) # Core uses a builtin for indexing
-            obj.metadata = DefDict()
-            obj.context = DefDict()
-        # ... rest of __new__
+    def _init_slots(self, name, origin):
+        super()._init_slots(name, origin)
+        object.__setattr__(self, 'parents', OrderedKindSet())
+        object.__setattr__(self, 'children', OrderedKindSet())
+        object.__setattr__(self, '_index', SENTINEL)
+        # ... metadata, context and relations are created lazily as well
+
+    @property
+    def index(self) -> KindIndex:
+        if self._index is SENTINEL:
+            object.__setattr__(self, '_index', KindIndex(self))  # Core uses a builtin for indexing
+        return self._index
 ```
 
 ### Industry Applications

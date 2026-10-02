@@ -10,19 +10,15 @@ kind/builtin/avl_tree.py
 kind/builtin/collections.py
 kind/builtin/index.py
 kind/builtin/path.py
-kind/builtin/red_black_tree.py
 kind/builtin/time_dim.py
 kind/builtin/timeline.py
 kind/builtin/visual.py
-kind/config.py
 kind/core/__init__.py
 kind/core/base_kind.py
 kind/core/batch_processing.py
 kind/core/graph_traversal.py
 kind/core/kind.py
 kind/core/kind_namespace.py
-kind/core/kindable.py
-kind/core/lazy.py
 kind/core/lazy_kind.py
 kind/core/maturing.py
 kind/core/mixin_validator.py
@@ -32,7 +28,4 @@ kind/core/protocols.py
 kind/core/relations.py
 kind/core/schedule.py
 kind/core/time_arithmetics.py
-kind/core/type_var_t.py
-kind/utils/__init__.py
-kind/utils/memory.py
 ```

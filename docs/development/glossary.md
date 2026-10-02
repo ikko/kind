@@ -10,7 +10,7 @@ The `Kind` class serves as the foundational data structure, representing a node 
 
 ### Mixin-based Extensibility
 
-The `mixinability` module implements a sophisticated mechanism for dynamically adding and removing functionality to the `Kind` class at runtime. This pattern allows for a high degree of modularity and code reuse, as new features can be developed and tested in isolation before being integrated into the main application.
+The `mixinability` module implements a sophisticated mechanism for dynamically adding functionality to the `Kind` class at runtime (`register_mixin`; `lock_mixins()` closes the registry). This pattern allows for a high degree of modularity and code reuse, as new features can be developed and tested in isolation before being integrated into the main application.
 
 ### Metadata Elevation
 
@@ -32,4 +32,4 @@ The `GraphTraversal` class provides a generic implementation of graph traversal 
 
 ### Lazy Evaluation
 
-The `.schedule` feature will be implemented using a lazy evaluation strategy, where computations are deferred until their results are actually needed. This pattern can lead to significant performance improvements, especially in applications that deal with large or complex data structures.
+`LazyKind` defers the conversion of a value to a `Kind` until it is first used, and a `Kind` creates its `metadata`, `context`, `index` and `relations` only on first access, so computations are deferred until their results are actually needed. This pattern can lead to significant performance improvements, especially in applications that deal with large or complex data structures.

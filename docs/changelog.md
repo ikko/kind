@@ -1,8 +1,33 @@
 # Changelog
 
-## [Unreleased]
+## [v0.1.0] - 2026-10-02
 ### Changed
 - **Renamed from `symb` to `kind`**: the distribution, the package and the CLI. `Symbol` → `Kind`, `BaseSymbol` → `BaseKind`, `SymbolNamespace` → `KindNamespace`, `to_sym` → `to_kind`, and the namespace object `s` → `k` (`from kind import k`). The console script is `kind-scheduler`, because `kind` is the Kubernetes-in-Docker binary. Earlier entries below use the new names.
+- **Requires Python >= 3.10.**
+- **Weak, shared intern pool**: one pool for all Kind classes; a Kind keeps its identity only while something references it.
+- **`origin` defaults to `None`**; the first non-`None` origin given wins. `kind.ref` is a settable alias of `origin`.
+- **Per-instance freezing**: `kind.freeze()`, `kind.frozen`, and `kind.immute()` (elevate → slim → freeze) act on one Kind; a frozen Kind raises `FrozenKindError` on any attribute, edge or relation change. The process-wide mixin registry lock is `lock_mixins()` / `mixins_locked()`.
+- **`register_mixin(value, name=None, target_class=None, safe=True, expand=True)`**: refuses strings (no `eval`), private/dunder names, and core names unless `safe=False`; replacing a registered mixin is allowed. The validator checks the signature only (first parameter `self`); a mixin is trusted code.
+- **`slim()`** drops only elevated attributes whose value is `SENTINEL` (unless protected); no `gc.collect()`. **`elevate()`** keeps keys that name Kind methods or read-only properties in metadata, with a warning.
+- **`to_mmd()`** takes no `mode`: `graph LR`, sorted node declarations with shapes, then `A --> B` / `A -- how --> B` edges. Graphviz output (`to_dot`, `to_svg`, `to_png`, `a_to_svg`, `a_to_png`, DOT names escaped) and `from_mmd` live in `kind.builtin.visual` as mixins on every Kind; `KindRender(kind)` wraps only the Graphviz renderers.
+- **Traversal**: `to_ascii(traverse_mode, family_mode)` and `GraphTraversal(root, traverse_mode, family_mode)` (`family_mode` also accepts `'children_only'`); `kind.tree()` walks children only, `kind.graph()` children, parents and relations.
+- **Relations**: `a.relate(b, how=...)`, `a.unrelate(b, how=None)`, and dynamic verbs (`a.has_kind(b)`) for any public name; relations hold strong references.
+- **Serialization**: `to_json`/`to_yaml`/`to_toml` dump only the connected component of the Kind; `from_*` merge into existing Kinds by name.
+- **`Kind.from_object`**: scalars become the Kind of their text (`123` → `Kind('123')`); containers become a Kind named by their content, with items as children and a `has_kind` relation to `Kind('list')` (or `tuple`/`set`/`dict`).
+- **Creation order**: `Kind.next()` chains `kind_0`, `kind_1`, …; `Kind.first()`/`last()`/`len()`/`seek(pos)`/`each(start)` cover all live Kinds in creation order. `insert(child, at)` places a child at list index `at`.
+- **`children`/`parents` are `OrderedKindSet`**: ordered, O(1) membership, no duplicates.
+- **Time views** are `kind.time_head` / `kind.time_tail`; `KindHeadTailView.filter_by_weekday(weekday)` filters by weekday number, `filter_by_workday()` keeps Monday–Friday.
+- **Scheduler**: `Scheduler(schedule_file=None, allowed_modules=(), now=datetime.datetime.now)`; `ScheduledJob(func, args=(), kwargs=None, schedule=..., id=None)`; `run_due_jobs()` runs one deterministic step. `process_batch(batch, func, new_thread=True)` and `a_process_batch(batch, func)`.
+### Added
+- **`Timeline.overlap(other)`**: returns a Timeline of the common periods.
+### Security
+- **Schedule files** may only name functions from `allowed_modules` (CLI: `kind-scheduler -f FILE -m MODULE add|list|remove|run`).
+- **`register_mixin`** no longer evaluates strings.
+- **DOT output** escapes Kind names, so a name cannot inject Graphviz attributes.
+### Removed
+- The global `freeze()` / `is_frozen()` (see per-instance freezing above), `apply_mixin` (use `apply_mixin_to_instance`), `Kind.prev()`, the length cache, `que()`, `graph_mode`, the `mode` argument of `to_mmd()`, `KindRender.to_mmd`/`to_ascii`, the `from_int`/`from_float`/`from_str`/`from_bool`/`from_none`/`from_enum`/`from_list` constructors (use `Kind.from_object` / `to_kind`), the `new_process`/`new_thread` flags of `ScheduledJob`, and the `new_process` flag of `process_batch`.
+- Modules `kind/builtin/red_black_tree.py` (`AVLTree` remains), `kind/core/kindable.py`, `kind/core/lazy.py`, `kind/core/type_var_t.py`, `kind/utils/memory.py` and `kind/config.py`; `SENTINEL` lives in `kind/core/lazy_kind.py`.
+- Import-time `logging.basicConfig` calls: the library no longer configures root logging.
 ### Fixed
 - **Installable package**: the `symb` 0.0.10 wheel installed top-level `core`, `builtin`, `bin` and `utils` packages, so `import symb` failed after `pip install`. All imports are now absolute (`kind.core…`), and the wheel contains only `kind/`.
 - **One copy of each module**: mixin discovery imported `symb.core.*` while the rest of the code used `core.*`, so two distinct `Symbol` classes were loaded.
@@ -12,15 +37,15 @@
 - **Dynamic Relation Syntax**: Introduced a more intuitive and expressive API for defining relationships between `Kind` instances (e.g., `kind.relates_to(other)` instead of `kind.relate(other, how='relates_to')`). This enhances the readability and semantic clarity of graph construction, aligning with principles of Domain-Specific Languages (DSLs).
 - **Comprehensive Serialization/Deserialization**: Added robust capabilities for persisting and reconstructing `Kind` graphs to/from various structured data formats: JSON (`to_json`, `from_json`), YAML (`to_yaml`, `from_yaml`), and TOML (`to_toml`, `from_toml`). This significantly improves data interchange, reproducibility, and integration with external systems.
 - **ASCII Graph Round-trip**: Implemented `Kind.from_ascii()` to complement the enhanced `Kind.to_ascii()`, enabling full round-trip serialization of `Kind` graphs into human-readable ASCII representations. This is invaluable for debugging, visualization, and simplified data sharing.
-- **Configurable Graph Traversal**: Introduced a dedicated `GraphTraversal` class with parameters (`traverse_mode`, `family_mode`, `graph_mode`) for fine-grained control over graph exploration strategies (DFS, BFS, and specific family/general relation traversal orders). This provides greater flexibility for algorithmic development and analysis.
-- **PyPI-Optimized Documentation**: Integrated a new `docs/pypi_org/` directory with scripts (`start.sh`, `update.py`) to generate a PyPI-specific `README.md` that includes rendered SVG diagrams and transformed links. This enhances the project's presentation and accessibility on the Python Package Index.
+- **Configurable Graph Traversal**: Introduced a dedicated `GraphTraversal` class with parameters (`traverse_mode`, `family_mode`, and `graph_mode`, removed in v0.1.0) for fine-grained control over graph exploration strategies (DFS, BFS, and specific family/general relation traversal orders). This provides greater flexibility for algorithmic development and analysis.
+- **PyPI-Optimized Documentation**: Integrated a new `docs/pypi_org/` directory (now `docs/package/`) with scripts (`start.sh`, `update.py`) to generate a PyPI-specific `README.md` that includes rendered SVG diagrams and transformed links. This enhances the project's presentation and accessibility on the Python Package Index.
 - **Formalized Development Planning**: Added `docs/plan.md` and `docs/todo.md` to formalize development planning and task tracking, promoting a more structured and transparent project management approach.
 - **Software Architecture Overview**: Included `docs/software_architecture.md` to provide a high-level overview of the system's design, aiding in comprehension for new contributors and facilitating architectural discussions.
 
 ### Changed
-- **Architectural Decomposition**: Performed a significant refactoring of the core `Kind` implementation, decomposing `kind/core/kind.py` into `kind/core/kind.py` (for core `Kind` logic) and `kind/core/kind_namespace.py` (for the `s` namespace and related utilities). This enhances modularity, reduces coupling, and improves maintainability.
+- **Architectural Decomposition**: Performed a significant refactoring of the core `Kind` implementation, decomposing `kind/core/kind.py` into `kind/core/kind.py` (for core `Kind` logic) and `kind/core/kind_namespace.py` (for the `k` namespace and related utilities). This enhances modularity, reduces coupling, and improves maintainability.
 - **Module Renaming**: Renamed the `kind/builtins` package to `kind/builtin` for improved naming consistency and adherence to Python's standard library conventions. All internal and external references have been updated accordingly.
-- **Python Version Requirement**: Increased the minimum required Python version from `3.6` to `3.8` in `pyproject.toml` to leverage modern language features and ensure compatibility with contemporary development environments.
+- **Python Version Requirement**: Increased the minimum required Python version from `3.6` to `3.8` in `pyproject.toml` (raised to `3.10` in v0.1.0) to leverage modern language features and ensure compatibility with contemporary development environments.
 - **Project Metadata**: Updated `pyproject.toml` with comprehensive project metadata, including PyPI classifiers, author information, and explicit URLs for homepage, repository, and documentation. This improves project discoverability and formalizes its distribution.
 - **Test Fixture Refinement**: Modified `tests/conftest.py` to introduce a more robust `kind_fixture` that ensures a clean `Kind._pool` state for each test and pre-populates a complex bioinformatics graph for comprehensive testing of graph operations and serialization.
 

@@ -13,7 +13,7 @@ To provide flexibility, the `GraphTraversal.to_ascii` method will be extended wi
 
 *   `traverse_mode: Literal["dfs", "bfs"] = "dfs"`: Determines the general graph traversal order (Depth-First Search or Breadth-First Search).
 *   `family_mode: Literal["children_first", "parents_first"] = "children_first"`: Specifies the traversal order within the parent-child hierarchy.
-*   `graph_mode: Literal["dfs", "bfs"] = "dfs"`: Specifies the traversal order for general relations.
+*   ~~`graph_mode`~~: not implemented. Relations are walked by the same `traverse_mode`, after the family members of each Kind.
 
 ### 3.2. Enhanced Content Export
 The ASCII output will be augmented to include:
@@ -22,7 +22,7 @@ The ASCII output will be augmented to include:
 *   **Nested Elements:** The traversal logic will ensure that all connected kinds are included, preventing infinite loops by tracking visited nodes. The export will stop traversing a path when it encounters an already exported kind.
 
 ### 3.3. Implementation Details
-*   Modify `GraphTraversal.__init__` to accept the new `traverse_mode`, `family_mode`, and `graph_mode` parameters.
+*   Modify `GraphTraversal.__init__` to accept the new `traverse_mode` and `family_mode` parameters.
 *   Refactor `GraphTraversal.traverse` (or create new internal methods) to implement DFS and BFS logic, considering both family and general graph relations.
 *   Update `GraphTraversal.to_ascii` to utilize the chosen traversal modes and to format the output to include relation information.
 *   Update `Kind.to_ascii` to accept and pass these new parameters to `GraphTraversal.to_ascii`.
@@ -46,7 +46,7 @@ The initial implementation will focus solely on the "happy path," assuming a wel
 
 ### 5.1. Unit Tests for `.to_ascii`
 *   Create test cases to verify the output of `.to_ascii` for various graph structures (simple trees, graphs with relations, cycles).
-*   Test different combinations of `traverse_mode`, `family_mode`, and `graph_mode`.
+*   Test different combinations of `traverse_mode` and `family_mode`.
 *   Ensure correct indentation and representation of relations.
 
 ### 5.2. Unit Tests for `.from_ascii`
@@ -58,7 +58,7 @@ The initial implementation will focus solely on the "happy path," assuming a wel
 *   Verify that the `reconstructed_kind_graph` is structurally and relationally equivalent to the original `kind_graph`.
 
 ## 6. Deliverables
-*   Modified `kind/core/kind.py` with enhanced `GraphTraversal.to_ascii` and new `Kind.from_ascii`.
+*   Modified `kind/core/graph_traversal.py` (enhanced `GraphTraversal.to_ascii`) and `kind/core/kind.py` (new `Kind.from_ascii`).
 *   Updated test files (e.g., `tests/core/test_kind.py`) with new test cases.
 *   This `docs/plan.md` document.
 *   `docs/todo.md` for tracking progress.

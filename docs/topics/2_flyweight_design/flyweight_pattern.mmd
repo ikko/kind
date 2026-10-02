@@ -1,7 +1,7 @@
 graph TB
     subgraph "Flyweight Pattern for Kind Instantiation"
         A[Client] --> B[Kind Factory: Kind.__new__];
-        B -- "Request Kind['Name']" --> C[Kind Pool - Kind._pool];
+        B -- "Request Kind['Name']" --> C[Weak Kind Pool - BaseKind._pool];
         C -- "Check if 'Name' exists" --> D{Exists?};
         D -- "Yes" --> E[Return Existing Kind Instance];
         D -- "No" --> F[Create New Kind Instance];

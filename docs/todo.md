@@ -5,7 +5,7 @@
 - [x] Create `docs/todo.md`
 
 ## Phase 2: Enhance `.to_ascii`
-- [x] Modify `GraphTraversal.__init__` to accept `traverse_mode`, `family_mode`, `graph_mode`.
+- [x] Modify `GraphTraversal.__init__` to accept `traverse_mode`, `family_mode` (no `graph_mode`: relations follow `traverse_mode`).
 - [x] Refactor `GraphTraversal.traverse` to implement DFS/BFS for family and general relations.
 - [x] Update `GraphTraversal.to_ascii` to format output with relations as explicit `Source --relation_type--> Target` lines.
 - [x] Update `Kind.to_ascii` to pass new parameters.
@@ -16,9 +16,9 @@
 - [x] Implement parsing logic for relationship reconstruction.
 
 ## Phase 4: Testing
-- [ ] Write unit tests for enhanced `.to_ascii`.
-- [ ] Write unit tests for new `.from_ascii`.
-- [ ] Write roundtrip tests (`to_ascii` -> `from_ascii`).
+- [x] Write unit tests for enhanced `.to_ascii` (`tests/core/test_kind.py`).
+- [x] Write unit tests for new `.from_ascii` (`tests/core/test_kind.py`).
+- [x] Write roundtrip tests (`to_ascii` -> `from_ascii`) (`tests/core/test_kind.py`).
 
 ## Phase 5: Refinement (Future Iterations)
 - [ ] Add error handling for malformed ASCII input in `.from_ascii`.

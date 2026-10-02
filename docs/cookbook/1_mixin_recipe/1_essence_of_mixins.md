@@ -21,8 +21,8 @@ The primary motivations for adopting a mixin-based architecture in `kind` are:
 
 ## How Mixins Work in `kind`
 
-In `kind`, a mixin is typically implemented as a Python class that provides a set of methods and attributes. These methods are then "mixed in" to `Kind` instances, making them available as if they were part of the `Kind`'s original definition. The framework handles the underlying mechanism of integrating these mixin methods, often through dynamic method binding or protocol adherence.
+In `kind`, a mixin is typically implemented as a Python class that provides a set of methods and attributes. These methods are then "mixed in" to `Kind` instances, making them available as if they were part of the `Kind`'s original definition. The framework handles the underlying mechanism: `register_mixin` attaches the methods to the class, so every `Kind` gets them, and `apply_mixin_to_instance` attaches them to a single `Kind`.
 
-Consider a scenario where you want to add visualization capabilities to your `Kind` objects. Instead of creating a `VisualKind` class that inherits from `Kind` and implements visualization logic, you would create a `VisualMixin` (or `KindRender` as seen in `kind.builtins.visual`) that encapsulates the visualization methods. This mixin can then be applied to any `Kind` instance, granting it visualization capabilities without altering its core identity or introducing complex inheritance chains.
+Consider a scenario where you want to add visualization capabilities to your `Kind` objects. Instead of creating a `VisualKind` class that inherits from `Kind` and implements visualization logic, you would write the visualization methods once (as `to_dot`, `to_svg` and `to_png` in `kind.builtin.visual`, which are registered on every `Kind`; `KindRender` there is only a thin wrapper around them). These methods are then available on any `Kind` instance, granting it visualization capabilities without altering its core identity or introducing complex inheritance chains.
 
 This approach aligns with the principles of composition over inheritance, leading to a more flexible, scalable, and maintainable symbolic framework.

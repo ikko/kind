@@ -8,15 +8,12 @@ graph TD
         C --> F[AVLTree for Numbered Kinds];
     end
 
-    subgraph Relational System (Current)
+    subgraph Relational System
         B --> G[relate/unrelate methods];
-        G --> H{related_to & related_how lists};
-    end
-
-    subgraph Relational System (Proposed)
-        B --> I[Dynamic __getattr__];
+        G --> H{Relations: how maps to OrderedKindSet, strong refs};
+        B --> I[Dynamic __getattr__ verbs, e.g. has_kind];
         I --> J{Relations Class (dict-like)};
-        J --> K[Relation objects];
+        J --> G;
     end
 
     subgraph Advanced Features
@@ -45,7 +42,6 @@ graph TD
     style H fill:#f99,stroke:#333,stroke-width:2px
     style I fill:#9f9,stroke:#333,stroke-width:2px
     style J fill:#9f9,stroke:#333,stroke-width:2px
-    style K fill:#9f9,stroke:#333,stroke-width:2px
     style L fill:#cfc,stroke:#333,stroke-width:2px
     style M fill:#cfc,stroke:#333,stroke-width:2px
     style N fill:#cfc,stroke:#333,stroke-width:2px

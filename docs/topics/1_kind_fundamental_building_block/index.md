@@ -9,7 +9,7 @@ The `Kind` object serves as the atomic unit within the framework, embodying a no
 
 ## Uniqueness and Interning
 
-Each `Kind` instance is uniquely identified by its `name` attribute. This uniqueness is enforced through an interning mechanism, ensuring that `Kind('A')` will always return the same object in memory as any subsequent call to `Kind('A')`. This design choice offers significant advantages:
+Each `Kind` instance is uniquely identified by its `name` attribute. This uniqueness is enforced through an interning mechanism, ensuring that `Kind('A')` returns the same object in memory as any subsequent call to `Kind('A')`. The pool is weak: a Kind keeps its identity only while something references it. This design choice offers significant advantages:
 
 -   **Memory Efficiency**: Prevents redundant object creation, reducing memory footprint, especially in large graphs with many identical symbolic representations.
 -   **Consistency**: Guarantees that operations on a kind consistently refer to the same underlying entity, simplifying identity checks and graph integrity.
@@ -42,9 +42,9 @@ graph TD
 
 The framework provides intuitive methods for establishing and managing these relationships:
 
--   `kind.add(child)`: Establishes a directed relationship from `kind` to `child`. If the relationship already exists, it is idempotent.
--   `kind.append(child)`: Similar to `add`, but ensures the child is added to the end of the children list if not already present.
--   `kind.delete()`: Removes a kind from the graph, severing its connections to parents and children.
+-   `kind.append(child)`: Establishes a directed relationship from `kind` to `child` (idempotent: `children` is an `OrderedKindSet`, ordered, without duplicates) and returns `child`.
+-   `kind.add(child)`: Like `append`, but returns `kind`, so calls can be chained.
+-   `kind.delete()`: Removes a kind from the graph and the pool; its children move up to its parents.
 
 ### Illustrative Example: Supply Chain Modeling
 
@@ -108,23 +108,30 @@ print(google.to_mmd())
 
 ```text
 - Alice
-  - Person
   - Google
-    - Organization
     - London
       - Location
-  - Tech_Conference_2025
-    - Event
+      - Tech_Conference_2025
+        - Event
+    - Organization
+  - Person
+    - Bob
 
-graph TD
+graph LR
+Google[Google]
+Location[Location]
+London[London]
+Organization[Organization]
     Google --> Organization
     Google --> London
     London --> Location
 ```
 
+`to_ascii()` walks children and then parents (`family_mode='children_first'`), by name within each group, so `London`'s other parent `Tech_Conference_2025` and `Person`'s other parent `Bob` appear too.
+
 **Rendered Mermaid Diagram:**
 ```mermaid
-graph TD
+graph LR
     Google --> Organization
     Google --> London
     London --> Location
@@ -139,11 +146,10 @@ graph TD
 ```python
 from kind import k, Kind
 from kind.core.mixinability import register_mixin
-from kind.core.protocols import KindProtocol
 from kind.builtin import apply_builtins
 
 
-class KnowledgeGraphMixin(KindProtocol):
+class KnowledgeGraphMixin:
     def has_title(self, title: Kind):
         self.add(title)
 
@@ -186,11 +192,10 @@ Author of Paper A: Alice_Smith
 ```python
 from kind import k, Kind
 from kind.core.mixinability import register_mixin
-from kind.core.protocols import KindProtocol
 from kind.builtin import apply_builtins
 
 
-class KnowledgeGraphMixin(KindProtocol):
+class KnowledgeGraphMixin:
     def has_title(self, title: Kind):
         self.add(title)
 
@@ -229,6 +234,10 @@ Bicycle components: ['Frame', 'Wheel_Assembly', 'Handlebars']
 Wheel Assembly components: ['Rim', 'Spokes', 'Tire']
 ```
 </details>
+
+## Kind vs type
+
+How a Kind compares with a Python type (and with Lisp and Ruby symbols) is on its own page: [Kind vs type](kind_vs_type.md).
 
 ## Conclusion
 

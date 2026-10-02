@@ -8,7 +8,7 @@ This advanced tutorial delves into the sophisticated capabilities of the `Kind` 
 
 ### 1. Deep Dive into Mixinability: Custom Behaviors and Protocols
 
-Beyond the built-in mixins, `Kind` allows you to define and register your own custom behaviors, enabling truly domain-specific modeling. This is achieved by creating classes that implement `Kind`'s protocols and registering them as mixins.
+Beyond the built-in mixins, `Kind` allows you to define and register your own custom behaviors, enabling truly domain-specific modeling. This is achieved by creating classes (optionally following `Kind`'s protocols in `kind.core.protocols`) and registering them as mixins.
 
 #### 1.1. Custom Mixin Development: Aerospace (Aircraft Maintenance Scheduling)
 
@@ -16,48 +16,45 @@ Imagine modeling aircraft components and their maintenance schedules. We can cre
 
 ```python
 import datetime
+from typing import Optional
 from kind.core.kind import Kind
 from kind.core.mixinability import register_mixin
-from kind.core.protocols import KindProtocol
+
+INSPECTION_INTERVAL = datetime.timedelta(days=365)  # Default 1 year
 
 
-class AircraftComponentMixin(KindProtocol):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._last_inspected = None
-        self._inspection_interval = datetime.timedelta(days=365)  # Default 1 year
-
+class AircraftComponentMixin:
     @property
     def last_inspected(self) -> Optional[datetime.datetime]:
-        return self._last_inspected
+        return self.metadata.get("last_inspected")
 
     @last_inspected.setter
     def last_inspected(self, dt: datetime.datetime):
-        self._last_inspected = dt
+        self.metadata["last_inspected"] = dt
 
     @property
     def next_inspection_due(self) -> Optional[datetime.datetime]:
-        if self._last_inspected:
-            return self._last_inspected + self._inspection_interval
+        if self.last_inspected:
+            return self.last_inspected + INSPECTION_INTERVAL
         return None
 
 
-# Register the mixin
+# Register the mixin: its public members become attributes of every Kind
 register_mixin(AircraftComponentMixin, expand=True)
 
 # Usage
 engine = Kind("Engine_Turbofan_A320")
-engine.aircraft_component.last_inspected = datetime.datetime(2024, 1, 15)
+engine.last_inspected = datetime.datetime(2024, 1, 15)
 
-print(f"Engine last inspected: {engine.aircraft_component.last_inspected}")
-print(f"Engine next inspection due: {engine.aircraft_component.next_inspection_due}")
+print(f"Engine last inspected: {engine.last_inspected}")
+print(f"Engine next inspection due: {engine.next_inspection_due}")
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
 Engine last inspected: 2024-01-15 00:00:00
-Engine next inspection due: 2025-01-15 00:00:00
+Engine next inspection due: 2025-01-14 00:00:00
 ```
 </details>
 
@@ -85,13 +82,17 @@ product_service.append(payment_service)  # Product depends on Payment
 payment_service.append(auth_service)  # Payment depends on Auth (potential cycle!)
 
 # Visualize the microservices dependencies
-print(auth_service.to_mmd(mode="graph"))
+print(auth_service.to_mmd())
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
-graph TD
+graph LR
+AuthService[AuthService]
+PaymentService[PaymentService]
+ProductService[ProductService]
+UserService[UserService]
     AuthService --> UserService
     UserService --> ProductService
     ProductService --> PaymentService
@@ -141,7 +142,13 @@ print(admission.to_mmd())
 <summary>Outcome</summary>
 
 ```text
-graph TD
+graph LR
+Admission[Admission]
+Consultation_GP[Consultation_GP]
+Discharge[Discharge]
+LabTests[LabTests]
+SpecialistReferral[SpecialistReferral]
+Treatment[Treatment]
     Admission --> Consultation_GP
     Consultation_GP --> LabTests
     LabTests --> SpecialistReferral
@@ -198,7 +205,11 @@ print(line_1.to_mmd())
 <summary>Outcome</summary>
 
 ```text
-graph TD
+graph LR
+AssemblyLine1[AssemblyLine1]
+ProcessWeld[ProcessWeld]
+RobotArmA[RobotArmA]
+Station1[Station1]
     AssemblyLine1 --> Station1
     Station1 --> RobotArmA
     RobotArmA --> ProcessWeld
@@ -244,7 +255,11 @@ print(property_123.to_mmd())
 <summary>Outcome</summary>
 
 ```text
-graph TD
+graph LR
+Bathroom[Bathroom]
+Bedroom[Bedroom]
+Kitchen[Kitchen]
+Property_123MainSt[Property_123MainSt]
     Property_123MainSt --> Bedroom
     Property_123MainSt --> Bathroom
     Property_123MainSt --> Kitchen

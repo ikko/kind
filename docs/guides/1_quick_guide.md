@@ -58,8 +58,8 @@ assert root_node in sub_system_1.parents
 from kind.core.kind import Kind
 
 # Time dimension mixin example
-event_start = Kind("2023-10-26T10:00:00Z")
-event_end = Kind("2023-10-26T11:30:00Z")
+event_start = Kind("2023-10-26T10:00:00+00:00")
+event_end = Kind("2023-10-26T11:30:00+00:00")
 
 assert event_start.as_datetime.hour == 10
 assert event_end.as_datetime.minute == 30
@@ -120,10 +120,10 @@ graph TD
 
 ### 3. Considerations for Researchers
 
-*   **Formal Verification:** The immutability of `Kind` instances (once interned) and the explicit graph structure lend themselves well to formal verification techniques for system properties.
+*   **Formal Verification:** The stable identity of `Kind` instances (one instance per name), per-instance freezing (`kind.freeze()`, `kind.immute()`) and the explicit graph structure lend themselves well to formal verification techniques for system properties.
 *   **Semantic Web Integration:** `Kind` can serve as a lightweight, in-memory RDF-like store, where `Kind` names are URIs and relationships form triples.
 *   **Dynamic Systems Modeling:** The mixin architecture enables runtime adaptation of system behavior, crucial for simulating adaptive or self-organizing systems.
-*   **Memory Footprint:** While interning optimizes for unique names, be mindful of the graph's overall memory consumption for extremely large-scale graphs. The `MEMORY_AWARE_DELETE` flag offers control over garbage collection behavior.
+*   **Memory Footprint:** While interning optimizes for unique names, be mindful of the graph's overall memory consumption for extremely large-scale graphs. The pool is weak: a `Kind` keeps its identity only while something references it (a parent, a relation or your own variable); `kind.footprint()` reports its size.
 
 ### 4. Advice to Engineers
 

@@ -20,15 +20,15 @@ print(hello.tree())
 <summary>Outcome</summary>
 
 ```text
-[<Kind: hello>, <Kind: world>]
+[Kind('hello'), Kind('world')]
 ```
 </details>
 
 ### Explanation
-- `Kind('hello')`: Creates a `Kind` instance named 'hello'. Due to the interning mechanism, if 'hello' already exists, the existing instance is returned.
+- `Kind('hello')`: Creates a `Kind` instance named 'hello'. Due to the interning mechanism, if 'hello' already exists (and is still referenced: the pool is weak), the existing instance is returned.
 - `k.world`: Utilizes the `KindNamespace` (`k`) for a more concise way to create a `Kind` named 'world'. This is syntactic sugar for `Kind('world')`.
 - `hello.add(world)`: Establishes a directed relationship from `hello` to `world`, making `world` a child of `hello`. If the relationship already exists, it's idempotent.
-- `print(hello.tree())`: Performs a depth-first traversal starting from `hello` and prints the names of all reachable kinds in a tree-like structure.
+- `print(hello.tree())`: Performs a depth-first traversal of `hello` and its descendants (children only) and prints the resulting list of kinds.
 
 ### Diagram
 ```mermaid
@@ -47,11 +47,10 @@ This example illustrates how `Kind` can model complex supply chain relationships
 ```python
 from kind import k, Kind
 from kind.core.mixinability import register_mixin
-from kind.core.protocols import KindProtocol
 from kind.builtin import apply_builtins
 
 
-class SupplyChainMixin(KindProtocol):
+class SupplyChainMixin:
     def buys_from(self, supplier: Kind):
         self.add(supplier)
 
@@ -74,22 +73,22 @@ def has_deforestation(kind):
     return 'deforestation' in kind.name
 
 
-for path in k.Global_Goods_Inc.match(has_deforestation):
-    print(f"Deforestation Link Found: {path.path_to(k.deforestation_event_2024_Q4)}")
+for event in k.Global_Goods_Inc.match(has_deforestation):
+    print(f"Deforestation Link Found: {k.Global_Goods_Inc.path_to(event)}")
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
-Deforestation Link Found: ['<Kind: Global_Goods_Inc>', '<Kind: Palm_Oil_Processor>', '<Kind: Supplier_B>', '<Kind: Plantation_Y>', '<Kind: deforestation_event_2024_Q4>']
+Deforestation Link Found: [Kind('Global_Goods_Inc'), Kind('Palm_Oil_Processor'), Kind('Supplier_B'), Kind('Plantation_Y'), Kind('deforestation_event_2024_Q4')]
 ```
 </details>
 
 ### Explanation
-- **Supply Chain Modeling**: Each entity (e.g., `Global_Goods_Inc`, `Palm_Oil_Processor`, `Plantation_X`) is represented as a `Kind`. Relationships like `buys_from` and `sources_from` are established using custom methods (which would internally use `add()` or `relate_to()`).
+- **Supply Chain Modeling**: Each entity (e.g., `Global_Goods_Inc`, `Palm_Oil_Processor`, `Plantation_X`) is represented as a `Kind`. Relationships like `buys_from` and `sources_from` are established using custom mixin methods that call `add()`; a named relation would use `relate(other, how=...)`.
 - **Event Representation**: `k.deforestation_event_2024_Q4` is a `Kind` representing a specific event, linked to `Plantation_Y`.
-- **Graph Querying**: The `has_deforestation` function acts as a predicate to identify kinds related to deforestation. `k.Global_Goods_Inc.match(has_deforestation)` performs a graph traversal (likely a depth-first search or breadth-first search) to find all paths from `Global_Goods_Inc` to any kind satisfying the predicate.
-- `path.path_to(k.deforestation_event_2024_Q4)`: Once a path is found, this method reconstructs the sequence of kinds from the starting point to the deforestation event, providing traceability.
+- **Graph Querying**: The `has_deforestation` function acts as a predicate to identify kinds related to deforestation. `k.Global_Goods_Inc.match(has_deforestation)` traverses the children of `Global_Goods_Inc` (depth first by default; `traversal='bfs'` for breadth first) and yields every kind satisfying the predicate.
+- `k.Global_Goods_Inc.path_to(event)`: For each match, this method returns the sequence of kinds (following children links) from the starting point to the deforestation event, providing traceability.
 
 ### Diagram
 ```mermaid
@@ -111,7 +110,7 @@ graph TD
 ```
 ## Timeline Example
 
-This example showcases the use of `kind.builtins.timeline` to manage and analyze temporal data. It demonstrates how to create timelines, add time periods, and perform operations like finding overlaps between different timelines.
+This example showcases the use of `kind.builtin.timeline` to manage and analyze temporal data. It demonstrates how to create timelines, add time periods, and perform operations like finding overlaps between different timelines.
 
 ### Code Example
 
@@ -134,16 +133,16 @@ print(timeline1.to_ascii())
 <summary>Outcome</summary>
 
 ```text
-Overlap periods: []
-#----------#----
+Overlap periods: [(datetime.datetime(2023, 1, 5, 0, 0), datetime.datetime(2023, 1, 12, 0, 0)), (datetime.datetime(2023, 1, 10, 0, 0), datetime.datetime(2023, 1, 12, 0, 0))]
+###################-
 ```
 </details>
 
 ### Explanation
-- `Timeline()`: Instantiates a `Timeline` object, which is a specialized `Kind` for managing time intervals.
-- `add_period()`: Adds a time period (defined by start and end `datetime.datetime` objects) to the timeline. These periods are internally represented as `Kind` instances.
-- `overlap()`: A method provided by the `Timeline` class that calculates the overlapping periods between two timelines. This demonstrates `Kind`'s ability to extend its core functionality for domain-specific operations.
-- `to_ascii()`: Visualizes the timeline using ASCII art, providing a quick textual representation of the time periods.
+- `Timeline()`: Instantiates a `Timeline` object, a sorted list of time intervals that can be associated with a Kind (it is not itself a Kind).
+- `add_period()`: Adds a time period (defined by start and end `datetime.datetime` objects) to the timeline. These periods are kept as sorted `(start, end)` tuples; overlapping periods are not merged.
+- `overlap()`: A method provided by the `Timeline` class that returns a new `Timeline` of the common periods of two timelines (one per overlapping pair). This demonstrates `Kind`'s ability to extend its core functionality for domain-specific operations.
+- `to_ascii()`: Visualizes the timeline using ASCII art (one character per day by default: `#` covered, `-` not), providing a quick textual representation of the time periods.
 
 ### Diagram
 ```mermaid
@@ -181,7 +180,7 @@ Batch processing results: [1, 4, 9, 16]
 </details>
 
 ### Explanation
-- `process_batch()`: A utility function (likely part of `kind.core.batch_processing`) that takes a list of inputs and a function, applying the function to each input in a batch. This highlights how `Kind` can be part of a larger system, where its symbolic representations can be processed by external functions.
+- `process_batch(batch, func, new_thread=True)`: A utility function from `kind.core.batch_processing` (also exported as `kind.process_batch`) that applies the function to each input concurrently in worker threads (or in order in the calling thread with `new_thread=False`) and returns the results in input order; `a_process_batch(batch, func)` is its async form. This highlights how `Kind` can be part of a larger system, where its symbolic representations can be processed by external functions.
 - `square()`: A simple function demonstrating the type of operation that can be applied in a batch.
 
 ### Diagram
@@ -202,20 +201,27 @@ This example demonstrates the use of `kind.core.schedule` to schedule and execut
 
 ### Code Example
 ```python
-from kind.core.schedule import Scheduler, ScheduledJob
-import time
 import datetime
+
+import anyio
+
+from kind.core.schedule import ScheduledJob, Scheduler
 
 def my_task(message):
     print(f"Executing task: {message}")
 
-scheduler = Scheduler()
-job = ScheduledJob(my_task, args=("Hello` from the scheduler!",), schedule=datetime.datetime.now() + datetime.timedelta(seconds=5))
-scheduler.add_job(job)
+async def main():
+    scheduler = Scheduler()
+    job = ScheduledJob(my_task, args=("Hello from the scheduler!",),
+                       schedule=datetime.datetime.now() + datetime.timedelta(seconds=1))
+    scheduler.add_job(job)
 
-scheduler.start()
-time.sleep(6) # Wait for the job to run
-scheduler.stop()
+    async with anyio.create_task_group() as task_group:
+        await scheduler.start(task_group)
+        await anyio.sleep(2)  # wait for the job to run
+        await scheduler.stop()
+
+anyio.run(main)
 ```
 <details>
 <summary>Outcome</summary>
@@ -226,12 +232,12 @@ Executing task: Hello from the scheduler!
 </details>
 
 ### Explanation
-- `Scheduler()`: Initializes the scheduler, which runs in a separate thread to monitor and execute jobs.
-- `ScheduledJob()`: Creates a job object, specifying the function to run (`my_task`), its arguments, and the `schedule` (in this case, 5 seconds from now).
+- `Scheduler()`: Initializes the scheduler (`Scheduler(schedule_file=None, allowed_modules=(), now=datetime.datetime.now)`); schedule files may only name functions from `allowed_modules`.
+- `ScheduledJob()`: Creates a job object, specifying the function to run (`my_task`), its arguments, and the `schedule` (in this case, 1 second from now).
 - `scheduler.add_job(job)`: Adds the created job to the scheduler's queue.
-- `scheduler.start()`: Initiates the scheduler's execution loop.
-- `time.sleep()`: Pauses the main thread to allow the scheduler thread to execute the scheduled task.
-- `scheduler.stop()`: Halts the scheduler's execution.
+- `await scheduler.start(task_group)`: Starts the scheduler's execution loop as a task in an `anyio` task group; sync jobs run in a worker thread.
+- `anyio.sleep()`: Lets the loop run the scheduled task; `await scheduler.run_due_jobs()` would run one deterministic step instead.
+- `await scheduler.stop()`: Halts the scheduler's execution loop.
 
 ### Diagram
 ```mermaid
@@ -239,7 +245,7 @@ graph TD
     A[Function &#40my_task&#41] --> B[ScheduledJob];
     C[Schedule &#40datetime.datetime&#41] --> B;
     B --> D[Scheduler.add_job&#40&#41];
-    D --> E[Scheduler.start&#40&#41];
+    D --> E[Scheduler.start&#40task_group&#41];
     E -- "Executes at time" --> A;
 
     style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;

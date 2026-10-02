@@ -4,9 +4,9 @@ This document provides empirical validation of the Big O notations asserted for 
 
 ## O(1) Kind Instantiation
 
-**Assertion**: Kind instantiation (creation or retrieval from the interning pool) is an O(1) operation.
+**Assertion**: Retrieving an interned Kind by name is an O(1) operation; creating a new Kind is O(log n), because it is also inserted into the creation-order index (an AVL tree) behind `Kind.first()`, `Kind.seek()` and `Kind.each()`.
 
-**Methodology**: We measure the time taken to instantiate a large number of unique and repeated kinds. The expectation is that the time per instantiation remains constant regardless of the total number of kinds already interned.
+**Methodology**: We measure the time taken to instantiate a large number of unique and repeated kinds. The pool is weak, so the measurement keeps references to the Kinds it creates. Timings below are from one run (2026-10-02); they vary by machine.
 
 **Empirical Results**:
 
@@ -15,12 +15,14 @@ import time
 from kind import Kind, k
 
 def measure_kind_instantiation(num_kinds):
+    kept = []  # the pool is weak: an unreferenced Kind is collected and would be created anew
     start_time = time.perf_counter_ns()
     for i in range(num_kinds):
-        Kind(f"test_kind_{i}") # Unique kinds
+        kept.append(Kind(f"test_kind_{num_kinds}_{i}")) # Unique kinds
     end_time = time.perf_counter_ns()
     time_unique = (end_time - start_time) / 1_000_000 # milliseconds
 
+    repeated = Kind("repeated_kind")  # held, so the loop below measures retrieval from the pool
     start_time = time.perf_counter_ns()
     for i in range(num_kinds):
         Kind("repeated_kind") # Repeated kind
@@ -40,19 +42,19 @@ for n in [1000, 10000, 100000]:
 ```text
 
 --- Kind Instantiation Performance ---
-N=1000: Unique Kinds: 1.0000 ms, Repeated Kind: 0.0000 ms
-N=10000: Unique Kinds: 10.0000 ms, Repeated Kind: 0.0000 ms
-N=100000: Unique Kinds: 100.0000 ms, Repeated Kind: 0.0000 ms
+N=1000: Unique Kinds: 4.7220 ms, Repeated Kind: 0.1607 ms
+N=10000: Unique Kinds: 55.2010 ms, Repeated Kind: 1.6028 ms
+N=100000: Unique Kinds: 943.8003 ms, Repeated Kind: 15.8094 ms
 ```
 </details>
 
-**Analysis**: The empirical results demonstrate that the time taken for both unique and repeated kind instantiation remains remarkably consistent, validating the O(1) complexity. The slight variations are attributable to system noise and Python's internal optimizations.
+**Analysis**: Retrieval stays at a constant ~0.16 µs per call, validating O(1). Creation grows from ~4.7 µs to ~9.4 µs per Kind as N grows 100-fold, consistent with the O(log n) index insert plus allocation and garbage-collector overhead.
 
 ## O(1) Relationship Linking
 
 **Assertion**: Establishing relationships between kinds (e.g., via `append()`) is an O(1) operation.
 
-**Methodology**: We measure the time taken to append a new child to a kind. This operation involves list appends, which are amortized O(1).
+**Methodology**: We measure the time taken to append a new child to a kind. This operation adds to two `OrderedKindSet`s (the parent's children and the child's parents): a set insert plus a list append, both amortized O(1).
 
 **Empirical Results**:
 
@@ -82,18 +84,18 @@ for n in [1000, 10000, 100000]:
 ```text
 
 --- Relationship Linking Performance ---
-N=1000: Time to link 1000 children: 0.0000 ms
-N=10000: Time to link 10000 children: 0.0000 ms
-N=100000: Time to link 100000 children: 0.0000 ms
+N=1000: Time to link 1000 children: 0.8707 ms
+N=10000: Time to link 10000 children: 8.6695 ms
+N=100000: Time to link 100000 children: 91.3839 ms
 ```
 </details>
 
-**Analysis**: The time taken to link relationships scales linearly with the number of links, confirming the amortized O(1) complexity per link. This is consistent with Python's list append performance characteristics.
+**Analysis**: The time taken to link relationships scales linearly with the number of links, confirming the amortized O(1) complexity per link. This is consistent with Python's set insert and list append performance characteristics.
 
 
-## O(log n) Insert/Search with Bisect-based Insertion Order
+## O(log n) Insert/Search in the AVL-backed Index
 
-**Assertion**: Insert and search operations within `KindIndex` (when using balanced tree implementations like AVL or Red-Black trees) are O(log n).
+**Assertion**: Insert and search operations within `KindIndex` (backed by a balanced AVL tree) are O(log n).
 
 **Methodology**: We measure the time taken to insert and search for elements in a `KindIndex` as the number of elements increases. The expectation is a logarithmic growth in time.
 
@@ -109,22 +111,20 @@ from kind.builtin.index import KindIndex
 def measure_index_performance(num_elements):
     idx = KindIndex(k.index_root)
     elements = [getattr(k, f"element_{i}") for i in range(num_elements)]
-    random.shuffle(elements)
+    weights = list(range(num_elements))
+    random.shuffle(weights)
 
     # Measure insertion
     insert_start_time = time.perf_counter_ns()
-    for element in elements:
-        idx.insert(element, 0.0)  # Added a dummy weight for insertion
+    for element, weight in zip(elements, weights):
+        idx.insert(element, float(weight))
     insert_end_time = time.perf_counter_ns()
     insert_time = (insert_end_time - insert_start_time) / 1_000_000
 
-    # Measure search (for existing elements)
+    # Measure search by weight (for existing elements)
     search_start_time = time.perf_counter_ns()
-    for element in elements:
-        # Assuming find by name, but KindIndex doesn't have a find method directly
-        # This part of the test needs to be adjusted based on actual KindIndex API
-        # For now, we'll just iterate through the elements to simulate search
-        pass
+    for weight in weights:
+        idx.tree.search(float(weight))
     search_end_time = time.perf_counter_ns()
     search_time = (search_end_time - search_start_time) / 1_000_000
 
@@ -142,13 +142,13 @@ for n in [1000, 10000, 100000]:
 ```text
 
 --- KindIndex Performance (O(log n)) ---
-N=1000: Insert: 0.0000 ms, Search: 0.0000 ms
-N=10000: Insert: 0.0000 ms, Search: 0.0000 ms
-N=100000: Insert: 0.0000 ms, Search: 0.0000 ms
+N=1000: Insert: 2.3334 ms, Search: 0.4733 ms
+N=10000: Insert: 29.8964 ms, Search: 5.9381 ms
+N=100000: Insert: 415.2549 ms, Search: 103.4067 ms
 ```
 </details>
 
-**Analysis**: The empirical results for `KindIndex` demonstrate a growth rate consistent with O(log n) for both insertion and search operations. As N increases by a factor of 10, the time taken increases by a smaller, roughly constant factor, characteristic of logarithmic complexity.
+**Analysis**: Per operation, insertion grows from ~2.3 µs to ~4.2 µs and search from ~0.5 µs to ~1.0 µs as N grows 100-fold, a growth consistent with O(log n) (plus cache effects at the largest size).
 
 ## Potentially Slow Callables and Their Complexity
 
@@ -190,17 +190,17 @@ for n in [100, 200, 400]: # Keep N small due to O(N^2) edges in dense graph
 ```text
 
 --- Graph Traversal Performance (O(V + E)) ---
-N=100: Time for traversal: 0.0000 ms
-N=200: Time for traversal: 0.0000 ms
-N=400: Time for traversal: 0.0000 ms
+N=100: Time for traversal: 1.0434 ms
+N=200: Time for traversal: 2.4492 ms
+N=400: Time for traversal: 13.6653 ms
 ```
 </details>
 
-### `Kind.patch()` (Recursive Deep Merge)
+### `Kind.patch()` (Shallow Merge)
 
-**Complexity**: O(D * (V + E)), where D is the depth of recursion, and V and E are the number of vertices and edges in the merged subgraphs. In the worst case, it can approach O(N) where N is the total number of elements in both kinds and their subgraphs.
+**Complexity**: O(c + p + r), where c, p and r are the numbers of children, parents and relations of the *other* Kind.
 
-**Analysis**: The `patch()` method performs a deep merge, which involves traversing the structure of both kinds and their children. The complexity depends on the depth and breadth of the structures being merged. For very deep or wide graphs, this operation can be computationally intensive.
+**Analysis**: The `patch()` method is not recursive: it copies the other Kind's origin (if this one has none), links its direct children and parents, and copies its forward relations. The descendants come along by reference, not by copying, so a long chain behind the other Kind costs nothing extra — as the flat timings below show.
 
 ```python
 import time
@@ -233,9 +233,9 @@ for n in [100, 200, 400]:
 ```text
 
 --- Kind.patch() Performance ---
-N=100: Time for patch: 0.0000 ms
-N=200: Time for patch: 0.0000 ms
-N=400: Time for patch: 0.0000 ms
+N=100: Time for patch: 0.0054 ms
+N=200: Time for patch: 0.0036 ms
+N=400: Time for patch: 0.0024 ms
 ```
 </details>
 
@@ -278,12 +278,12 @@ for n in [1000, 5000, 10000]:
 ```text
 
 --- Visualization Performance (O(V + E)) ---
-N=1000: to_mmd: 0.0000 ms, to_ascii: 0.0000 ms
-N=5000: to_mmd: 0.0000 ms, to_ascii: 0.0000 ms
-N=10000: to_mmd: 0.0000 ms, to_ascii: 0.0000 ms
+N=1000: to_mmd: 1.5134 ms, to_ascii: 1.8185 ms
+N=5000: to_mmd: 8.5232 ms, to_ascii: 9.1434 ms
+N=10000: to_mmd: 15.7913 ms, to_ascii: 17.9667 ms
 ```
 </details>
 
 ## Conclusion
 
-The empirical measurements largely validate the theoretical Big O notations for `Kind` operations. Operations like instantiation and linking demonstrate constant time complexity, while indexed operations show logarithmic behavior. Graph traversal and visualization, as expected, scale with the size of the graph. The `patch()` operation, due to its deep merge nature, can be more resource-intensive for complex structures. Understanding these complexities is crucial for designing efficient applications leveraging the `Kind` framework.
+The empirical measurements largely validate the theoretical Big O notations for `Kind` operations. Retrieval and linking demonstrate constant time complexity, while creation and indexed operations show logarithmic behavior. Graph traversal and visualization, as expected, scale with the size of the graph. The `patch()` operation is shallow and costs only the direct links of the patched Kind. Understanding these complexities is crucial for designing efficient applications leveraging the `Kind` framework.

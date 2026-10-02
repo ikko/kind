@@ -6,7 +6,7 @@ The `Kind` framework incorporates a sophisticated "maturing" process, orchestrat
 
 The `immute()` method orchestrates three distinct phases:
 
-1.  **Elevate Metadata (`elevate()`)** This phase promotes key-value pairs stored in the `Kind`'s `metadata` `DefDict` (a `defaultdict` of `defaultdict`s); directly into instance attributes or methods. This transformation reduces the overhead associated with dictionary lookups and allows for faster, direct attribute access. Various merge strategies (e.g., `overwrite`, `patch`, `smooth`); can be applied to handle potential conflicts with existing attributes.
+1.  **Elevate Metadata (`elevate()`)** This phase promotes key-value pairs stored in the `Kind`'s `metadata` `DefDict` (a `defaultdict` of `defaultdict`s); directly into instance attributes or methods. This transformation reduces the overhead associated with dictionary lookups and allows for faster, direct attribute access. Various merge strategies (e.g., `overwrite`, `patch`, `smooth`) can be applied to handle potential conflicts with existing attributes. A key naming a Kind method or read-only property is not elevated: it stays in `metadata` with a warning.
 
     ```mermaid
     graph TD
@@ -22,13 +22,13 @@ The `immute()` method orchestrates three distinct phases:
     style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
     ```
     
-2.  **Slim Down (`slim()`);:** Following elevation, the `slim()` method removes dynamically applied mixins that are no longer needed or have been elevated. This process is crucial for memory optimization, as it cleans up transient attributes and methods, reducing the overall memory footprint of the `Kind` instance. The `deep_del` utility is employed to recursively delete attributes and their contents, ensuring that unreferenced objects are promptly garbage collected.
+2.  **Slim Down (`slim()`):** Following elevation, the `slim()` method drops elevated attributes whose value is `SENTINEL` (a placeholder for a part that holds no value), unless they are protected; `immute()` protects the keys it just elevated. It does not delete slots and does not call `gc.collect()`; Python's garbage collector reclaims what is no longer referenced.
 
     ```mermaid
     graph TD
         A[Kind Instance] --> B{Slim#40;#41;};
-        B -- "Removes" --> C[Unused Dynamic Mixins];
-        C --> D[Transient Attributes];
+        B -- "Removes" --> C[Elevated Attributes holding SENTINEL];
+        C --> D[Unless protected];
         D -- "Reduces" --> E[Memory Footprint];
 
       style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
@@ -38,13 +38,13 @@ The `immute()` method orchestrates three distinct phases:
       style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
     ```
     
-3.  **Freeze (`freeze()`);:** The final step in the maturing process is to globally freeze the `Kind` class. This prevents any further runtime modifications, including the registration of new mixins or the elevation of additional metadata. Freezing ensures the immutability and predictability of `Kind` behavior in production environments, safeguarding against unintended side effects and maintaining system integrity.
+3.  **Freeze (`freeze()`):** The final step in the maturing process is to freeze *that* `Kind` instance; other Kinds stay mutable. A frozen Kind raises `FrozenKindError` on any attribute, edge or relation change, and `kind.frozen` reports the state. Freezing ensures the immutability and predictability of a matured Kind, safeguarding against unintended side effects. (Locking the mixin registry for the whole process is a separate call: `lock_mixins()`.)
 
     ```mermaid
     graph TD
-        A[Kind Class] --> B{Freeze#40;#41;};
-        B -- "Prevents" --> C[Further Dynamic Modifications];
-        C --> D[New Mixin Registrations];
+        A[Kind Instance] --> B{Freeze#40;#41;};
+        B -- "Prevents" --> C[Further Changes to this Kind];
+        C --> D[Attribute, Edge and Relation Changes raise FrozenKindError];
         D --> E[Ensures] --> F[Immutability & Predictability];
 
       style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
@@ -61,16 +61,11 @@ The `immute()` method orchestrates three distinct phases:
 
 ```python
 from kind import Kind, k
+from kind.core.kind import FrozenKindError
 from kind.core.mixinability import register_mixin
 
-class KnowledgeEntity(Kind):
-    def __init__(self, name, initial_data=None):
-        super().__init__(name)
-        if initial_data:
-            for k, v in initial_data.items():
-                self.metadata[k] = v
-
-entity = KnowledgeEntity(k.QuantumPhysics.name, {
+entity = k.QuantumPhysics
+entity.metadata.update({
     "field": "Physics",
     "subfield": "Quantum Mechanics",
     "established": 1900,
@@ -82,10 +77,15 @@ def get_summary(self):
 
 register_mixin(get_summary, name="get_summary", target_class=Kind)
 
-entity.immute()
+entity.immute()  # elevate -> slim -> freeze, of this Kind only
 
 print(f"Field as attribute: {entity.field}")
 print(f"Summary as attribute: {entity.get_summary()}")
+print(f"Frozen: {entity.frozen}, another Kind frozen: {k.Chemistry.frozen}")
+try:
+    entity.field = "Chemistry"
+except FrozenKindError as error:
+    print(f"Refused: {type(error).__name__}")
 ```
 <details>
 <summary>Outcome</summary>
@@ -93,6 +93,8 @@ print(f"Summary as attribute: {entity.get_summary()}")
 ```text
 Field as attribute: Physics
 Summary as attribute: Summary of QuantumPhysics: Field=Physics, Established=1900
+Frozen: True, another Kind frozen: False
+Refused: FrozenKindError
 ```
 </details>
 
@@ -103,7 +105,7 @@ graph TD
         B -- "Populates" --> C[Kind.metadata];
         C -- "Stabilizes" --> D[immute#40;#41; Call];
         D -- "Elevates" --> E[Direct Attributes];
-        D -- "Slimes" --> F[Unused Mixins];
+        D -- "Slims" --> F[SENTINEL Attributes];
         D -- "Freezes" --> G[Optimized, Immutable Entity];
     end
 
@@ -119,18 +121,11 @@ graph TD
 ### Low-Tech Industry: Financial Transaction Processing
 
 ```python
-from kind import Kind, k
+from kind import k
 
-class FinancialTransaction(Kind):
-    def __init__(self, transaction_id, amount, currency, status="pending", details=None):
-        super().__init__(transaction_id)
-        self.metadata["amount"] = amount
-        self.metadata["currency"] = currency
-        self.metadata["status"] = status
-        if details:
-            self.metadata["details"] = details
-
-transaction = FinancialTransaction(k.TXN_001.name, 100.50, "USD", details={"merchant": "Coffee Shop"})
+transaction = k.TXN_001
+transaction.metadata.update(amount=100.50, currency="USD", status="pending",
+                            details={"merchant": "Coffee Shop"})
 
 transaction.metadata["status"] = "settled"
 transaction.metadata["settlement_date"] = "2025-07-04"
@@ -157,8 +152,8 @@ graph TD
         A[Pending Transaction Kind] --> B{Processing & Validation};
         B -- "Adds" --> C[Dynamic Metadata #40;amount, currency, status, settlement_date#41;];
         C -- "Settled" --> D[immute#40;#41; Call];
-        D -- "Elevates" --> E[Fixed Attributes #41;amount, currency, status#41;];
-        D -- "Slims" --> F[Temporary Metadata];
+        D -- "Elevates" --> E[Fixed Attributes #40;amount, currency, status#41;];
+        D -- "Slims" --> F[SENTINEL Attributes];
         D -- "Freezes" --> G[Optimized, Immutable Transaction];
     end
 
@@ -172,7 +167,7 @@ graph TD
 ```
 ## Conclusion
 
-Memory-aware maturing in the `Kind` framework provides a powerful mechanism for optimizing the lifecycle of `Kind` instances. By systematically elevating dynamic metadata, slimming down transient components, and freezing the class, it enables developers to achieve significant memory savings and performance improvements, particularly in data-intensive applications. This feature underscores `Kind`'s commitment to both flexibility and efficiency.
+Memory-aware maturing in the `Kind` framework provides a powerful mechanism for optimizing the lifecycle of `Kind` instances. By systematically elevating dynamic metadata, slimming down placeholder attributes, and freezing the matured Kind, it enables developers to achieve significant memory savings and performance improvements, particularly in data-intensive applications. This feature underscores `Kind`'s commitment to both flexibility and efficiency.
 
 For a visual representation of the maturing process, refer to the [Maturing Process Diagram](maturing_process.mmd).
 

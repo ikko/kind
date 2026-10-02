@@ -116,10 +116,11 @@
      
         * Interning (Flyweight Pattern): At its essence, «kind» ensures that each unique string
           name corresponds to precisely one Kind object instance in memory. This is achieved by
-          overriding the __new__ method to manage a global interning pool. This design choice, an
-          application of the Flyweight pattern [3], offers significant advantages:
-            * O(1) Identity Check: Kind("concept") is Kind("concept") always evaluates to True,
-              enabling constant-time identity comparisons.
+          overriding the __new__ method to manage a global, weak interning pool (a Kind keeps its
+          identity while something references it). This design choice, an application of the
+          Flyweight pattern [3], offers significant advantages:
+            * O(1) Identity Check: Kind("concept") is Kind("concept") evaluates to True while the
+              Kind is alive, enabling constant-time identity comparisons.
             * Memory Efficiency: Prevents redundant object creation, drastically reducing memory
               footprint in applications with recurring symbolic representations.
             * Canonical Representation: Guarantees that all references to a particular concept point
@@ -127,7 +128,7 @@
      
      
         * Graph-Centricity: Kind objects are inherently designed as nodes in a directed graph.
-          Relationships are established through explicit operations (add(), append(), relate_to()),
+          Relationships are established through explicit operations (add(), append(), relate()),
           forming directed edges. Each Kind maintains references to its children (kinds it points
           to) and parents (kinds that point to it), facilitating bidirectional traversal. This
           graph-based approach naturally models complex systems, where the meaning of an entity is
@@ -137,7 +138,8 @@
         * Controlled Immutability and Maturing: While Kind objects are initially flexible and
           extensible, the framework provides a "maturing" process, orchestrated by the immute()
           method. This process transitions a Kind from a dynamic state to an optimized, immutable
-          form by elevating metadata to direct attributes and removing unused dynamic components.
+          form by elevating metadata to direct attributes, dropping elevated attributes that hold
+          no value, and freezing that Kind (a frozen Kind raises FrozenKindError on any change).
           This mechanism balances the need for initial flexibility during modeling with the
           requirement for stability and performance in production environments.
      
@@ -157,8 +159,8 @@
           defines the fundamental Kind class, its interning logic, and core mechanisms for graph
           management and lifecycle control. Components in this layer are designed for high stability
           and minimal external dependencies.
-        * `kind.builtins`: This layer comprises a collection of modular, optional extensions that
-          provide specialized functionalities. Each module within kind.builtins addresses a
+        * `kind.builtin`: This layer comprises a collection of modular, optional extensions that
+          provide specialized functionalities. Each module within kind.builtin addresses a
           specific domain (e.g., time_dim for temporal analysis, index for per-instance indexing,
           path for graph traversal algorithms, visual for diagram generation). These built-ins are
           dynamically applied as mixins, ensuring that the core remains lean while offering rich,
@@ -171,32 +173,34 @@
           arbitrary metadata (a DefDict for flexible key-value pairs) and maintain origin (a
           reference to its source provenance).
         * Relationship Management:
-            * add(child: Kind): Establishes a directed parent-child relationship. Idempotent.
-            * append(child: Kind): Similar to add(), but ensures the child is added to the end of
-              the children list if not already present, preserving order.
-            * relate_to(other: Kind, how: Kind): Enables semantically rich, typed relationships,
-              where how is itself a Kind describing the nature of the connection.
+            * append(child: Kind): Establishes a directed parent-child relationship, adding the
+              child at the end of the ordered children if not already present. Idempotent;
+              returns the child.
+            * add(child: Kind): Like append(), but returns the parent, so calls can be chained.
+            * relate(other: Kind, how: str): Enables semantically rich, named relationships
+              (with an inverse recorded on other); a.has_kind(b) is the same as
+              a.relate(b, how='has_kind') for any public name. unrelate() removes them.
             * delete(): Safely removes a Kind from the graph, severing all its incoming and
               outgoing connections to maintain graph consistency.
         * Lifecycle Management:
             * elevate(): Promotes key-value pairs from metadata to direct instance
               attributes/methods, optimizing access speed.
-            * slim(): Removes unused dynamically applied mixins and attributes, reducing memory
+            * slim(): Drops elevated attributes that hold no value (SENTINEL), reducing memory
               footprint.
             * immute(): Orchestrates the complete maturing process (elevate(), slim(), freeze()),
-              transitioning the Kind to an optimized, immutable state.
+              transitioning that Kind to an optimized, immutable state.
         * Traversal:
-            * tree(): Performs a depth-first traversal of the reachable graph, yielding Kind
-              objects.
-            * graph(): Provides a general graph traversal mechanism.
+            * tree(): Returns the Kind and its descendants (children only), depth first.
+            * graph(): Walks children, parents and relations, depth first.
         * Type Conversion:
             * Kind.from_object(obj: Any): A versatile factory method that converts standard Python
-              objects (e.g., int, str, list, dict) into Kind instances, preserving their original
-              value in the origin attribute.
+              objects into Kind instances, preserving their original value in the origin
+              attribute: a scalar becomes the Kind of its text (123 -> Kind('123')), a container
+              the Kind of its content, with its items as children.
             * to_kind(obj: Any): A global alias for Kind.from_object().
-        * `KindNamespace` (`s`): A convenient singleton instance that allows for concise Kind
+        * `KindNamespace` (`k`): A convenient singleton instance that allows for concise Kind
           creation via attribute access (e.g., k.MyConcept is equivalent to Kind("MyConcept")).
-        * `KindIndex`: A per-instance index (part of kind.builtins.index) that allows each Kind
+        * `KindIndex`: A per-instance index (part of kind.builtin.index) that allows each Kind
           to maintain a private, weighted, and searchable collection of other Kind references, often
            backed by balanced tree structures for efficient operations.
         * `ScheduledJob`, `Scheduler`: Components (part of kind.core.schedule) for managing and
@@ -211,13 +215,13 @@
      
         * O(1) Kind Instantiation and Linking: Due to the stringent interning mechanism, retrieving
           or creating a Kind by name is a constant-time operation. Similarly, establishing
-          relationships (add(), append()) leverages Python's highly optimized list appends, resulting
+          relationships (add(), append()) inserts into ordered sets with hashed membership, resulting
           in amortized O(1) complexity per link. This ensures rapid graph construction even for large
           numbers of entities and relationships.
         * O(log n) for Indexed Operations: When Kind instances are extended with the KindIndex
           built-in, operations such as insertion and search within a sorted collection of kinds can
           achieve O(log n) time complexity. This is facilitated by the underlying balanced binary
-          search tree implementations (AVL or Red-Black trees) provided within kind.builtins.
+          search tree implementation (an AVL tree) provided within kind.builtin.
         * O(V+E) for Graph Traversals: Full graph traversals (tree(), graph()) inherently scale with
           the number of vertices (V) and edges (E) in the reachable subgraph. While this complexity is
            unavoidable for comprehensive traversal, «kind»'s lean design and efficient internal
@@ -225,7 +229,7 @@
           sized graphs.
         * Memory-Aware Management: Features like immute() and slim() actively manage the memory
           footprint of Kind instances. By elevating frequently accessed metadata to direct
-          attributes and removing transient or unused mixins, «kind» optimizes for cache locality
+          attributes and dropping elevated attributes that hold no value, «kind» optimizes for cache locality
           and reduces overall memory consumption, which is critical for in-memory graph processing.
      
      
