@@ -10,6 +10,11 @@
 - **Entering a closed space** raises `SpaceError` instead of making the closed space current.
 - **Time**: a space mixing naive and aware datetimes raises `ValueError` with a hint, and time-only names are non-temporal (the message says "date or datetime").
 - **`kind-scheduler`**: a `Scheduler` with a schedule file refuses, at add time, jobs whose function a file cannot name (lambda, nested function, method).
+- **Edge sets change only through Kind's edge methods**: a direct `add`/`discard`/`clear` on `children`, `parents` or a relation set raises `AttributeError` with a hint, so edge symmetry holds without exception.
+- **Settled `metadata`/`context`**: on a frozen Kind or in a closed space, a write raises `FrozenKindError`/`SpaceError`, and reading a missing key raises `KeyError` instead of inserting it.
+- **Serialized input is shape-checked**: `from_json`/`from_yaml`/`from_toml` of input that is not a list of nodes raise `ValueError` with a hint, not `KeyError`.
+- **`Kind.to(T)`** reads back what `from_object` writes: JSON, else a Python literal (`ast.literal_eval`); no code is evaluated.
+- **`apply_mixin_to_instance`** binds `self` to the Kind.
 ### Changed
 - `FrozenKindError` is exported from `kind`.
 - **Documentation restructured for engineers.** Pages: README; concepts (the contract); API reference; errors (every message checked by a test); performance (one complexity table); architecture; tutorial; how-to guides; examples; history. Gates check that every page is reachable from the README, that the API reference covers the public surface, and that claims are precise (no filler words, no "DAG", no unscoped "thread-safe").
