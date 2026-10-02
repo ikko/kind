@@ -1,5 +1,4 @@
-import collections.abc
-from weakref import WeakSet
+from kind.builtin.collections import OrderedKindSet
 
 class Relations:
     def __init__(self, owner):
@@ -42,16 +41,15 @@ class Relations:
         return relation_proxy
 
     def add(self, how, related_kind):
-        if how not in self._relations:
-            self._relations[how] = WeakSet()
-        self._relations[how].add(related_kind)
+        """Strong, ordered references: a relation keeps its target alive, like a child link does."""
+        self._relations.setdefault(how, OrderedKindSet()).add(related_kind)
 
     def get(self, how):
-        return self._relations.get(how, WeakSet())
+        return self._relations.get(how, OrderedKindSet())
 
     def remove(self, how, related_kind):
-        if how in self._relations and related_kind in self._relations[how]:
-            self._relations[how].remove(related_kind)
+        if how in self._relations:
+            self._relations[how].discard(related_kind)
             if not self._relations[how]:
                 del self._relations[how]
 

@@ -1,28 +1,52 @@
 """This module provides an implementation of an AVL tree.
 
 An AVL tree is a self-balancing binary search tree that maintains a balanced height,
-ensuring efficient search, insertion, and deletion operations.
+ensuring O(log n) search, insertion and deletion.
+
+A tree built with `weak=True` holds its Kinds through weak references, so being in
+the tree does not keep a Kind alive. Nodes of collected Kinds are skipped by every
+read and are purged by the next insert or remove.
 """
 from __future__ import annotations
-from typing import Optional, Union, Callable, Any
+
+import weakref
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional, Union
+
+if TYPE_CHECKING:
+    from kind.core.kind import Kind
+
+Weight = Union[float, Callable[[Any], float]]
+
 
 class AVLNode:
-    def __init__(self, kind: 'Kind', weight: Union[float, Callable[[Any], float]]):
-        self.kind = kind
+    __slots__ = ('_kind', 'weight', 'height', 'left', 'right')
+
+    def __init__(self, kind: 'Kind', weight: Weight):
+        self._kind: Any = kind
         self.weight = weight
         self.height = 1
-        self.left: Optional['AVLNode'] = None
-        self.right: Optional['AVLNode'] = None
+        self.left: Optional[AVLNode] = None
+        self.right: Optional[AVLNode] = None
 
-    def eval_weight(self, *args, **kwargs) -> float:
+    @property
+    def kind(self) -> Optional['Kind']:
+        """The Kind held by this node, or None if it was weakly held and has been collected."""
+        return self._kind() if isinstance(self._kind, weakref.ref) else self._kind
+
+    def eval_weight(self) -> float:
         return self.weight(self.kind) if callable(self.weight) else self.weight
 
 
 class AVLTree:
-    def __init__(self):
+    def __init__(self, weak: bool = False):
         self.root: Optional[AVLNode] = None
+        self._weak = weak
+        self._has_collected = False  # set by weakref callbacks; dead nodes are purged on the next write
 
-    def _height(self, node: Optional[AVLNode]) -> int:
+    # --- balancing -------------------------------------------------------
+
+    @staticmethod
+    def _height(node: Optional[AVLNode]) -> int:
         return node.height if node else 0
 
     def _update_height(self, node: AVLNode) -> None:
@@ -33,143 +57,143 @@ class AVLTree:
 
     def _rotate_left(self, z: AVLNode) -> AVLNode:
         y = z.right
-        T2 = y.left
-
-        y.left = z
-        z.right = T2
-
+        z.right, y.left = y.left, z
         self._update_height(z)
         self._update_height(y)
-
         return y
 
     def _rotate_right(self, z: AVLNode) -> AVLNode:
         y = z.left
-        T3 = y.right
-
-        y.right = z
-        z.left = T3
-
+        z.left, y.right = y.right, z
         self._update_height(z)
         self._update_height(y)
-
         return y
 
     def _rebalance(self, node: AVLNode) -> AVLNode:
         self._update_height(node)
         balance = self._balance_factor(node)
-
-        # Left Left Case
-        if balance > 1 and self._balance_factor(node.left) >= 0:
+        if balance > 1:
+            if self._balance_factor(node.left) < 0:
+                node.left = self._rotate_left(node.left)
             return self._rotate_right(node)
-
-        # Left Right Case
-        if balance > 1 and self._balance_factor(node.left) < 0:
-            node.left = self._rotate_left(node.left)
-            return self._rotate_right(node)
-
-        # Right Right Case
-        if balance < -1 and self._balance_factor(node.right) <= 0:
+        if balance < -1:
+            if self._balance_factor(node.right) > 0:
+                node.right = self._rotate_right(node.right)
             return self._rotate_left(node)
-
-        # Right Left Case
-        if balance < -1 and self._balance_factor(node.right) > 0:
-            node.right = self._rotate_right(node.right)
-            return self._rotate_left(node)
-
         return node
 
-    def insert(self, node: Optional[AVLNode], kind: 'Kind', weight: Union[float, Callable]) -> AVLNode:
-        if not node:
-            return AVLNode(kind, weight)
+    # --- writes ----------------------------------------------------------
 
-        if (weight(kind) if callable(weight) else weight) < node.eval_weight():
+    def insert(self, node: Optional[AVLNode], kind: 'Kind', weight: Weight) -> AVLNode:
+        """Inserts `kind` under `node` and returns the new subtree root.
+
+        Kept in this shape for KindIndex; prefer `add`, which also maintains `root`.
+        """
+        if not node:
+            new_node = AVLNode(kind, weight)
+            if self._weak:
+                new_node._kind = weakref.ref(kind, self._mark_collected)
+            return new_node
+        value = weight(kind) if callable(weight) else weight
+        if value < node.eval_weight():
             node.left = self.insert(node.left, kind, weight)
         else:
             node.right = self.insert(node.right, kind, weight)
-
         return self._rebalance(node)
 
-    def search(self, weight: float) -> Optional['Kind']:
-        """Searches for a kind with the given weight."""
-        node = self.root
-        while node:
-            if weight == node.eval_weight():
-                return node.kind
-            elif weight < node.eval_weight():
-                node = node.left
-            else:
-                node = node.right
-        return None
+    def add(self, kind: 'Kind', weight: Weight) -> None:
+        self._purge_collected()
+        self.root = self.insert(self.root, kind, weight)
 
-    def remove(self, weight: float) -> Optional[AVLNode]:
-        """Removes a node with the given weight from the tree."""
-        self.root = self._remove(self.root, weight)
+    def remove(self, weight: float, kind: Optional['Kind'] = None) -> Optional[AVLNode]:
+        """Removes the node with `weight`; with `kind`, only the node holding that Kind."""
+        self._purge_collected()
+        self.root = self._remove(self.root, weight, kind)
         return self.root
 
-    def _remove(self, node: Optional[AVLNode], weight: float) -> Optional[AVLNode]:
+    def _remove(self, node: Optional[AVLNode], weight: float, kind: Optional['Kind'], _node: Optional[AVLNode] = None) -> Optional[AVLNode]:
         if not node:
-            return node
-
-        if weight < node.eval_weight():
-            node.left = self._remove(node.left, weight)
-        elif weight > node.eval_weight():
-            node.right = self._remove(node.right, weight)
+            return None
+        node_weight = node.eval_weight() if node.kind is not None or not callable(node.weight) else None
+        matches = node is _node if _node is not None else (
+            node_weight == weight and (kind is None or node.kind is kind))
+        if not matches and node_weight is not None and weight < node_weight:
+            node.left = self._remove(node.left, weight, kind, _node)
+        elif not matches:
+            # equal weights may sit on either side after rotations, so search both
+            node.right = self._remove(node.right, weight, kind, _node)
+            if node_weight == weight:
+                node.left = self._remove(node.left, weight, kind, _node)
         else:
-            # Node with the given weight found
-
-            # Case 1: Node with only one child or no child
             if not node.left:
                 return node.right
-            elif not node.right:
+            if not node.right:
                 return node.left
-
-            # Case 2: Node with two children
-            # Get the in-order successor (smallest in the right subtree)
-            temp = self._min_value_node(node.right)
-            node.kind = temp.kind
-            node.weight = temp.weight
-            node.right = self._remove(node.right, temp.weight)
-
-        # Rebalance the current node after deletion (or recursive calls)
+            successor = self._min_value_node(node.right)
+            node._kind, node.weight = successor._kind, successor.weight
+            node.right = self._remove(node.right, successor.eval_weight(), None, successor)
         return self._rebalance(node)
 
-    def _min_value_node(self, node: AVLNode) -> AVLNode:
-        current = node
-        while current.left:
-            current = current.left
-        return current
+    def _mark_collected(self, _ref: weakref.ref) -> None:
+        # Runs inside garbage collection: only flag, never restructure the tree here.
+        self._has_collected = True
+
+    def _purge_collected(self) -> None:
+        if not self._has_collected:
+            return
+        self._has_collected = False
+        dead_nodes = [node for node in self._nodes_inorder(include_dead=True) if node.kind is None]
+        for dead in dead_nodes:  # weak trees hold float weights, so .weight is the key
+            self.root = self._remove(self.root, dead.weight, None, dead)
+
+    # --- reads -----------------------------------------------------------
+
+    @staticmethod
+    def _min_value_node(node: AVLNode) -> AVLNode:
+        while node.left:
+            node = node.left
+        return node
+
+    def _nodes_inorder(self, reverse: bool = False, include_dead: bool = False) -> Iterator[AVLNode]:
+        stack, node = [], self.root
+        first, second = ('right', 'left') if reverse else ('left', 'right')
+        while stack or node:
+            while node:
+                stack.append(node)
+                node = getattr(node, first)
+            node = stack.pop()
+            if include_dead or node.kind is not None:
+                yield node
+            node = getattr(node, second)
 
     def min_node(self) -> Optional[AVLNode]:
-        if not self.root:
-            return None
-        return self._min_value_node(self.root)
+        return next(self._nodes_inorder(), None)
 
     def max_node(self) -> Optional[AVLNode]:
-        if not self.root:
-            return None
-        current = self.root
-        while current.right:
-            current = current.right
-        return current
+        return next(self._nodes_inorder(reverse=True), None)
 
-    def traverse_inorder(self, node: Optional[AVLNode] = None) -> list['Kind']:
-        if node is None:
-            node = self.root
-        result = []
+    def search(self, weight: float) -> Optional['Kind']:
+        """Returns the Kind stored with `weight`, or None."""
+        node = self.root
+        while node:
+            node_weight = node.eval_weight()
+            if weight == node_weight and node.kind is not None:
+                return node.kind
+            node = node.left if weight < node_weight else node.right
+        return None
 
-        def _walk(n: Optional[AVLNode]):
-            if not n:
-                return
-            _walk(n.left)
-            result.append(n.kind)
-            _walk(n.right)
+    def traverse_inorder(self, start_weight: Optional[float] = None) -> list['Kind']:
+        return [node.kind for node in self._nodes_inorder()
+                if start_weight is None or node.eval_weight() >= start_weight]
 
-        _walk(node)
-        return result
+    def size(self) -> int:
+        return sum(1 for _ in self._nodes_inorder())
 
-    def __iter__(self):
-        return iter(self.traverse_inorder())
+    def __len__(self) -> int:
+        return self.size()
+
+    def __iter__(self) -> Iterator['Kind']:
+        return (node.kind for node in self._nodes_inorder())
 
     def to_ascii(self) -> str:
         lines = []
@@ -178,7 +202,8 @@ class AVLTree:
             if node is None:
                 return
             _walk_ascii(node.right, indent + "  ")
-            lines.append(f"{indent}- {node.kind.name} (W:{node.eval_weight():.2f}, H:{node.height})")
+            if node.kind is not None:
+                lines.append(f"{indent}- {node.kind.name} (W:{node.eval_weight():.2f}, H:{node.height})")
             _walk_ascii(node.left, indent + "  ")
 
         _walk_ascii(self.root)

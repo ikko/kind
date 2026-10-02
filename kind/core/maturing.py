@@ -15,16 +15,12 @@ The merge proceeds by:
        * If a key does not exist in merged, the new_value is simply added.
 
 """
-from collections import defaultdict, deque
-import gc
-import logging
-from typing import Any, Callable, Dict, TypeVar, Union, Literal
 import copy
+import logging
+from collections import defaultdict
 from collections.abc import Mapping
+from typing import Any, Callable, Literal, TypeVar
 
-# --- Logger Setup ---
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
 
 V = TypeVar('V')
@@ -45,37 +41,25 @@ class DefDict(defaultdict):
         return value
 
     def __delitem__(self, key):
-        """Deletes an item and attempts to deep_del its value for memory awareness."""
-        if key in self:
-            value_to_delete = self[key]
-            super().__delitem__(key)
-            log.info(f"Deleted key '{key}' from DefDict. Attempting deep_del on its value.")
-            # We don't call deep_del directly here on value_to_delete
-            # because deep_del is designed for object attributes.
-            # Instead, we rely on Python's GC for the value itself, but log the intent.
-            # The primary deep_del is for attributes of the Kind instance.
-        else:
+        """Deletes an item, raising KeyError with the key's name if it is missing."""
+        if key not in self:
             raise KeyError(f"Key '{key}' not found in DefDict.")
+        super().__delitem__(key)
+
 
 def deep_del(obj: Any, attr: str) -> None:
-    """Recursively deletes an attribute and its contents if no other references exist."""
+    """Deletes an attribute and, if its value is a mapping, empties it first.
+
+    Emptying drops the references the mapping holds even if something else still
+    references the mapping itself; Python's GC reclaims the rest.
+    """
     if not hasattr(obj, attr):
         log.warning(f"Attempted to deep_del non-existent attribute '{attr}' from {obj}")
         return
-
-    # Get the value before deleting the attribute
-    value_to_delete = getattr(obj, attr)
-
-    # Delete the attribute from the object
+    value = getattr(obj, attr)
     delattr(obj, attr)
-    log.info(f"Deleted attribute '{attr}' from {obj}")
-
-    # Check if the value_to_delete has other references. If not, explicitly collect it.
-    # This is tricky and often not necessary, but aligns with the memory-aware directive.
-    # For now, we rely on gc.collect() to pick up unreferenced objects.
-    pass # gc.collect() will be called by the orchestrating immute() method
-
-    log.info(f"Value associated with '{attr}' is now unreferenced (if no other strong refs).")
+    if isinstance(value, dict):
+        value.clear()
 
 
 MergeStrategy = Literal['overwrite', 'patch', 'copy', 'deepcopy', 'pipe', 'update', 'extend', 'smooth']
@@ -95,14 +79,14 @@ def _apply_merge_strategy(current_value: Any, new_value: Any, strategy: MergeStr
         if isinstance(current_value, Kind) and isinstance(new_value, Kind):
             return current_value.patch(new_value)
         else:
-            log.warning(f"Patch strategy only applies to Kind objects. Overwriting instead.")
+            log.warning("Patch strategy only applies to Kind objects. Overwriting instead.")
             return new_value
     elif strategy == 'pipe':
         # Assumes new_value is a callable that takes current_value as input
         if callable(new_value):
             return new_value(current_value)
         else:
-            log.warning(f"Pipe strategy requires new_value to be callable. Overwriting instead.")
+            log.warning("Pipe strategy requires new_value to be callable. Overwriting instead.")
             return new_value
     elif strategy == 'update':
         # Assumes both are dictionaries or have an update method
@@ -110,7 +94,7 @@ def _apply_merge_strategy(current_value: Any, new_value: Any, strategy: MergeStr
             current_value.update(new_value)
             return current_value
         else:
-            log.warning(f"Update strategy only applies to mappings. Overwriting instead.")
+            log.warning("Update strategy only applies to mappings. Overwriting instead.")
             return new_value
     elif strategy == 'extend':
         # Assumes both are lists or have an extend method
@@ -118,7 +102,7 @@ def _apply_merge_strategy(current_value: Any, new_value: Any, strategy: MergeStr
             current_value.extend(new_value)
             return current_value
         else:
-            log.warning(f"Extend strategy only applies to lists. Overwriting instead.")
+            log.warning("Extend strategy only applies to lists. Overwriting instead.")
             return new_value
     elif strategy == 'smooth':
         if isinstance(current_value, Mapping) and isinstance(new_value, Mapping):
@@ -158,7 +142,7 @@ def _apply_merge_strategy(current_value: Any, new_value: Any, strategy: MergeStr
                     merged[k] = v
             return merged
         else:
-            log.warning(f"Smooth merge: Non-mapping types. Overwriting instead.")
+            log.warning("Smooth merge: Non-mapping types. Overwriting instead.")
             return new_value
     else:
         log.warning(f"Unknown merge strategy '{strategy}'. Overwriting instead.")

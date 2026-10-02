@@ -1,62 +1,28 @@
-from kind.core.mixinability import register_mixin
-from .path import KindPathMixin
-from .time_dim import KindTimeDimMixin
-from .visual import KindRender
-from .timeline import Timeline
+"""Builtin mixins: path finding, time dimension and Graphviz rendering, attached to every Kind."""
 import logging
+
+from kind.builtin import visual
+from kind.builtin.path import KindPathMixin
+from kind.builtin.time_dim import KindTimeDimMixin
+from kind.builtin.timeline import Timeline
+from kind.builtin.visual import KindRender
+from kind.core.mixinability import register_mixin
 
 log = logging.getLogger(__name__)
 
-def apply_builtins():
-    successful_mixins = 0
-    total_mixins = 0
+__all__ = ["apply_builtins", "BUILTIN_MIXINS", "KindPathMixin", "KindTimeDimMixin", "KindRender", "Timeline"]
 
-    # Path Mixin
-    total_mixins += 1
-    if register_mixin(KindPathMixin.path_to, 'path_to'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindPathMixin.match, 'match'): successful_mixins += 1
+BUILTIN_MIXINS = {
+    **{name: getattr(KindPathMixin, name) for name in ('path_to', 'match')},
+    **{name: getattr(KindTimeDimMixin, name) for name in (
+        'time_head', 'time_tail', 'as_date', 'as_time', 'as_datetime', 'day', 'hour', 'minute', 'second',
+        'period', 'as_period', 'duration', 'as_duration', 'delta', 'as_delta')},
+    **{renderer.__name__: renderer for renderer in visual.RENDERERS},
+    'from_mmd': staticmethod(visual.from_mmd),
+}
 
-    # Time Dimension Mixin
-    
-    
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.time_head, 'time_head'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.time_tail, 'time_tail'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.as_date, 'as_date'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.as_time, 'as_time'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.as_datetime, 'as_datetime'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.day, 'day'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.hour, 'hour'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.minute, 'minute'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.second, 'second'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.period, 'period'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.as_period, 'as_period'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.duration, 'duration'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.as_duration, 'as_duration'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.delta, 'delta'): successful_mixins += 1
-    total_mixins += 1
-    if register_mixin(KindTimeDimMixin.as_delta, 'as_delta'): successful_mixins += 1
 
-    # Visual Mixin
-    visual_methods = [
-        'to_dot', 'a_to_svg', 'to_svg', 'a_to_png', 'to_png', 'to_mmd', 'to_ascii'
-    ]
-    for method_name in visual_methods:
-        total_mixins += 1
-        if register_mixin(getattr(KindRender, method_name), method_name): successful_mixins += 1
-
-    log.debug(f"Mixin application complete. Successfully applied {successful_mixins} of {total_mixins} mixins.")
+def apply_builtins() -> None:
+    """Registers every builtin mixin; idempotent (re-registering replaces the same mixin)."""
+    applied = sum(register_mixin(value, name) for name, value in BUILTIN_MIXINS.items())
+    log.debug(f"Applied {applied} of {len(BUILTIN_MIXINS)} builtin mixins.")

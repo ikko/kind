@@ -1,35 +1,5 @@
 import pytest
-import threading
-from weakref import WeakValueDictionary
-from kind.core.base_kind import BaseKind as Kind, _to_kind, AVLTree
-
-@pytest.fixture(autouse=True)
-def setup_and_teardown_base_kind():
-    # Store original class-level attributes
-    original_pool = Kind._pool
-    original_numbered = Kind._numbered
-    original_auto_counter = Kind._auto_counter
-    original_read_cursor = Kind._read_cursor
-    original_write_cursor = Kind._write_cursor
-    original_lock = Kind._lock
-
-    # Clear for predictable testing
-    Kind._pool = WeakValueDictionary()
-    Kind._numbered = AVLTree()
-    Kind._auto_counter = 0
-    Kind._read_cursor = 0.0
-    Kind._write_cursor = 0.0
-    Kind._lock = threading.RLock()
-
-    yield
-
-    # Restore original class-level attributes after each test
-    Kind._pool = original_pool
-    Kind._numbered = original_numbered
-    Kind._auto_counter = original_auto_counter
-    Kind._read_cursor = original_read_cursor
-    Kind._write_cursor = original_write_cursor
-    Kind._lock = original_lock
+from kind.core.base_kind import BaseKind as Kind, _to_kind
 
 def test_kind_creation_and_interning():
     s1 = Kind("test_kind")

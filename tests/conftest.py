@@ -1,17 +1,55 @@
+import threading
+from weakref import WeakValueDictionary
+
 import pytest
-from kind.core.kind import Kind
+
 from kind.builtin import apply_builtins
 from kind.builtin.avl_tree import AVLTree
+from kind.core import mixinability
+from kind.core.base_kind import BaseKind
+from kind.core.kind import Kind
+
+
+@pytest.fixture(params=["asyncio", "trio"])
+def anyio_backend(request):
+    """Every anyio test runs on both backends."""
+    return request.param
+
 
 @pytest.fixture(scope='session', autouse=True)
 def apply_builtins_for_session():
     apply_builtins()
 
 
+def _fresh_pool() -> None:
+    """Forgets every Kind: a new pool and creation order (existing objects live on, unpooled)."""
+    BaseKind._pool = WeakValueDictionary()
+    BaseKind._numbered = AVLTree(weak=True)
+    BaseKind._auto_counter = 0
+    BaseKind._write_cursor = 0.0
+    BaseKind._lock = threading.RLock()
+
+
+@pytest.fixture(autouse=True)
+def isolated_kinds():
+    """Every test starts with an empty pool, a fresh creation order and an unlocked mixin registry."""
+    _fresh_pool()
+    mixinability._unlock_mixins_for_testing()
+    registry = mixinability._snapshot_for_testing()
+    yield
+    mixinability._restore_for_testing(registry)
+    mixinability._unlock_mixins_for_testing()
+
+
+@pytest.fixture
+def reset_pool():
+    """Call it mid-test to rebuild a graph from serialized text alone."""
+    return _fresh_pool
+
+
 
 @pytest.fixture(scope='function')
 def kind_fixture():
-    Kind._pool.clear() # Ensure a clean slate for the fixture
 
     # Define a set of core bioinformatics terms for nodes
     core_nodes = [
@@ -91,5 +129,3 @@ def kind_fixture():
 
     yield kinds
 
-    # Clean up after the fixture if necessary (though setup_and_teardown handles most of it)
-    Kind._pool.clear()

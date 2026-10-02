@@ -2,8 +2,9 @@
 
 It allows for adding, manipulating, and calculating overlaps between timelines.
 """
-from typing import List, Tuple, Optional, Iterator
+import bisect
 import datetime
+from typing import Iterator, List, Optional, Tuple
 
 class Timeline:
     """Represents a series of periods, typically associated with a Kind."""
@@ -16,8 +17,16 @@ class Timeline:
     def add_period(self, start: datetime.datetime, end: datetime.datetime) -> None:
         if start >= end:
             raise ValueError("Start datetime must be before end datetime.")
-        self._periods.append((start, end))
-        self._periods.sort()
+        bisect.insort(self._periods, (start, end))
+
+    def overlap(self, other: 'Timeline') -> 'Timeline':
+        """The periods covered by both timelines."""
+        common = Timeline()
+        for start, end in self._periods:
+            for other_start, other_end in other:
+                if max(start, other_start) < min(end, other_end):
+                    common.add_period(max(start, other_start), min(end, other_end))
+        return common
 
     def __iter__(self) -> Iterator[Tuple[datetime.datetime, datetime.datetime]]:
         return iter(self._periods)

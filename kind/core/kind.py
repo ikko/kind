@@ -1,708 +1,472 @@
+"""This module defines Kind: an interned, name-identified graph node.
+
+A Kind stands for a category as data. It has one identity per name (see BaseKind),
+children and parents (an ordered DAG), named relations with inverses, lazily created
+metadata/context/index, attributes attached at runtime, and a per-instance freeze.
+"""
 import datetime
 import inspect
+import re
 import warnings
-from typing import Any, Iterator, Literal, Optional, Set, Type, Union
-from weakref import WeakValueDictionary
+from collections import deque
+from itertools import chain
 from sys import getsizeof
+from typing import Any, Iterable, Iterator, Literal, Optional, Set, Type, TypeVar, Union
 
 import orjson
-import toml
+import tomli_w
 import yaml
 
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
+
+from kind.builtin.collections import OrderedKindSet
 from kind.builtin.index import KindIndex
-from kind.core.lazy import SENTINEL
-from kind.core.lazy_kind import LazyKind
-from kind.core.maturing import _apply_merge_strategy, deep_del, DefDict
-from kind.builtin.avl_tree import AVLTree
+from kind.core.base_kind import BaseKind
+from kind.core.graph_traversal import GraphTraversal
+from kind.core.lazy_kind import SENTINEL, LazyKind
+from kind.core.maturing import DefDict, _apply_merge_strategy
+from kind.core.mixinability import apply_mixin_to_instance
+from kind.core.mixins import _get_available_mixins
+from kind.core.relations import Relations
 
-from .base_kind import BaseKind
-from .mixinability import apply_mixin_to_instance, freeze, is_frozen
-from .mixins import _get_available_mixins
-from .relations import Relations
-from .graph_traversal import GraphTraversal
-from .type_var_t import T
+T = TypeVar("T")
+MergeStrategy = Literal['overwrite', 'patch', 'copy', 'deepcopy', 'pipe', 'update', 'extend', 'smooth']
 
-MEMORY_AWARE_DELETE = True
+INVERSE_PREFIX = "_inverse_"
+
+# Mermaid node shapes: node_shape -> (opening, closing) around the label.
+MERMAID_SHAPES = {
+    "round": ("(", ")"),
+    "stadium": ("([", "])"),
+    "subroutine": ("[[", "]]"),
+    "cylindrical": ("[(", ")]"),
+    "circle": ("((", "))"),
+    "double_circle": ("(((", ")))"),
+    "asymmetric": (">", "]"),
+    "rhombus": ("{", "}"),
+    "hexagon": ("{{", "}}"),
+    "parallelogram": ("[/", "/]"),
+    "parallelogram_alt": ("[\\", "\\]"),
+    "trapezoid": ("[/", "\\]"),
+    "trapezoid_alt": ("[\\", "/]"),
+}
+DEFAULT_SHAPE = ("[", "]")
+
+# Slots that make up a Kind's identity and place in the graph: never set from metadata.
+STRUCTURAL_SLOTS = frozenset({'name', 'parents', 'children', '_position', '_next', '_prev'})
+
+
+def _is_settable(class_attribute: Any) -> bool:
+    """True for slots and properties with a setter: the class-level attributes an instance may set."""
+    if isinstance(class_attribute, property):
+        return class_attribute.fset is not None
+    return inspect.ismemberdescriptor(class_attribute)
+
+
+class FrozenKindError(AttributeError):
+    """Raised when a frozen Kind is asked to change."""
 
 
 class Kind(BaseKind):
-    _pool: WeakValueDictionary[str, 'Kind'] = WeakValueDictionary() # Override BaseKind's pool
-    _numbered: AVLTree = AVLTree() # Override BaseKind's numbered tree
-
-    def __repr__(self):
-        return f"Kind('{self.name}')"
     __slots__ = (
         '_index',
         '_metadata',
         '_context',
         '_elevated_attributes',
-        '_relations', # New slot for lazy relations
+        '_relations',
+        '_frozen',
     )
 
-    def __new__(cls, name: str, origin: Optional[Any] = None):
-        with cls._lock:
-            if not isinstance(name, str):
-                raise TypeError("Kind name must be a string")
+    def _init_slots(self, name: str, origin: Optional[Any]) -> None:
+        super()._init_slots(name, origin)
+        set_slot = object.__setattr__
+        set_slot(self, 'parents', OrderedKindSet())
+        set_slot(self, 'children', OrderedKindSet())
+        set_slot(self, '_elevated_attributes', {})
+        set_slot(self, '_index', SENTINEL)
+        set_slot(self, '_metadata', SENTINEL)
+        set_slot(self, '_context', SENTINEL)
+        set_slot(self, '_relations', SENTINEL)
+        set_slot(self, '_frozen', False)
 
-            # Check if an object with this name already exists in the pool
-            if name in cls._pool:
-                existing_obj = cls._pool[name]
-                # If the existing object is already an instance of the current class (Kind or its subclass),
-                # return it directly.
-                if isinstance(existing_obj, cls):
-                    return existing_obj
-                # If the existing object is a BaseKind (but not a Kind),
-                # we need to "upgrade" it to a Kind.
-                elif isinstance(existing_obj, BaseKind):
-                    # Create a new instance of the current class (Kind) using object.__new__
-                    # to bypass any custom __new__ in the hierarchy.
-                    obj = object.__new__(cls)
-                    # Copy attributes from the existing BaseKind to the new Kind instance.
-                    # This ensures that properties like name, parents, children, etc., are preserved.
-                    for attr in existing_obj.__slots__:
-                        if hasattr(existing_obj, attr):
-                            object.__setattr__(obj, attr, getattr(existing_obj, attr))
-                    
-                    # Initialize Kind-specific attributes on the newly created Kind instance.
-                    # These are attributes that are part of Kind's __slots__ but not BaseKind's.
-                    object.__setattr__(obj, '_elevated_attributes', {})
-                    object.__setattr__(obj, '_index', SENTINEL)
-                    object.__setattr__(obj, '_metadata', SENTINEL)
-                    object.__setattr__(obj, '_context', SENTINEL)
-                    object.__setattr__(obj, '_relations', SENTINEL) # Lazy relations initialization
-                    
-                    # Set the origin if it's not already set.
-                    if origin is None and obj.origin is None:
-                        object.__setattr__(obj, 'origin', f"{cls.__module__}.{cls.__name__}")
-                    
-                    # Update the pool to store the new Kind instance instead of the old BaseKind.
-                    cls._pool[name] = obj
-                    return obj
-            
-            # If no object with this name exists in the pool, create a brand new Kind instance.
-            obj = object.__new__(cls)
-            
-            # Initialize BaseKind-specific attributes directly.
-            object.__setattr__(obj, 'name', name)
-            object.__setattr__(obj, 'origin', origin)
-            object.__setattr__(obj, 'parents', [])
-            object.__setattr__(obj, 'children', [])
-            
-            object.__setattr__(obj, '_position', cls._write_cursor)
-            object.__setattr__(obj, '_next', None)
-            object.__setattr__(obj, '_prev', None)
-            object.__setattr__(obj, '_length_cache', None)
-            object.__setattr__(obj, 'node_shape', None)
-            cls._write_cursor += 1.0
-            
-            # Initialize Kind-specific attributes.
-            object.__setattr__(obj, '_elevated_attributes', {})
-            object.__setattr__(obj, '_index', SENTINEL)
-            object.__setattr__(obj, '_metadata', SENTINEL)
-            object.__setattr__(obj, '_context', SENTINEL)
-            object.__setattr__(obj, '_relations', SENTINEL) # Lazy relations initialization
-            
-            # Set the origin if it's not already set.
-            if origin is None and obj.origin is None:
-                object.__setattr__(obj, 'origin', f"{cls.__module__}.{cls.__name__}")
-            
-            # Add the newly created Kind instance to the global pool and numbered tree.
-            cls._pool[name] = obj
-            cls._numbered.root = cls._numbered.insert(cls._numbered.root, obj, obj._position)
-
-            return obj
+    # --- lazily created parts ----------------------------------------------
 
     @property
-    def index(self):
+    def index(self) -> KindIndex:
         if self._index is SENTINEL:
-            self._index = KindIndex(self)
+            object.__setattr__(self, '_index', KindIndex(self))
         return self._index
 
     @property
-    def metadata(self):
+    def metadata(self) -> DefDict:
         if self._metadata is SENTINEL:
-            self._metadata = DefDict()
+            object.__setattr__(self, '_metadata', DefDict())
         return self._metadata
 
     @property
-    def context(self):
+    def context(self) -> DefDict:
         if self._context is SENTINEL:
-            self._context = DefDict()
+            object.__setattr__(self, '_context', DefDict())
         return self._context
 
     @property
-    def relations(self):
+    def relations(self) -> Relations:
         if self._relations is SENTINEL:
             object.__setattr__(self, '_relations', Relations(self))
         return self._relations
 
+    @property
+    def ref(self) -> Optional[Any]:
+        """Alias for .origin: the source this Kind was made from."""
+        return self.origin
+
+    @ref.setter
+    def ref(self, value: Any) -> None:
+        self.origin = value
+
+    # --- attribute protocol ------------------------------------------------
+
     def __getattr__(self, name: str) -> Any:
-        if name in self._elevated_attributes:
-            return self._elevated_attributes[name]
+        """Elevated attributes first; any other public name is a dynamic relation verb.
+
+        `a.has_kind(b)` relates a to b with how='has_kind'. Private names and names the
+        class defines (e.g. a property whose getter failed) raise AttributeError instead.
+        """
         try:
-            # Try to get the attribute from the base class (which checks __slots__)
-            return super().__getattr__(name)
+            elevated = object.__getattribute__(self, '_elevated_attributes')
         except AttributeError:
-            # If not found in base class or _elevated_attributes, delegate to relations
-            return getattr(self.relations, name) # This will now call the property
+            raise AttributeError(name) from None
+        if name in elevated:
+            return elevated[name]
+        if name.startswith('_') or hasattr(type(self), name):
+            raise AttributeError(f"{type(self).__name__} {self.name!r} has no attribute {name!r}")
+        return getattr(self.relations, name)
 
     def __setattr__(self, name: str, value: Any) -> None:
-        # If the attribute is in __slots__ (either in Kind or BaseKind), set it directly
-        if name in self.__slots__ or name in self.__class__.__bases__[0].__slots__:
-            super().__setattr__(name, value)
+        self._ensure_mutable()
+        if _is_settable(getattr(type(self), name, None)):
+            object.__setattr__(self, name, value)
         else:
-            # Otherwise, store it in _elevated_attributes
             self._elevated_attributes[name] = value
 
     def __delattr__(self, name: str) -> None:
-        if name in self.__slots__ or name in self.__class__.__bases__[0].__slots__:
-            super().__delattr__(name)
-        elif name in self._elevated_attributes:
+        self._ensure_mutable()
+        if name in self._elevated_attributes:
             del self._elevated_attributes[name]
         else:
-            super().__delattr__(name) # Raise AttributeError if not found
+            object.__delattr__(self, name)
 
-    def append(self, child: Union['Kind', 'LazyKind']) -> 'Kind':
-        # Ensure child is a Kind or LazyKind instance
-        if not isinstance(child, (Kind, LazyKind)):
-            child = Kind.from_object(child)
+    # --- freezing ----------------------------------------------------------
 
-        with self._lock:
-            if child not in self.children:
-                self.children.append(child)
-                self._length_cache = None
-            if self not in child.parents:
-                child.parents.append(self)
-        return child
+    @property
+    def frozen(self) -> bool:
+        return self._frozen
 
-    def add(self, child: 'Kind') -> 'Kind':
-        # Ensure child is a Kind instance
-        if not isinstance(child, Kind):
-            child = Kind.from_object(child)
-
-        if child not in self.children:
-            return self.append(child)
+    def freeze(self) -> 'Kind':
+        """Makes this Kind immutable: no attribute, edge or relation changes on it afterwards."""
+        object.__setattr__(self, '_frozen', True)
         return self
 
-    def insert(self, child: 'Kind', at: float = None) -> 'Kind':
-        # Ensure child is a Kind instance
-        if not isinstance(child, Kind):
-            child = Kind.from_object(child)
+    def _ensure_mutable(self) -> None:
+        if object.__getattribute__(self, '_frozen'):
+            raise FrozenKindError(f"Kind {self.name!r} is frozen (immute()/freeze()); it cannot change. "
+                                  f"Hint: change it before maturing, or build a new Kind.")
 
+    # --- graph construction ------------------------------------------------
+
+    @classmethod
+    def _coerce(cls, value: Any) -> 'Kind':
+        if isinstance(value, Kind):
+            return value
+        if isinstance(value, LazyKind):
+            return value.evaluate()
+        return cls.from_object(value)
+
+    def append(self, child: Any) -> 'Kind':
+        """Links `child` under this Kind (idempotent) and returns the child."""
+        child = self._coerce(child)
         with self._lock:
-            if child in self.children:
-                self.children.remove(child)
-            if at is None:
-                at = self._write_cursor
-                self._write_cursor += 1.0
-            child._position = at
-            self.children.append(child)
-            child.parents.append(self)
-            self._length_cache = len(self.children)
+            self._ensure_mutable()
+            child._ensure_mutable()
+            self.children.add(child)
+            child.parents.add(self)
+        return child
+
+    def add(self, child: Any) -> 'Kind':
+        """Like append, but returns self, so calls can be chained."""
+        self.append(child)
+        return self
+
+    def insert(self, child: Any, at: Optional[int] = None) -> 'Kind':
+        """Places `child` at index `at` among the children (moving it if already there)."""
+        child = self._coerce(child)
+        with self._lock:
+            self._ensure_mutable()
+            child._ensure_mutable()
+            self.children.discard(child)
+            self.children.insert(len(self.children) if at is None else at, child)
+            child.parents.add(self)
         return self
 
     def reparent(self) -> None:
-        """Connects the children of the removed Kind to its parents."""
+        """Connects the children of this Kind directly to its parents."""
         with self._lock:
-            for parent in self.parents:
-                # Remove self from parent's children
-                if self in parent.children:
-                    parent.children.remove(self)
-                # Add self's children to parent's children
+            for parent in list(self.parents):
+                parent.children.discard(self)
                 for child in self.children:
-                    if child not in parent.children:
-                        parent.children.append(child)
-                    # Update child's parents
-                    if self in child.parents:
-                        child.parents.remove(self)
-                    if parent not in child.parents:
-                        child.parents.append(parent)
+                    parent.children.add(child)
+                    child.parents.discard(self)
+                    child.parents.add(parent)
 
     def rebind_linear_sequence(self) -> None:
-        """Rebinds the _prev and _next pointers of adjacent kinds in the linear sequence."""
+        """Removes this Kind from the Kind.next() chain, joining its neighbours."""
         with self._lock:
-            if self._prev:
-                self._prev._next = self._next
-            if self._next:
-                self._next._prev = self._prev
-            self._prev = None
-            self._next = None
+            if self._prev is not None:
+                object.__setattr__(self._prev, '_next', self._next)
+            if self._next is not None:
+                object.__setattr__(self._next, '_prev', self._prev)
+            object.__setattr__(self, '_prev', None)
+            object.__setattr__(self, '_next', None)
 
     def delete(self) -> None:
-        self.reparent()
-        self.rebind_linear_sequence()
-        if self._index is not SENTINEL:
-            self.index.remove(self)
-
-        # Sever all relationships
-        for related_kind in list(self.related_to): # Iterate over a copy as list will be modified
-            self.unrelate(related_kind)
-
-        self.parents.clear()
-        self.children.clear()
+        """Removes this Kind from the graph and the pool; its children move up to its parents."""
         with self._lock:
-            if self._position in self._numbered:
-                self._numbered.remove(self._position)
-            if self.name in self._pool:
-                del self._pool[self.name]
-        if MEMORY_AWARE_DELETE:
-            try:
-                pass # Removed 'del self' due to potential object corruption
-            except Exception:
-                pass
+            self._ensure_mutable()
+            self.reparent()
+            self.rebind_linear_sequence()
+            if self._index is not SENTINEL:
+                self._index.remove(self)
+            for how, related_kinds in list(self.relations.items()):
+                for related_kind in list(related_kinds):
+                    if how.startswith(INVERSE_PREFIX):
+                        related_kind.unrelate(self, how=how[len(INVERSE_PREFIX):])
+                    else:
+                        self.unrelate(related_kind, how=how)
+            for parent in self.parents:
+                parent.children.discard(self)
+            for child in self.children:
+                child.parents.discard(self)
+            self.parents.clear()
+            self.children.clear()
+            self._numbered.remove(self._position, self)
+            if BaseKind._pool.get(self.name) is self:
+                del BaseKind._pool[self.name]
 
     def pop(self) -> 'Kind':
-        """Safely removes the kind from its hierarchy, re-parenting its children.
-
-        Returns:
-            The popped kind.
-        """
+        """Deletes this Kind (re-parenting its children) and returns it."""
         self.delete()
         return self
 
     def popleft(self) -> Optional['Kind']:
-        if self.children:
-            self._length_cache = None
-            popped_child = self.children.pop(0)
-            popped_child.delete() # Ensure full cleanup of the popped child
-            return popped_child
-        return None
+        """Deletes and returns the first child, or None."""
+        if not self.children:
+            return None
+        child = self.children[0]
+        child.delete()
+        return child
 
-    def graph(self):
-        return GraphTraversal(self, graph_mode='dfs').traverse()
+    # --- traversal and rendering -------------------------------------------
 
-    def tree(self):
-        return GraphTraversal(self, mode='tree').traverse()
+    def graph(self) -> list['Kind']:
+        return GraphTraversal(self, traverse_mode='dfs').traverse()
 
-    def to_mmd(self, mode: str = "tree") -> str:
-        lines = ["graph LR"]
-        visited_nodes = set()
-        visited_edges = set()
+    def tree(self) -> list['Kind']:
+        """This Kind and its descendants, depth first."""
+        return GraphTraversal(self, traverse_mode='dfs', family_mode='children_only').traverse()
 
-        def get_node_id(kind: 'Kind') -> str:
+    def _outgoing(self) -> Iterator[tuple['Kind', str]]:
+        """Child edges (how='') then forward relations, in a deterministic order."""
+        for child in self.children:
+            yield child, ""
+        for how, related_kinds in self.relations.items():
+            if not how.startswith(INVERSE_PREFIX):
+                for related_kind in sorted(related_kinds, key=lambda k: k.name):
+                    yield related_kind, how
+
+    def to_mmd(self) -> str:
+        """Mermaid flowchart of everything reachable through children and relations."""
+        def node_id(kind: 'Kind') -> str:
             return kind.name.replace(" ", "_")
 
-        def get_node_declaration(kind: 'Kind') -> str:
-            node_id = get_node_id(kind)
-            if kind.node_shape == "round":
-                return f"{node_id}({kind.name})"
-            elif kind.node_shape == "stadium":
-                return f"{node_id}([{kind.name}])"
-            elif kind.node_shape == "subroutine":
-                return f"{node_id}[{kind.name}]"
-            elif kind.node_shape == "cylindrical":
-                return f"{node_id}[({kind.name})]"
-            elif kind.node_shape == "circle":
-                return f"{node_id}(({kind.name}))"
-            elif kind.node_shape == "asymmetric":
-                return f"{node_id}> {kind.name}]"
-            elif kind.node_shape == "rhombus":
-                return f"{node_id}{{{kind.name}}}"
-            elif kind.node_shape == "hexagon":
-                return f"{node_id}{{{{ {kind.name} }}}}"
-            elif kind.node_shape == "parallelogram":
-                return f"{node_id}[/{kind.name}/]"
-            elif kind.node_shape == "parallelogram_alt":
-                return f"{node_id}[\\{kind.name}\\]"
-            elif kind.node_shape == "trapezoid":
-                return f"{node_id}[/{kind.name}\\]"
-            elif kind.node_shape == "trapezoid_alt":
-                return f"{node_id}[\\{kind.name}/]"
-            elif kind.node_shape == "double_circle":
-                return f"{node_id}(({kind.name}))"
-            else:
-                return f"{node_id}[{kind.name}]"
+        edges, visited = [], {self}
+        stack = [self._outgoing()]
+        owners = [self]
+        while stack:
+            edge = next(stack[-1], None)
+            if edge is None:
+                stack.pop()
+                owners.pop()
+                continue
+            target, how = edge
+            arrow = "-->" if not how else f"-- {how} -->"
+            edges.append(f"    {node_id(owners[-1])} {arrow} {node_id(target)}")
+            if target not in visited:
+                visited.add(target)
+                stack.append(target._outgoing())
+                owners.append(target)
 
-        def walk(kind: 'Kind'):
-            if kind in visited_nodes:
-                return
-            visited_nodes.add(kind)
-
-            for child in kind.children:
-                edge = (kind, child, "-->", "")
-                if edge not in visited_edges:
-                    lines.append(f"    {get_node_id(kind)} --> {get_node_id(child)}")
-                    visited_edges.add(edge)
-                walk(child)
-
-            for how, related_kinds in kind.relations.items():
-                if not how.startswith("_inverse_"):
-                    for related_kind in related_kinds:
-                        edge = (kind, related_kind, "--", how)
-                        if edge not in visited_edges:
-                            lines.append(f"    {get_node_id(kind)} -- {how} --> {get_node_id(related_kind)}")
-                            visited_edges.add(edge)
-                        walk(related_kind)
-
-        walk(self)
-
-        node_declarations = set()
-        for kind in visited_nodes:
-            node_declarations.add(get_node_declaration(kind))
-
-        final_lines = ["graph LR"]
-        final_lines.extend(sorted(list(node_declarations)))
-        final_lines.extend(lines[1:])
-
-        return "\n".join(final_lines)
+        declarations = sorted({
+            f"{node_id(kind)}{MERMAID_SHAPES.get(kind.node_shape, DEFAULT_SHAPE)[0]}{kind.name}"
+            f"{MERMAID_SHAPES.get(kind.node_shape, DEFAULT_SHAPE)[1]}"
+            for kind in visited})
+        return "\n".join(["graph LR", *declarations, *dict.fromkeys(edges)])
 
     def to_ascii(self, traverse_mode: Literal["dfs", "bfs"] = "dfs",
-                 family_mode: Literal["children_first", "parents_first"] = "children_first",
-                 graph_mode: Literal["dfs", "bfs"] = "dfs") -> str:
-        """
-         what: Generates an ASCII art representation of the Kind.
-         why: To visualize the Kind's structure in text.
-         how: Delegates to `GraphTraversal.to_ascii`.
-         when: When a text-based visualization is requested.
-         by caller: External tools, debugging.
-         how often: Infrequently.
-         how much: Depends on graph size.
-         it is like: Drawing a text-based diagram.
-         improve: N/A.
-         """
-        return GraphTraversal(self, traverse_mode=traverse_mode, family_mode=family_mode, graph_mode=graph_mode).to_ascii()
+                 family_mode: Literal["children_first", "parents_first"] = "children_first") -> str:
+        """Indented text rendering of the graph, followed by its relations."""
+        return GraphTraversal(self, traverse_mode=traverse_mode, family_mode=family_mode).to_ascii()
 
-    def to_yaml(self) -> str:
-        """
-        Serializes the Kind graph to a YAML string.
-        """
-        nodes_data = []
-        # Collect all kinds from the pool
-        all_kinds = list(Kind._pool.values())
+    # --- serialization -----------------------------------------------------
 
-        # Sort kinds by name for consistent output
-        all_kinds.sort(key=lambda s: s.name)
+    def _component(self) -> list['Kind']:
+        """Every Kind connected to this one by children, parents or relations (either direction)."""
+        seen, queue = {self}, deque([self])
+        while queue:
+            kind = queue.popleft()
+            neighbours = chain(kind.children, kind.parents,
+                               *(related for _, related in kind.relations.items()))
+            for neighbour in neighbours:
+                if neighbour not in seen:
+                    seen.add(neighbour)
+                    queue.append(neighbour)
+        return sorted(seen, key=lambda kind: kind.name)
 
-        for kind in all_kinds:
-            node_info = {
-                "name": kind.name,
-                "children": sorted([child.name for child in kind.children]), # Sort children for consistent output
-                "relations": {how: sorted([related_kind.name for related_kind in related_kinds])
-                              for how, related_kinds in kind.relations.items() if not how.startswith('_inverse_')}
-            }
-            nodes_data.append(node_info)
-
-        return yaml.dump(nodes_data, sort_keys=False, default_flow_style=False)
+    def _graph_dump(self) -> list[dict]:
+        return [{
+            "name": kind.name,
+            "children": [child.name for child in kind.children],
+            "relations": {how: sorted(related.name for related in related_kinds)
+                          for how, related_kinds in kind.relations.items()
+                          if not how.startswith(INVERSE_PREFIX)},
+        } for kind in self._component()]
 
     @classmethod
-    def from_yaml(cls, yaml_string: str) -> 'Kind':
+    def _graph_load(cls, nodes: list[dict], source: str) -> 'Kind':
+        """Builds (or merges into, by name) the Kinds described by `nodes`; returns a root.
+
+        Names are interned: a node named like an existing Kind extends that Kind.
         """
-        Reconstructs a Kind graph from a YAML string.
-        """
-        loaded_data = yaml.safe_load(yaml_string)
-
-        # First pass: Create all Kind instances
-        kinds = {} # type: ignore
-        for node_data in loaded_data:
-            name = node_data["name"]
-            kinds[name] = cls(name)
-
-        # Second pass: Establish children and relations
-        for node_data in loaded_data:
-            name = node_data["name"]
-            current_kind = kinds[name]
-
-            for child_name in node_data.get("children", []):
-                child_kind = kinds.get(child_name)
-                if child_kind:
-                    current_kind.append(child_kind)
-
-            for how, related_names in node_data.get("relations", {}).items():
+        if not nodes:
+            raise ValueError(f"No kinds found in the {source} input.")
+        kinds = {node["name"]: cls(node["name"]) for node in nodes}
+        for node in nodes:
+            current = kinds[node["name"]]
+            for child_name in node.get("children", []):
+                if child_name in kinds:
+                    current.append(kinds[child_name])
+            for how, related_names in node.get("relations", {}).items():
                 for related_name in related_names:
-                    related_kind = kinds.get(related_name)
-                    if related_kind:
-                        current_kind.relate(related_kind, how=how)
+                    if related_name in kinds:
+                        current.relate(kinds[related_name], how=how)
+        return cls._pick_root(kinds.values())
 
-        # Determine root kinds (those with no parents among the parsed kinds)
-        all_kinds = set(kinds.values())
-        child_kinds = set()
-        for kind in all_kinds:
-            for child in kind.children:
-                if child in all_kinds:
-                    child_kinds.add(child)
-            for how, related_kinds in kind.relations.items():
-                if not how.startswith('_inverse_'):
-                    for related_kind in related_kinds:
-                        if related_kind in all_kinds:
-                            child_kinds.add(related_kind)
-
-        root_kinds = [kind for kind in all_kinds if kind not in child_kinds]
-
-        if not root_kinds:
-            if all_kinds:
-                return next(iter(all_kinds))
-            else:
-                raise ValueError("No kinds found in the YAML string.")
-
-        return root_kinds[0]
+    @staticmethod
+    def _pick_root(kinds: Iterable['Kind']) -> 'Kind':
+        """The first Kind (by name) that no other parsed Kind points to; else the first by name."""
+        kinds = sorted(kinds, key=lambda kind: kind.name)
+        targets = {target for kind in kinds for target, _ in kind._outgoing()}
+        return next((kind for kind in kinds if kind not in targets), kinds[0])
 
     def to_json(self) -> str:
-        """
-        Serializes the Kind graph to a JSON string using orjson.
-        """
-        nodes_data = []
-        all_kinds = list(Kind._pool.values())
-        all_kinds.sort(key=lambda s: s.name)
-
-        for kind in all_kinds:
-            node_info = {
-                "name": kind.name,
-                "children": sorted([child.name for child in kind.children]),
-                "relations": {how: sorted([related_kind.name for related_kind in related_kinds])
-                              for how, related_kinds in kind.relations.items() if not how.startswith('_inverse_')}
-            }
-            nodes_data.append(node_info)
-
-        return orjson.dumps(nodes_data, option=orjson.OPT_INDENT_2).decode("utf-8")
+        return orjson.dumps(self._graph_dump(), option=orjson.OPT_INDENT_2).decode("utf-8")
 
     @classmethod
     def from_json(cls, json_string: str) -> 'Kind':
-        """
-        Reconstructs a Kind graph from a JSON string using orjson.
-        """
-        loaded_data = orjson.loads(json_string)
+        return cls._graph_load(orjson.loads(json_string), "JSON")
 
-        kinds = {} # type: ignore
-        for node_data in loaded_data:
-            name = node_data["name"]
-            kinds[name] = cls(name)
+    def to_yaml(self) -> str:
+        return yaml.safe_dump(self._graph_dump(), sort_keys=False, default_flow_style=False)
 
-        for node_data in loaded_data:
-            name = node_data["name"]
-            current_kind = kinds[name]
-
-            for child_name in node_data.get("children", []):
-                child_kind = kinds.get(child_name)
-                if child_kind:
-                    current_kind.append(child_kind)
-
-            for how, related_names in node_data.get("relations", {}).items():
-                for related_name in related_names:
-                    related_kind = kinds.get(related_name)
-                    if related_kind:
-                        current_kind.relate(related_kind, how=how)
-
-        all_kinds = set(kinds.values())
-        child_kinds = set()
-        for kind in all_kinds:
-            for child in kind.children:
-                if child in all_kinds:
-                    child_kinds.add(child)
-            for how, related_kinds in kind.relations.items():
-                if not how.startswith('_inverse_'):
-                    for related_kind in related_kinds:
-                        if related_kind in all_kinds:
-                            child_kinds.add(related_kind)
-
-        root_kinds = [kind for kind in all_kinds if kind not in child_kinds]
-
-        if not root_kinds:
-            if all_kinds:
-                return next(iter(all_kinds))
-            else:
-                raise ValueError("No kinds found in the JSON string.")
-
-        return root_kinds[0]
+    @classmethod
+    def from_yaml(cls, yaml_string: str) -> 'Kind':
+        return cls._graph_load(yaml.safe_load(yaml_string) or [], "YAML")
 
     def to_toml(self) -> str:
-        """
-        Serializes the Kind graph to a TOML string.
-        """
-        nodes_data = []
-        all_kinds = list(Kind._pool.values())
-        all_kinds.sort(key=lambda s: s.name)
-
-        for kind in all_kinds:
-            node_info = {
-                "name": kind.name,
-                "children": sorted([child.name for child in kind.children]),
-                "relations": {how: sorted([related_kind.name for related_kind in related_kinds])
-                              for how, related_kinds in kind.relations.items() if not how.startswith('_inverse_')}
-            }
-            nodes_data.append(node_info)
-
-        # TOML does not directly support lists of tables without a key
-        # So, we wrap it in a dictionary with a top-level key
-        return toml.dumps({"kinds": nodes_data})
+        return tomli_w.dumps({"kinds": self._graph_dump()})  # TOML needs a key above a list of tables
 
     @classmethod
     def from_toml(cls, toml_string: str) -> 'Kind':
-        """
-        Reconstructs a Kind graph from a TOML string.
-        """
-        loaded_data = toml.loads(toml_string)
-        nodes_data = loaded_data.get("kinds", [])
-
-        # First pass: Create all Kind instances
-        kinds = {} # type: ignore
-        for node_data in nodes_data:
-            name = node_data["name"]
-            kinds[name] = cls(name)
-
-        # Second pass: Establish children and relations
-        for node_data in nodes_data:
-            name = node_data["name"]
-            current_kind = kinds[name]
-
-            for child_name in node_data.get("children", []):
-                child_kind = kinds.get(child_name)
-                if child_kind:
-                    current_kind.append(child_kind)
-
-            for how, related_names in node_data.get("relations", {}).items():
-                for related_name in related_names:
-                    related_kind = kinds.get(related_name)
-                    if related_kind:
-                        current_kind.relate(related_kind, how=how)
-
-        all_kinds = set(kinds.values())
-        child_kinds = set()
-        for kind in all_kinds:
-            for child in kind.children:
-                if child in all_kinds:
-                    child_kinds.add(child)
-            for how, related_kinds in kind.relations.items():
-                if not how.startswith('_inverse_'):
-                    for related_kind in related_kinds:
-                        if related_kind in all_kinds:
-                            child_kinds.add(related_kind)
-
-        root_kinds = [kind for kind in all_kinds if kind not in child_kinds]
-
-        if not root_kinds:
-            if all_kinds:
-                return next(iter(all_kinds))
-            else:
-                raise ValueError("No kinds found in the TOML string.")
-
-        return root_kinds[0]
+        return cls._graph_load(tomllib.loads(toml_string).get("kinds", []), "TOML")
 
     @classmethod
     def from_ascii(cls, ascii_string: str) -> 'Kind':
-        """
-        Reconstructs a Kind graph from an ASCII string.
-        """
-        import re
-        lines = ascii_string.strip().split('\n')
-
-        kinds = {}  # name -> Kind instance
-        # Stack to keep track of parent-child relationships based on indentation
-        # Stores (indentation_level, Kind_instance)
-        parent_stack = []
-
-        # First pass: Parse kinds and their hierarchy
-        for line in lines:
-            if not line.strip() or line.strip().startswith("---"):
-                continue
-
-            kind_match = re.match(r'^(\s*)- (.+)$', line)
-            if kind_match:
-                indent = len(kind_match.group(1))
-                name = kind_match.group(2)
-
-                # Create the kind if it doesn't exist
-                if name not in kinds:
-                    kinds[name] = cls(name)
-
-                # Determine parent based on indentation
-                while parent_stack and parent_stack[-1][0] >= indent:
-                    parent_stack.pop()
-
-                # If we have a parent, establish the relationship
-                if parent_stack:
-                    parent_level, parent_kind = parent_stack[-1]
-                    parent_kind.append(kinds[name])
-
-                # Add current kind to the stack
-                parent_stack.append((indent, kinds[name]))
-
-        # Second pass: Parse relations if they exist
-        relation_section = False
-        for line in lines:
+        """Rebuilds a graph from the output of to_ascii()."""
+        kinds: dict[str, Kind] = {}
+        parent_stack: list[tuple[int, Kind]] = []
+        in_relations = False
+        for line in ascii_string.strip().split('\n'):
             if line.strip() == "--- Relations ---":
-                relation_section = True
+                in_relations = True
                 continue
+            if in_relations:
+                relation = re.match(r'^(.+) --(.+)--> (.+)$', line.strip())
+                if relation:
+                    source, how, target = relation.groups()
+                    source_kind = kinds.setdefault(source, cls(source))
+                    source_kind.relate(kinds.setdefault(target, cls(target)), how=how)
+                continue
+            node = re.match(r'^(\s*)- (.+)$', line)
+            if not node:
+                continue
+            indent, name = len(node.group(1)), node.group(2)
+            kind = kinds.setdefault(name, cls(name))
+            while parent_stack and parent_stack[-1][0] >= indent:
+                parent_stack.pop()
+            if parent_stack:
+                parent_stack[-1][1].append(kind)
+            parent_stack.append((indent, kind))
+        if not kinds:
+            raise ValueError("No kinds found in the ASCII input.")
+        return next((kind for kind in kinds.values() if not kind.parents), next(iter(kinds.values())))
 
-            if relation_section:
-                relation_match = re.match(r'^(.+) --(.+)--> (.+)$', line.strip())
-                if relation_match:
-                    source_name = relation_match.group(1)
-                    relation_type = relation_match.group(2)
-                    target_name = relation_match.group(3)
-
-                    if source_name in kinds and target_name in kinds:
-                        kinds[source_name].relate(kinds[target_name], how=relation_type)
-
-        # Find the root kind (one with no parents or the first one if all have parents)
-        root_kinds = [s for s in kinds.values() if not s.parents]
-        if root_kinds:
-            return root_kinds[0]
-        else:
-            # If no clear root, return the first kind
-            return next(iter(kinds.values()))
+    # --- relations ---------------------------------------------------------
 
     def patch(self, other: 'Kind') -> 'Kind':
-        """
-        Patches this Kind with attributes from another Kind.
-        """
-        if other.origin and not self.origin:
+        """Merges another Kind's origin (if unset), children, parents and relations into this one."""
+        self._ensure_mutable()
+        if other.origin is not None and self.origin is None:
             self.origin = other.origin
-        for attr in ("children", "parents"):
-            existing = getattr(self, attr)
-            new = getattr(other, attr)
-            for e in new:
-                if e not in existing:
-                    existing.append(e)
-        # Patch relations
-        for how, related_kinds in other.relations.items():
-            for related_kind in related_kinds:
-                self.relate(related_kind, how=how)
+        for child in list(other.children):
+            self.append(child)
+        for parent in list(other.parents):
+            parent.append(self)
+        for how, related_kinds in list(other.relations.items()):
+            if not how.startswith(INVERSE_PREFIX):
+                for related_kind in list(related_kinds):
+                    self.relate(related_kind, how=how)
         return self
-    def relate(self, other: 'Kind', how: str = 'related') -> 'Kind':
-        """Establishes a bidirectional relationship with another Kind."""
-        with self._lock:
-            # Add forward relationship
-            self.relations.add(how, other)
 
-            # Establish inverse relationship
-            inverse_how = f"_inverse_{how}"
-            other.relations.add(inverse_how, self)
+    def relate(self, other: 'Kind', how: str = 'related') -> 'Kind':
+        """Relates this Kind to `other` under `how`, recording the inverse on `other`."""
+        with self._lock:
+            self._ensure_mutable()
+            other._ensure_mutable()
+            self.relations.add(how, other)
+            other.relations.add(f"{INVERSE_PREFIX}{how}", self)
         return self
 
     def unrelate(self, other: 'Kind', how: Optional[str] = None) -> 'Kind':
-        """Removes a bidirectional relationship with another Kind."""
+        """Removes the relation(s) to `other`: one `how`, or all of them."""
         with self._lock:
-            # Remove forward relationship
-            if how is None:
-                # Remove all relationships with 'other'
-                hows_to_remove = [h for h, kinds in self.relations.items() if other in kinds]
-                for h in hows_to_remove:
-                    self.relations.remove(h, other)
-            else:
-                self.relations.remove(how, other)
-
-            # Remove inverse relationship
-            if how is None:
-                hows_to_remove_inverse = [h for h, kinds in other.relations.items() if self in kinds and h.startswith('_inverse_')]
-                for h in hows_to_remove_inverse:
-                    other.relations.remove(h, self)
-            else:
-                inverse_how = f"_inverse_{how}"
-                other.relations.remove(inverse_how, self)
+            hows = [how] if how is not None else [h for h, kinds in self.relations.items()
+                                                  if other in kinds and not h.startswith(INVERSE_PREFIX)]
+            for h in hows:
+                self.relations.remove(h, other)
+                other.relations.remove(f"{INVERSE_PREFIX}{h}", self)
         return self
 
-    @property
-    def ref(self) -> Optional[Any]:
-        """Alias for .origin, representing the original source or reference of the Kind."""
-        return self.origin
+    # --- the Kind.next() sequence and creation order -----------------------
 
-    def head(self, up_to_position: float = 5.0):
+    def head(self, up_to_position: float = 5.0) -> 'Kind':
         cur = self
         while cur._prev and cur._prev._position >= up_to_position:
             cur = cur._prev
         return cur
 
-    def tail(self, from_position: float = -10.0):
+    def tail(self, from_position: float = -10.0) -> 'Kind':
         cur = self
         while cur._next and cur._next._position <= from_position:
             cur = cur._next
@@ -710,139 +474,110 @@ class Kind(BaseKind):
 
     @classmethod
     def auto_date(cls) -> 'Kind':
-        iso = datetime.date.today().isoformat()
-        return cls(iso)
+        return cls(datetime.date.today().isoformat())
 
     @classmethod
     def auto_datetime(cls) -> 'Kind':
-        iso = datetime.datetime.now().isoformat()
-        return cls(iso)
+        return cls(datetime.datetime.now().isoformat())
 
     @classmethod
     def auto_time(cls) -> 'Kind':
-        iso = datetime.datetime.now().time().isoformat()
-        return cls(iso)
+        return cls(datetime.datetime.now().time().isoformat())
 
     @classmethod
     def next(cls) -> 'Kind':
+        """Creates kind_<n> and chains it after the previous Kind.next() result."""
         with cls._lock:
-            last = cls.last()
-            name = f"kind_{cls._auto_counter}"
-            kind = cls(name)
-            kind._position = cls._auto_counter  # Set position for AVLTree
-            cls._numbered.insert(cls._numbered.root, kind, kind._position) # Insert into AVLTree
-            if last:
-                last._next = kind
-                kind._prev = last
-            cls._auto_counter += 1
+            previous = BaseKind._pool.get(f"kind_{BaseKind._auto_counter - 1}")
+            kind = cls(f"kind_{BaseKind._auto_counter}")
+            BaseKind._auto_counter += 1
+            if previous is not None:
+                object.__setattr__(previous, '_next', kind)
+                object.__setattr__(kind, '_prev', previous)
         return kind
 
     @classmethod
-    def prev(cls) -> Optional['Kind']:
-        with cls._lock:
-            if cls._auto_counter <= 0:
-                return None
-            cls._auto_counter -= 1
-            # Search for the kind at the decremented position
-            node = cls._numbered.search(cls._auto_counter)
-            return node.kind if node else None
-
-    @classmethod
     def first(cls) -> Optional['Kind']:
+        """The earliest created live Kind."""
         node = cls._numbered.min_node()
-        return node.value if node else None
+        return node.kind if node else None
 
     @classmethod
     def last(cls) -> Optional['Kind']:
+        """The most recently created live Kind."""
         node = cls._numbered.max_node()
-        return node.value if node else None
+        return node.kind if node else None
 
     @classmethod
     def len(cls) -> int:
+        """The number of live Kinds."""
         return cls._numbered.size()
 
     @classmethod
-    def from_object(cls, obj: Any) -> 'Kind':
-        """Converts an object to a Kind, acting as a central router."""
-        if isinstance(obj, Kind):
-            return obj
-        if isinstance(obj, LazyKind):
-            return obj._kind
-
-        # Conversion functions for different types
-        def from_list(value: list) -> 'Kind':
-            kind = cls('list', origin=value)
-            for item in value:
-                kind.append(LazyKind(item))
-            return kind
-
-        def from_dict(value: dict) -> 'Kind':
-            kind = cls('dict', origin=value)
-            for k, v in value.items():
-                key_kind = LazyKind(k)
-                val_kind = LazyKind(v)
-                kind.append(key_kind)
-                key_kind.append(val_kind)
-            return kind
-
-        def from_tuple(value: tuple) -> 'Kind':
-            kind = cls('tuple', origin=value)
-            for item in value:
-                kind.append(LazyKind(item))
-            return kind
-
-        def from_set(value: set) -> 'Kind':
-            kind = cls('set', origin=value)
-            for item in value:
-                kind.append(LazyKind(item))
-            return kind
-
-        type_map = {
-            list: from_list,
-            dict: from_dict,
-            tuple: from_tuple,
-            set: from_set,
-            int: lambda v: cls(str(v), origin=v),
-            float: lambda v: cls(str(v), origin=v),
-            str: lambda v: cls(v, origin=v),
-            bool: lambda v: cls(str(v), origin=v),
-            type(None): lambda v: cls('None', origin=v)
-        }
-
-        # Try to find a specific from_ method
-        obj_type = type(obj)
-        if obj_type in type_map:
-            return type_map[obj_type](obj)
-        else:
-            try:
-                name = orjson.dumps(obj).decode()
-                return cls(name, origin=obj)
-            except (TypeError, orjson.JSONEncodeError) as e:
-                import logging
-                logging.error(f"Cannot convert {obj_type} to Kind: {repr(e)}", exc_info=True)
-                raise TypeError(f"Cannot convert {obj_type} to Kind: {repr(e)}")
-
-    @classmethod
     def seek(cls, pos: float) -> Optional['Kind']:
-        node = cls._numbered.search(pos)
-        return node.value if node else None
+        """The live Kind created at position `pos`, or None."""
+        return cls._numbered.search(pos)
 
     @classmethod
     def each(cls, start: Union[float, 'Kind', None] = None) -> Iterator['Kind']:
-        if start is None:
-            # Iterate through all kinds in order
-            for node in cls._numbered.inorder_traverse():
-                yield node.value
-        elif isinstance(start, (int, float)):
-            # Find the kind at or after the given position and iterate from there
-            for node in cls._numbered.inorder_traverse(start_key=start):
-                yield node.value
-        elif isinstance(start, Kind):
-            # Find the starting kind and iterate from there
-            for node in cls._numbered.inorder_traverse(start_key=start._position):
-                yield node.value
+        """Live Kinds in creation order, optionally from a position or a Kind on."""
+        if start is not None and not isinstance(start, (int, float, Kind)):
+            raise TypeError(f"Invalid start parameter {start!r} of type {type(start).__name__} in each()")
+        start_weight = start._position if isinstance(start, Kind) else start
+        yield from cls._numbered.traverse_inorder(start_weight)
+
+    # --- conversion --------------------------------------------------------
+
+    @classmethod
+    def from_object(cls, obj: Any) -> 'Kind':
+        """Converts a value to a Kind.
+
+        Scalars become the Kind of their text (`123` -> Kind('123')). A container becomes
+        the Kind of its content (`[1, 2]` -> Kind('[1, 2]')) with its items as children and
+        a `has_kind` relation to the container's kind (Kind('list')). Equal content means
+        the same Kind, as for any name.
+        """
+        if isinstance(obj, Kind):
+            return obj
+        if isinstance(obj, LazyKind):
+            return obj.evaluate()
+        if isinstance(obj, (list, tuple, set, frozenset, dict)):
+            return cls._from_container(obj)
+        if obj is None or isinstance(obj, (bool, int, float, str)):
+            return cls(obj if isinstance(obj, str) else str(obj), origin=obj)
+        try:
+            return cls(orjson.dumps(obj).decode(), origin=obj)
+        except (TypeError, orjson.JSONEncodeError) as error:
+            raise TypeError(f"Cannot convert {type(obj).__name__} to Kind: {error}. "
+                            f"Hint: give the object a JSON-serializable form, or pass its name.") from None
+
+    @classmethod
+    def _from_container(cls, value: Union[list, tuple, set, frozenset, dict]) -> 'Kind':
+        if isinstance(value, (set, frozenset)):
+            items = sorted(value, key=repr)
+            name = f"{type(value).__name__}({{{', '.join(map(repr, items))}}})" if items else f"{type(value).__name__}()"
         else:
-            raise TypeError(f"Invalid start parameter {repr(start)} instance of {type(start)} in each")
+            items = value
+            name = repr(value)
+        kind = cls(name, origin=value)
+        if isinstance(value, dict):
+            for key, val in value.items():
+                kind.append(key).append(val)
+        else:
+            for item in items:
+                kind.append(item)
+        kind.relate(cls(type(value).__name__), how='has_kind')
+        return kind
+
+    def to(self, target_type: Type[T]) -> T:
+        """Converts the Kind's name back to a value of `target_type`."""
+        if target_type is str:
+            return self.name
+        try:
+            value = orjson.loads(self.name)
+        except orjson.JSONDecodeError:
+            raise TypeError(f"Cannot convert Kind '{self.name}' to {target_type.__name__}") from None
+        return value if isinstance(value, target_type) else target_type(value)
 
     def each_parents(self) -> Iterator['Kind']:
         return iter(self.parents)
@@ -854,233 +589,118 @@ class Kind(BaseKind):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        pass
+        return None
 
-    def elevate(self, merge_strategy: Literal['overwrite', 'patch', 'copy', 'deepcopy', 'pipe', 'update', 'extend', 'smooth'] = 'smooth') -> Set[str]:
-        """Elevates metadata entries to instance attributes/methods based on a merge strategy."""
-        if is_frozen():
-            warnings.warn(f"Cannot elevate on frozen Kind {self.name}")
-            return set()
+    # --- maturing: elevate, slim, immute -----------------------------------
 
-        elevated_keys = set()
-        keys_to_remove = []
+    def elevate(self, merge_strategy: MergeStrategy = 'smooth') -> Set[str]:
+        """Moves metadata entries onto the Kind as attributes; returns the keys moved.
 
-        for key, value in list(self.metadata.items()): # Iterate over a copy to allow modification
-            if hasattr(self, key) and key not in self.__slots__ and key not in self.__class__.__bases__[0].__slots__:
-                # This means it's an existing attribute not in slots, likely from a mixin or dynamic assignment
-                current_value = getattr(self, key)
-                if key.startswith('__') or inspect.ismethod(current_value) or inspect.isfunction(current_value):
-                    warnings.warn(f"Overwriting internal attribute/method '{key}' on Kind {self.name}")
-                merged_value = _apply_merge_strategy(current_value, value, merge_strategy)
-                setattr(self, key, merged_value)
-            elif key in self.__slots__ or key in self.__class__.__bases__[0].__slots__:
-                # Attribute is part of __slots__, directly set it
-                current_value = getattr(self, key)
-                if key.startswith('__') or inspect.ismethod(current_value) or inspect.isfunction(current_value):
-                    warnings.warn(f"Overwriting internal attribute/method '{key}' on Kind {self.name}")
-                merged_value = _apply_merge_strategy(current_value, value, merge_strategy)
-                setattr(self, key, merged_value)
+        A key naming a Kind method or property cannot be elevated (the class attribute
+        would hide it) and stays in metadata with a warning.
+        """
+        self._ensure_mutable()
+        elevated = set()
+        for key, value in list(self.metadata.items()):
+            class_attribute = getattr(type(self), key, None)
+            if key in STRUCTURAL_SLOTS or key.startswith('_'):
+                warnings.warn(f"Cannot elevate '{key}' on Kind {self.name!r}: it is part of its identity or structure.")
+                continue
+            if class_attribute is not None and not _is_settable(class_attribute):
+                warnings.warn(f"Cannot elevate '{key}' on Kind {self.name!r}: it is a Kind method or read-only property.")
+                continue
+            if class_attribute is not None:
+                current = getattr(self, key)
             else:
-                # Dynamically add to _elevated_attributes
-                self._elevated_attributes[key] = value
-            elevated_keys.add(key)
-            keys_to_remove.append(key)
-
-        for key in keys_to_remove:
+                current = self._elevated_attributes.get(key)
+            merged = value if current is None else _apply_merge_strategy(current, value, merge_strategy)
+            setattr(self, key, merged)
             del self.metadata[key]
-
-        return elevated_keys
+            elevated.add(key)
+        return elevated
 
     def slim(self, protected_attributes: Optional[Set[str]] = None) -> None:
-        """Removes dynamically applied attributes/methods that are not explicitly protected."""
-        if is_frozen():
-            warnings.warn(f"Cannot slim on frozen Kind {self.name}")
-            return
+        """Drops elevated attributes that hold no value (SENTINEL) unless protected."""
+        self._ensure_mutable()
+        protected = protected_attributes or set()
+        for name in [name for name, value in self._elevated_attributes.items()
+                     if value is SENTINEL and name not in protected]:
+            del self._elevated_attributes[name]
 
-        if protected_attributes is None:
-            protected_attributes = set()
-
-        # Combine attributes from __dict__ (if it exists) and __slots__
-        all_attributes = list(getattr(self, '__dict__', {}).keys()) \
-                       + list(self.__slots__) \
-                       + list(self.__class__.__bases__[0].__slots__)
-
-        for attr_name in all_attributes:
-            if attr_name not in protected_attributes and not attr_name.startswith('__'):
-                try:
-                    value = getattr(self, attr_name)
-                    if value is SENTINEL:
-                        # Use deep_del for a safer deletion
-                        deep_del(self, attr_name)
-                except AttributeError:
-                    # Attribute might not be set, which is fine
-                    pass
-
-        # Clean up elevated attributes that are SENTINEL
-        for attr_name in list(self._elevated_attributes.keys()):
-            if self._elevated_attributes[attr_name] is SENTINEL and attr_name not in protected_attributes:
-                del self._elevated_attributes[attr_name]
-
-        # # this is not the solution, we must delete directly with deep_del
-        # gc.collect()  # Explicitly call garbage collector after deletions
-
-    def immute(self, merge_strategy: Literal['overwrite', 'patch', 'copy', 'deepcopy', 'pipe', 'update', 'extend', 'smooth'] = 'smooth') -> None:
-        """Orchestrates the maturing process: elevates metadata, slims down, and freezes the Kind."""
-        if is_frozen():
-            warnings.warn(f"Kind {self.name} is already frozen. No action taken.")
-            return
-
-        # 1. Elevate metadata
-        elevated_keys = self.elevate(merge_strategy=merge_strategy)
-
-        # 2. Slim down
-        self.slim(protected_attributes=elevated_keys)
-
-        # 3. Freeze the Kind class (global state)
-        freeze()
+    def immute(self, merge_strategy: MergeStrategy = 'smooth') -> 'Kind':
+        """Matures this Kind: elevate metadata, slim, then freeze it."""
+        if self._frozen:
+            return self
+        self.slim(protected_attributes=self.elevate(merge_strategy=merge_strategy))
+        return self.freeze()
 
     def clear_context(self) -> None:
-        """Clears the context DefDict, performing memory-aware deletion of its contents."""
-        if is_frozen():
-            warnings.warn(f"Cannot clear context on frozen Kind {self.name}")
-            return
+        """Empties the context."""
+        self._ensure_mutable()
+        if self._context is not SENTINEL:
+            self._context.clear()
 
-        # Iterate over a copy of keys to allow modification during iteration
-        for key in list(self.context.keys()):
-            # DefDict's __delitem__ will handle logging and potential deep_del for nested DefDicts
-            del self.context[key]
-
-    def to(self, target_type: Type[T]) -> T:
-        """Converts the Kind to an object of the specified type."""
-        try:
-            return orjson.loads(self.name)
-        except orjson.JSONDecodeError:
-            raise TypeError(f"Cannot convert Kind '{self.name}' to {target_type}")
+    # --- introspection -----------------------------------------------------
 
     @classmethod
-    def ps(cls):
-        """Lists all loaded kinds with their name, footprint, and origin."""
-        total_footprint = 0
-        output = ["{:<30} {:<15} {:<50}".format("Name", "Footprint (b)", "Origin")]
-        output.append("-" * 95)
-
-        for name, kind in sorted(cls._pool.items()):
-            footprint = kind.footprint()
-            total_footprint += footprint
-            origin = kind.origin
-            if origin is None:
-                origin_str = f"{kind.__class__.__module__}.{kind.__class__.__name__}"
-            else:
-                origin_str = str(origin)
-            output.append("{:<30} {:<15} {:<50}".format(name, footprint, origin_str))
-
-        output.append("-" * 95)
-        output.append("{:<30} {:<15}".format("Total", total_footprint))
-        print("\n".join(output))
+    def ps(cls) -> None:
+        """Prints all live Kinds with their footprint and origin."""
+        rows = ["{:<30} {:<15} {:<50}".format("Name", "Footprint (b)", "Origin"), "-" * 95]
+        total = 0
+        for name, kind in sorted(BaseKind._pool.items()):
+            footprint = kind.footprint() if isinstance(kind, Kind) else getsizeof(kind)
+            total += footprint
+            origin = kind.origin if kind.origin is not None else f"{type(kind).__module__}.{type(kind).__name__}"
+            rows.append("{:<30} {:<15} {:<50}".format(name, footprint, str(origin)))
+        rows += ["-" * 95, "{:<30} {:<15}".format("Total", total)]
+        print("\n".join(rows))
 
     @classmethod
-    def ls(cls):
-        """Lists all available mixin modules."""
-        mixins = _get_available_mixins()
+    def ls(cls) -> None:
+        """Prints the available mixin classes."""
         print("Available Mixins:")
-        for name in sorted(mixins.keys()):
+        for name in sorted(_get_available_mixins()):
             print(f"- {name}")
 
-    def stat(self):
-        """Provides detailed statistics about the kind and its mixins."""
-
-        all_mixins = _get_available_mixins()
-        output = [f"Statistics for Kind: '{self.name}'"]
-        output.append("\n--- Mixin Analysis ---")
-        output.append("{:<30} {:<15} {:<15}".format("Mixin Name", "Footprint (b)", "Slim Tag"))
-        output.append("-" * 60)
-
-        footprint_all_loaded = 0
-        footprint_after_slim = 0
-        slim_mixins = []
-
-        for name, mixin_cls in sorted(all_mixins.items()):
-            is_slim_tag = False
-
-            # Create a temporary dummy kind to measure mixin size
-            dummy_kind = Kind(f"dummy_for_{name}")
-            apply_mixin_to_instance(dummy_kind, mixin_cls)
-
-            footprint = dummy_kind.footprint()
-            footprint_all_loaded += footprint
-
-            # Check for non-sentinel values to determine slim tag
-            for attr_name in dir(dummy_kind):
-                if not attr_name.startswith('__') and not callable(getattr(dummy_kind, attr_name)):
-                    try:
-                        value = getattr(dummy_kind, attr_name)
-                        if value is not SENTINEL:
-                            is_slim_tag = True
-                            break
-                    except AttributeError:
-                        pass
-
-            tag = "slim tag" if is_slim_tag else ""
-            if is_slim_tag:
-                footprint_after_slim += footprint
-            else:
-                slim_mixins.append(name)
-
-            output.append("{:<30} {:<15} {:<15}".format(name, footprint, tag))
-
-        output.append("-" * 60)
-
-        # 2. Self stats
-        current_footprint = self.footprint()
-        output.append("\n--- Kind Footprint ---")
-        output.append(f"Current Footprint: {current_footprint} bytes")
-        output.append(f"Footprint after .slim(): {footprint_after_slim} bytes")
-        output.append(f"  (Would remove: {', '.join(slim_mixins)})")
-        output.append(f"Footprint with all mixins loaded: {footprint_all_loaded} bytes")
-
-        print("\n".join(output))
+    def stat(self) -> None:
+        """Prints this Kind's footprint and what each available mixin would add to it."""
+        rows = [f"Statistics for Kind: '{self.name}'", "\n--- Mixin Analysis ---",
+                "{:<30} {:<15}".format("Mixin Name", "Footprint (b)"), "-" * 46]
+        for name, mixin_cls in sorted(_get_available_mixins().items()):
+            probe = Kind(f"_stat_probe_{name}")
+            try:
+                apply_mixin_to_instance(probe, mixin_cls)
+                rows.append("{:<30} {:<15}".format(name, probe.footprint()))
+            except Exception as error:  # a mixin class that cannot be instantiated bare
+                rows.append("{:<30} {:<15}".format(name, f"n/a ({type(error).__name__})"))
+            finally:
+                probe.delete()
+        rows += ["-" * 46, "\n--- Kind Footprint ---", f"Current Footprint: {self.footprint()} bytes"]
+        print("\n".join(rows))
 
     def footprint(self) -> int:
-        """Calculates the memory footprint of the kind and its descendants in bytes."""
-
-        memo = set()
-
-        def get_size(obj):
-            if id(obj) in memo:
-                return 0
+        """Bytes used by this Kind and its descendants (each object counted once)."""
+        shared = (None, True, False, SENTINEL)
+        memo, total, stack = set(), 0, [self]
+        while stack:
+            obj = stack.pop()
+            if id(obj) in memo or any(obj is s for s in shared):
+                continue
             memo.add(id(obj))
-
-            size = getsizeof(obj)
-            if isinstance(obj, dict):
-                size += sum(get_size(k) + get_size(v) for k, v in obj.items())
-            elif isinstance(obj, (list, tuple, set, frozenset)):
-                size += sum(get_size(i) for i in obj)
-            elif hasattr(obj, '__dict__'):
-                size += get_size(obj.__dict__)
-
-            if hasattr(obj, '__slots__'):
-                size += sum(get_size(getattr(obj, s)) for s in obj.__slots__ if hasattr(obj, s))
-
-            # Special handling for Kind children to avoid recounting
+            total += getsizeof(obj)
             if isinstance(obj, Kind):
-                # The size of the kind object itself is already counted.
-                # Now, add the sizes of its direct attributes and mixins.
-                if obj._index is not SENTINEL:
-                    size += get_size(obj._index)
-                if obj._metadata is not SENTINEL:
-                    size += get_size(obj._metadata)
-                if obj._context is not SENTINEL:
-                    size += get_size(obj._context)
-                size += get_size(obj._elevated_attributes)
-
-                # Recursively calculate footprint of children, but avoid double counting
-                for child in obj.children:
-                    if id(child) not in memo:
-                        size += child.footprint()
-
-            return size
-
-        return get_size(self)
+                total += getsizeof(obj.parents._items) + getsizeof(obj.children._items)
+                stack += [obj.name, obj.origin, obj.node_shape, obj._index, obj._metadata,
+                          obj._context, obj._elevated_attributes]
+                stack.extend(obj.children)
+            elif isinstance(obj, dict):
+                stack.extend(obj.keys())
+                stack.extend(obj.values())
+            elif isinstance(obj, (list, tuple, set, frozenset)):
+                stack.extend(obj)
+            elif hasattr(obj, '__dict__') and not inspect.isroutine(obj) and not inspect.isclass(obj):
+                stack.append(vars(obj))
+        return total
 
 
 def to_kind(obj: Any) -> Kind:

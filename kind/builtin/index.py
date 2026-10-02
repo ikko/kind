@@ -1,23 +1,28 @@
 """This module provides index capabilities for Kind objects.
 
-It allows for creating and managing indexes on Kind attributes,
-and provides methods for rebalancing the index using different strategies.
+Each Kind can own an index: other Kinds kept sorted by a weight (a number, or a
+function of the Kind), stored in a self-balancing AVL tree.
 """
-from typing import Any, Union, Optional, Callable, Literal
+from typing import Any, Callable, Literal, Union
 
-from .avl_tree import AVLTree
-# from .red_black_tree import RedBlackTree
+from kind.builtin.avl_tree import AVLTree
+from typing import TYPE_CHECKING
 
-ENABLE_ORIGIN = True
-MEMORY_AWARE_DELETE = True
+if TYPE_CHECKING:
+    from kind.core.kind import Kind
+
 
 class KindIndex:
     def __init__(self, owner: 'Kind'):
         self.owner = owner
-        self.tree: Optional[AVLTree] = AVLTree() # Use AVLTree for underlying storage
+        self.tree = AVLTree()
+        self._weights: dict = {}  # kind -> the weight it was inserted with
 
     def insert(self, kind: 'Kind', weight: Union[float, Callable]):
-        self.tree.root = self.tree.insert(self.tree.root, kind, weight)
+        if kind in self._weights:
+            self.remove(kind)
+        self._weights[kind] = weight
+        self.tree.add(kind, weight)
 
     def map(self, fn: Callable[['Kind'], Any]) -> list[Any]:
         return [fn(kind) for kind in self.traverse(order="in")]
@@ -32,16 +37,10 @@ class KindIndex:
         # For now, return in-order for other requests or raise an error
         raise NotImplementedError(f"Traversal order '{order}' not implemented for KindIndex.")
 
-    def rebalance(self, strategy: Literal['avl', 'red_black', 'weight', 'hybrid'] = 'weight') -> None:
-        # Rebalancing is handled by the underlying AVLTree on insertion
-        # For other strategies, a new tree would need to be built
-        if strategy == 'avl':
-            pass # AVLTree is self-balancing
-        else:
-            raise NotImplementedError(f"Rebalancing strategy '{strategy}' not implemented for KindIndex.")
-
     def remove(self, kind: 'Kind') -> None:
-        self.tree.remove(kind._position)
+        weight = self._weights.pop(kind, None)
+        if weight is not None:
+            self.tree.remove(weight(kind) if callable(weight) else weight, kind)
 
     def ascii(self):
         return self.tree.to_ascii()

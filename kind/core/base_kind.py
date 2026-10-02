@@ -1,16 +1,15 @@
-"""This module defines the foundational Kind class and its core instantiation logic.
+"""This module defines BaseKind: the interned, name-identified node every Kind is built on.
 
-It serves as a base for the more extensive Kind functionality defined elsewhere,
-specifically designed to prevent circular import dependencies.
+One name has one identity in a process: all classes in the hierarchy share one pool,
+so `BaseKind('A') is Kind('A')` holds whichever was created first, as long as the first
+one is at least as specific as the one requested.
 """
 import threading
-from typing import (Optional, Any, TypeVar)
+from typing import Any, Optional
 from weakref import WeakValueDictionary
 
 from kind.builtin.avl_tree import AVLTree
 
-
-T = TypeVar("T")
 
 class BaseKind:
     __slots__ = (
@@ -18,78 +17,73 @@ class BaseKind:
         'origin',
         'parents',
         'children',
-        'related_to',
-        'related_how',
         '_position',
         '_next',
         '_prev',
-        '_length_cache',
         '__weakref__',
         'node_shape',
     )
 
-    _pool: WeakValueDictionary[str, 'BaseKind'] = WeakValueDictionary()
-    _numbered: AVLTree = AVLTree()
+    _pool: WeakValueDictionary = WeakValueDictionary()
+    _numbered: AVLTree = AVLTree(weak=True)  # every live Kind, by creation position
     _auto_counter: int = 0
-    _read_cursor: float = 0.0
     _write_cursor: float = 0.0
     _lock = threading.RLock()
 
     def __new__(cls, name: str, origin: Optional[Any] = None):
-        with cls._lock:
-            if not isinstance(name, str):
-                raise TypeError("BaseKind name must be a string")
-            
-            # Only intern BaseKind instances if the requested class is exactly BaseKind.
-            # Subclasses will handle their own pooling logic.
-            if cls is BaseKind and name in BaseKind._pool:
-                return BaseKind._pool[name]
+        if not isinstance(name, str):
+            raise TypeError(f"{cls.__name__} name must be a string, got {type(name).__name__}. "
+                            f"Hint: use Kind.from_object(value) to convert other values.")
+        with BaseKind._lock:
+            existing = BaseKind._pool.get(name)
+            if existing is not None:
+                if not isinstance(existing, cls):
+                    raise TypeError(
+                        f"'{name}' already exists as {type(existing).__name__}, so it cannot also be a "
+                        f"{cls.__name__}: one name has one identity. Hint: create it as {cls.__name__} "
+                        f"first, or delete() the existing one.")
+                if origin is not None and existing.origin is None:
+                    object.__setattr__(existing, 'origin', origin)  # the first given origin wins
+                return existing
 
             obj = super().__new__(cls)
-            object.__setattr__(obj, 'name', name)
-            object.__setattr__(obj, 'origin', origin)
-            object.__setattr__(obj, 'parents', [])
-            object.__setattr__(obj, 'children', [])
-            
-            object.__setattr__(obj, '_position', cls._write_cursor)
-            object.__setattr__(obj, '_next', None)
-            object.__setattr__(obj, '_prev', None)
-            object.__setattr__(obj, '_length_cache', None)
-            object.__setattr__(obj, 'node_shape', None) # Initialize node_shape
-            cls._write_cursor += 1.0
-            
-            # Only add to BaseKind's pool if it's a BaseKind instance being created
-            # Subclasses will manage their own pool entries.
-            if cls is BaseKind:
-                BaseKind._pool[name] = obj
-                BaseKind._numbered.root = BaseKind._numbered.insert(BaseKind._numbered.root, obj, obj._position)
-            
+            obj._init_slots(name, origin)
+            BaseKind._pool[name] = obj
+            BaseKind._numbered.add(obj, obj._position)
             return obj
 
+    def _init_slots(self, name: str, origin: Optional[Any]) -> None:
+        set_slot = object.__setattr__
+        set_slot(self, 'name', name)
+        set_slot(self, 'origin', origin)
+        set_slot(self, 'parents', [])
+        set_slot(self, 'children', [])
+        set_slot(self, '_position', BaseKind._write_cursor)
+        set_slot(self, '_next', None)
+        set_slot(self, '_prev', None)
+        set_slot(self, 'node_shape', None)
+        BaseKind._write_cursor += 1.0
+
     def __repr__(self):
-        return f"BaseKind('{self.name}')"
+        return f"{type(self).__name__}('{self.name}')"
 
     def __str__(self):
         return self.name
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, BaseKind) and self.name == other.name
+        if not isinstance(other, BaseKind):
+            return NotImplemented  # lets LazyKind (or any wrapper) answer for itself
+        return self.name == other.name
 
     def __hash__(self) -> int:
         return hash(self.name)
 
-    # Basic comparison for numbered kinds, more complex logic in kind.py
     def __lt__(self, other):
-        # Check if both kinds are in the numbered tree by searching for their positions
-        if isinstance(other, BaseKind) and \
-           self._numbered.search(self._position) is not None and \
-           other._numbered.search(other._position) is not None:
+        """Kinds order by creation position."""
+        if isinstance(other, BaseKind):
             return self._position < other._position
-        raise TypeError("Unordered comparison not supported for non-numbered kinds")
+        return NotImplemented
 
-    # Basic JSON serialization, more complex logic in kind.py
-    def __orjson__(self):
-        return self.name
 
 def _to_kind(x: Any) -> 'BaseKind':
     """Converts an object to a BaseKind instance."""
@@ -100,5 +94,3 @@ def _to_kind(x: Any) -> 'BaseKind':
     elif hasattr(x, 'name'):
         return BaseKind(x.name)
     raise TypeError(f"Cannot convert {repr(x)} instance of {type(x)} to BaseKind")
-
-

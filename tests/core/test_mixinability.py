@@ -1,44 +1,92 @@
+import logging
+
 import pytest
+
 from kind import Kind
-from kind.core.mixinability import freeze, is_frozen, register_mixin, _reset_frozen_state_for_testing
+from kind.core import mixinability
+from kind.core.mixinability import get_applied_mixins, lock_mixins, mixins_locked, register_mixin
 
-@pytest.fixture(autouse=True)
-def reset_frozen_state():
-    _reset_frozen_state_for_testing()
-    yield
-    _reset_frozen_state_for_testing() # Reset again after test to ensure clean state for other tests
 
-def test_freeze_and_is_frozen_states():
-    # Ensure initial state is not frozen
-    assert not is_frozen()
+def test_lock_mixins_is_idempotent_and_refuses_registration(caplog):
+    assert not mixins_locked()
+    lock_mixins()
+    lock_mixins()
+    assert mixins_locked()
 
-    # Test freezing the Kind class
-    freeze()
-    assert is_frozen()
+    def late_mixin(self) -> str:
+        return "late"
 
-    # Test that subsequent calls to freeze do not change state (it's idempotent)
-    freeze()
-    assert is_frozen()
+    with caplog.at_level(logging.ERROR):
+        assert register_mixin(late_mixin) is False
+    assert "registry is locked" in caplog.text
+    assert not hasattr(Kind, "late_mixin")
 
-def test_register_mixin_basic_application():
-    # Define a simple mixin function
-    def my_mixin_function(self):
+
+def test_register_mixin_applies_to_every_kind_and_can_be_replaced():
+    def greeting(self) -> str:
         return f"Hello from {self.name}"
 
-    # Register the mixin
-    success = register_mixin(my_mixin_function, "my_new_method")
-    assert success is True
-
-    # Test that the mixin is applied to Kind instances
+    assert register_mixin(greeting, "greeting") is True
     s = Kind("test_kind_for_mixin")
-    assert hasattr(s, "my_new_method")
-    assert callable(s.my_new_method)
-    assert s.my_new_method() == "Hello from test_kind_for_mixin"
+    assert s.greeting() == "Hello from test_kind_for_mixin"
 
-    # Test registering another mixin that overwrites an existing one
-    def my_overwriting_mixin(self):
+    def other_greeting(self) -> str:
         return "Overwritten!"
 
-    success_overwrite = register_mixin(my_overwriting_mixin, "my_new_method")
-    assert success_overwrite is True
-    assert s.my_new_method() == "Overwritten!"
+    assert register_mixin(other_greeting, "greeting") is True  # a mixin may replace a mixin
+    assert s.greeting() == "Overwritten!"
+    assert "greeting" in get_applied_mixins()
+
+
+def test_register_mixin_refuses_strings():
+    with pytest.raises(TypeError, match="strings are not evaluated"):
+        register_mixin("__import__('os').system('true')", "pwned")
+
+
+@pytest.mark.parametrize("name", ["append", "delete", "name", "__eq__", "_frozen"])
+def test_register_mixin_refuses_core_and_private_names(name):
+    def hijack(self) -> None:
+        return None
+
+    original = Kind.__dict__.get(name)
+    assert register_mixin(hijack, name) is False
+    assert Kind.__dict__.get(name) is original
+
+
+def test_register_mixin_can_replace_core_only_when_asked():
+    def custom_repr_name(self) -> str:
+        return "custom"
+
+    assert register_mixin(custom_repr_name, "auto_date", target_class=Kind) is False
+    original = Kind.__dict__["auto_date"]
+    try:
+        assert register_mixin(custom_repr_name, "auto_date", target_class=Kind, safe=False) is True
+        assert Kind("x").auto_date() == "custom"
+    finally:
+        Kind.auto_date = original
+        mixinability._applied_mixins.pop("auto_date", None)
+
+
+def test_register_mixin_requires_self():
+    def no_self() -> None:
+        return None
+
+    assert register_mixin(no_self, "no_self") is False
+
+
+def test_register_mixin_expands_classes():
+    class GreeterMixin:
+        def wave(self) -> str:
+            return f"{self.name} waves"
+
+        @property
+        def shout(self) -> str:
+            return self.name.upper()
+
+        @staticmethod
+        def helper() -> int:
+            return 42
+
+    assert register_mixin(GreeterMixin) is True
+    s = Kind("ann")
+    assert (s.wave(), s.shout, s.helper()) == ("ann waves", "ANN", 42)

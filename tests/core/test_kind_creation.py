@@ -48,57 +48,6 @@ def test_kind_string_representation():
     assert str(s) == "test_repr"
     assert repr(s) == "Kind('test_repr')"
 
-import pytest
-from kind.core.kind import Kind 
-from kind import k
-
-
-def test_kind_creation_and_interning():
-    # Test basic Kind creation
-    s1 = Kind("test_kind")
-    assert isinstance(s1, Kind)
-    assert s1.name == "test_kind"
-
-    # Test interning: creating a Kind with the same name should return the same instance
-    s2 = Kind("test_kind")
-    assert s1 is s2
-
-    # Test case sensitivity
-    s3 = Kind("Test_Kind")
-    assert s1 is not s3
-    assert s3.name == "Test_Kind"
-
-    # Test Kind with different types of names (e.g., numbers, special characters)
-    s4 = Kind("123")
-    assert s4.name == "123"
-    s5 = Kind("kind-with_dashes")
-    assert s5.name == "kind-with_dashes"
-    s6 = Kind("another kind")
-    assert s6.name == "another kind"
-
-def test_kind_equality_and_hashing():
-    s1 = Kind("apple")
-    s2 = Kind("apple")
-    s3 = Kind("banana")
-
-    # Test equality
-    assert s1 == s2
-    assert s1 != s3
-
-    # Test hashing
-    assert hash(s1) == hash(s2)
-    assert hash(s1) != hash(s3)
-
-    # Test with different types
-    assert s1 != "apple"
-    assert s1 != 123
-
-def test_kind_string_representation():
-    s = Kind("test_repr")
-    assert str(s) == "test_repr"
-    assert repr(s) == "Kind('test_repr')"
-
-@pytest.mark.skip(reason="rest of second refactor - AssertionError: assert 2 == 1")
 def test_kind_basic_graph_operations():
     parent = Kind("parent")
     child1 = Kind("child1")
@@ -174,3 +123,10 @@ def test_kind_namespace():
         k.new_kind = "value"
     with pytest.raises(TypeError):
         k["another_new_kind"] = "value"
+
+    # Attribute and item access name the same Kind
+    assert k.shared_kind is k["shared_kind"]
+
+    # The namespace has no members of its own: every public name is a Kind
+    assert k.next is Kind("next") and k.first is Kind("first")
+    assert not hasattr(k, "_private")

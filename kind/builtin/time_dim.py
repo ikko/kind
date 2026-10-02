@@ -5,7 +5,12 @@ as well as for calculating time periods and durations.
 """
 from __future__ import annotations
 import datetime
+import statistics
 from typing import Iterator, Union, Any, Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from kind.core.kind import Kind
 
 class KindTimeDimMixin:
     @staticmethod
@@ -248,7 +253,7 @@ class KindHeadTailView:
         result = [s for s in self._items if KindTimeDimMixin._parse_timestamp(s).weekday() >= 5]
         return KindHeadTailView(result)
 
-    def filter_by_weekday(self) -> 'KindHeadTailView':
+    def filter_by_workday(self) -> 'KindHeadTailView':
         result = [s for s in self._items if KindTimeDimMixin._parse_timestamp(s).weekday() < 5]
         return KindHeadTailView(result)
 
@@ -337,97 +342,10 @@ class KindHeadTailView:
             other = KindTimeDimMixin._parse_timestamp(other)
         return max(self._items, key=lambda s: abs(KindTimeDimMixin._parse_timestamp(s) - other))
 
-    def filter_by_average(self) -> datetime.datetime:
-        if not self._items:
-            return datetime.datetime.now()
-        return datetime.datetime.fromtimestamp(sum(s._parse_timestamp().timestamp() for s in self._items) / len(self._items))
-
-    def filter_by_median(self) -> datetime.datetime:
-        if not self._items:
-            return datetime.datetime.now()
-        sorted_items = sorted(self._items, key=lambda s: s._parse_timestamp())
-        mid = len(sorted_items) // 2
-        if len(sorted_items) % 2 == 0:
-            return datetime.datetime.fromtimestamp((sorted_items[mid - 1]._parse_timestamp().timestamp() + sorted_items[mid]._parse_timestamp().timestamp()) / 2)
-        else:
-            return sorted_items[mid]._parse_timestamp()
-
-    def filter_by_mode(self) -> list[datetime.datetime]:
-        if not self._items:
-            return []
-        from collections import Counter
-        counts = Counter(s._parse_timestamp() for s in self._items)
-        max_count = max(counts.values())
-        return [dt for dt, count in counts.items() if count == max_count]
-
     def filter_by_range(self) -> datetime.timedelta:
         if not self._items:
             return datetime.timedelta(0)
         return self.period
-
-    def filter_by_std(self) -> float:
-        if not self._items:
-            return 0.0
-        import numpy as np
-        return np.std([s._parse_timestamp().timestamp() for s in self._items])
-
-    def filter_by_variance(self) -> float:
-        if not self._items:
-            return 0.0
-        import numpy as np
-        return np.var([s._parse_timestamp().timestamp() for s in self._items])
-
-    def filter_by_percentile(self, percentile: int) -> datetime.datetime:
-        if not self._items:
-            return datetime.datetime.now()
-        import numpy as np
-        return datetime.datetime.fromtimestamp(np.percentile([s._parse_timestamp().timestamp() for s in self._items], percentile))
-
-    def filter_by_quantile(self, quantile: float) -> datetime.datetime:
-        if not self._items:
-            return datetime.datetime.now()
-        import numpy as np
-        return datetime.datetime.fromtimestamp(np.quantile([s._parse_timestamp().timestamp() for s in self._items], quantile))
-
-    def filter_by_first(self) -> 'Kind':
-        return self._items[0]
-
-    def filter_by_last(self) -> 'Kind':
-        return self._items[-1]
-
-    def filter_by_nth(self, n: int) -> 'Kind':
-        return self._items[n]
-
-    def filter_by_sample(self, n: int) -> 'KindHeadTailView':
-        import random
-        return KindHeadTailView(random.sample(self._items, n))
-
-    def filter_by_shuffle(self) -> 'KindHeadTailView':
-        import random
-        shuffled = list(self._items)
-        random.shuffle(shuffled)
-        return KindHeadTailView(shuffled)
-
-    def filter_by_reverse(self) -> 'KindHeadTailView':
-        return KindHeadTailView(self._items[::-1])
-
-    def filter_by_unique(self) -> 'KindHeadTailView':
-        return KindHeadTailView(list(dict.fromkeys(self._items)))
-
-    def filter_by_count(self) -> int:
-        return len(self._items)
-
-    def filter_by_is_empty(self) -> bool:
-        return not self._items
-
-    def filter_by_any(self, pred: Callable[['Kind'], bool]) -> bool:
-        return any(pred(s) for s in self._items)
-
-    def filter_by_all(self, pred: Callable[['Kind'], bool]) -> bool:
-        return all(pred(s) for s in self._items)
-
-    def filter_by_none(self, pred: Callable[['Kind'], bool]) -> bool:
-        return not any(pred(s) for s in self._items)
 
     def filter_by_map(self, fn: Callable[['Kind'], Any]) -> list[Any]:
         return [fn(s) for s in self._items]
@@ -449,8 +367,7 @@ class KindHeadTailView:
         return sum(fn(s) for s in self._items) / len(self._items)
 
     def filter_by_median(self, fn: Callable[['Kind'], Any]) -> Any:
-        import numpy as np
-        return np.median([fn(s) for s in self._items])
+        return statistics.median(fn(s) for s in self._items)
 
     def filter_by_mode(self, fn: Callable[['Kind'], Any]) -> Any:
         from collections import Counter
@@ -459,20 +376,20 @@ class KindHeadTailView:
         return [item for item, count in counts.items() if count == max_count]
 
     def filter_by_std(self, fn: Callable[['Kind'], Any]) -> Any:
-        import numpy as np
-        return np.std([fn(s) for s in self._items])
+        return statistics.pstdev(fn(s) for s in self._items)
 
     def filter_by_variance(self, fn: Callable[['Kind'], Any]) -> Any:
-        import numpy as np
-        return np.var([fn(s) for s in self._items])
+        return statistics.pvariance(fn(s) for s in self._items)
 
     def filter_by_percentile(self, fn: Callable[['Kind'], Any], percentile: int) -> Any:
-        import numpy as np
-        return np.percentile([fn(s) for s in self._items], percentile)
+        return self.filter_by_quantile(fn, percentile / 100)
 
     def filter_by_quantile(self, fn: Callable[['Kind'], Any], quantile: float) -> Any:
-        import numpy as np
-        return np.quantile([fn(s) for s in self._items], quantile)
+        values = sorted(fn(s) for s in self._items)
+        position = (len(values) - 1) * quantile  # linear interpolation, as numpy's default
+        lower = int(position)
+        upper = min(lower + 1, len(values) - 1)
+        return values[lower] + (values[upper] - values[lower]) * (position - lower)
 
     def filter_by_first(self, fn: Callable[['Kind'], Any]) -> Any:
         return fn(self._items[0])

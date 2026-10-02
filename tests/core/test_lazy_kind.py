@@ -1,29 +1,28 @@
-import pytest
 from kind import Kind
 from kind.core.lazy_kind import LazyKind
 
-def test_lazy_kind_evaluation():
-    # Create a list that will be converted to a Kind with LazyKind children
-    my_list = [1, 2, 3]
 
-    # Convert the list to a Kind. This should return a concrete Kind.
-    list_kind = Kind.from_object(my_list)
+def test_lazy_kind_defers_conversion_until_first_use():
+    lazy = LazyKind(42)
+    assert not lazy.evaluated
+    assert "42" not in Kind._pool  # nothing created yet
 
-    # The list_kind itself should be a Kind instance
-    assert isinstance(list_kind, Kind)
+    assert lazy.name == "42"  # first attribute access converts
+    assert lazy.evaluated
+    assert lazy.evaluate() is Kind("42")
+    assert lazy == Kind("42") and hash(lazy) == hash(Kind("42"))
 
-    # Its children should be LazyKind instances
-    assert len(list_kind.children) == 3
-    assert all(isinstance(child, LazyKind) for child in list_kind.children)
 
-    # Access an attribute of the first child to trigger its evaluation
-    first_child_lazy = list_kind.children[0]
-    _ = first_child_lazy.name
+def test_lazy_kind_is_accepted_wherever_a_kind_is():
+    parent = Kind("parent")
+    child = parent.append(LazyKind("child"))
+    assert child is Kind("child")
+    assert parent.children == [Kind("child")]
+    assert Kind.from_object(LazyKind("x")) is Kind("x")
 
-    # Now, the first child should be a concrete Kind instance
-    assert isinstance(first_child_lazy._kind, Kind)
-    assert first_child_lazy._kind.name == "1"
 
-    # The other children should still be LazyKind instances
-    assert isinstance(list_kind.children[1], LazyKind)
-    assert isinstance(list_kind.children[2], LazyKind)
+def test_containers_convert_their_items_eagerly():
+    """Children must be hashed to be linked, so a container's items become Kinds at once."""
+    list_kind = Kind.from_object([1, 2, 3])
+    assert [child.name for child in list_kind.children] == ["1", "2", "3"]
+    assert all(type(child) is Kind for child in list_kind.children)

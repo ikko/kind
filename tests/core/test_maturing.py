@@ -2,7 +2,6 @@ import pytest
 from collections import defaultdict
 from kind.core.maturing import DefDict, deep_del, _apply_merge_strategy
 from kind import Kind
-import copy
 
 # Fixture for DefDict
 @pytest.fixture
@@ -33,12 +32,11 @@ def test_def_dict_nested_assignment_and_retrieval(def_dict):
     assert def_dict["level1"]["level2"] == "value"
     assert isinstance(def_dict["level1"], defaultdict)
 
-def test_def_dict_delitem(def_dict, caplog):
+def test_def_dict_delitem(def_dict):
     def_dict["test_key"] = "test_value"
     assert "test_key" in def_dict
     del def_dict["test_key"]
     assert "test_key" not in def_dict
-    assert "Deleted key 'test_key' from DefDict. Attempting deep_del on its value." in caplog.text
 
 def test_def_dict_delitem_non_existent(def_dict):
     with pytest.raises(KeyError, match="Key 'non_existent_key' not found in DefDict."):
@@ -186,7 +184,15 @@ def test_deep_del_existing_attribute(caplog):
     assert hasattr(obj, "attr")
     deep_del(obj, "attr")
     assert not hasattr(obj, "attr")
-    assert "Deleted attribute 'attr' from" in caplog.text
+
+
+def test_deep_del_empties_a_dict_value_shared_elsewhere():
+    class TestObj:
+        pass
+    obj, shared = TestObj(), {"big": list(range(10))}
+    obj.cache = shared
+    deep_del(obj, "cache")
+    assert not hasattr(obj, "cache") and shared == {}
 
 def test_deep_del_non_existent_attribute(caplog):
     class TestObj:

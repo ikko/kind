@@ -1,4 +1,3 @@
-import pytest
 from kind import Kind
 from kind.builtin.collections import OrderedKindSet
 

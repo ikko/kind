@@ -4,9 +4,14 @@ These protocols establish a clear contract for extending the Kind class with new
 promoting a clean and maintainable architecture.
 """
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from typing import Any, Iterator, List, Optional, Protocol, Union, Callable, Awaitable, runtime_checkable
+
 import datetime
+from abc import abstractmethod
+from typing import Any, Callable, Iterator, List, Protocol
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from kind.core.kind import Kind
 
 
 
@@ -26,13 +31,13 @@ class KindPathProtocol(Protocol):
 class KindTimeDimProtocol(Protocol):
     @property
     @abstractmethod
-    def head(self) -> Any:
+    def time_head(self) -> Any:
         """Returns a view of Kinds sorted chronologically (earliest first)."""
         ...
 
     @property
     @abstractmethod
-    def tail(self) -> Any:
+    def time_tail(self) -> Any:
         """Returns a view of Kinds sorted in reverse chronological order (latest first)."""
         ...
 
@@ -129,21 +134,4 @@ class KindVisualProtocol(Protocol):
     @abstractmethod
     def to_png(self, mode: str = "tree") -> bytes:
         """Renders the Kind graph to a PNG image as bytes."""
-        ...
-
-    @abstractmethod
-    def to_mmd(self, mode: str = "tree") -> str:
-        """Generates a Mermaid diagram string representation of the Kind graph."""
-        ...
-
-    @abstractmethod
-    def to_ascii(self, mode: str = "tree") -> str:
-        """Generates an ASCII art representation of the Kind graph."""
-        ...
-
-
-@runtime_checkable
-class MixinFunction(Protocol):
-    async def __call__(self, *args: Any, new_process: bool = False, new_thread: bool = True, **params: Any) -> Union[Any, Awaitable[Any]]:
-        """Formal interface for mixin functions, supporting async, process/thread execution, and return type casting."""
         ...

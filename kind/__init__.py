@@ -1,59 +1,37 @@
-
+"""kind: interned, name-identified Kinds that form a graph of categories as data."""
+from kind import builtin, core
+from kind.builtin import apply_builtins
+from kind.core.batch_processing import a_process_batch, process_batch
+from kind.core.graph_traversal import GraphTraversal
 from kind.core.kind import Kind
 from kind.core.kind_namespace import k
-from kind.core.graph_traversal import GraphTraversal
-
-from kind.builtin import apply_builtins
 from kind.core.time_arithmetics import add_time_objects, subtract_time_objects
-from kind.core.batch_processing import a_process_batch, process_batch
-from . import builtin, core
 
-# Apply the mixins first to ensure the Kind class is fully featured
-# This call should ideally happen once at application startup, not on every import
-# For testing purposes, it's handled by conftest.py
+__all__ = ["Kind", "k", "GraphTraversal", "a_process_batch", "process_batch",
+           "add_time_objects", "subtract_time_objects", "add_time", "subtract_time", "builtin", "core"]
+
 apply_builtins()
 
-# --- User-facing aliases for convenience ---
+_ALIASES = {
+    "time_dim": "kind.builtin.time_dim", "td": "kind.builtin.time_dim",
+    "collections": "kind.builtin.collections", "coll": "kind.builtin.collections",
+    "index": "kind.builtin.index", "idx": "kind.builtin.index",
+    "path": "kind.builtin.path",
+    "timeline": "kind.builtin.timeline", "tl": "kind.builtin.timeline",
+    "visual": "kind.builtin.visual", "vis": "kind.builtin.visual",
+    "schedule": "kind.core.schedule",
+}
+add_time = add_time_objects
+subtract_time = subtract_time_objects
 
-# Expose builtin modules at the top level (lazy loaded)
-def __getattr__(name):
-    if name == "schedule":
-        return core.schedule
-    elif name == "time_dim":
-        return builtin.time_dim
-    elif name == "collections":
-        return builtin.collections
-    elif name == "index":
-        return builtin.index
-    elif name == "path":
-        return builtin.path
-    elif name == "timeline":
-        return builtin.timeline
-    elif name == "visual":
-        return builtin.visual
-    elif name == "add_time":
-        return add_time_objects
-    elif name == "subtract_time":
-        return subtract_time_objects
-    elif name == "a_process_batch":
-        return a_process_batch
-    elif name == "process_batch":
-        return process_batch
-    elif name == "td":
-        return builtin.time_dim
-    elif name == "coll":
-        return builtin.collections
-    elif name == "idx":
-        return builtin.index
-    elif name == "vis":
-        return builtin.visual
-    elif name == "tl":
-        return builtin.timeline
+
+def __getattr__(name: str):
+    """Module aliases (kind.td, kind.schedule, ...), imported on first access."""
+    if name in _ALIASES:
+        import importlib
+        return importlib.import_module(_ALIASES[name])
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
+
 def __dir__():
-    return sorted(list(globals().keys()) + [
-        "schedule", "time_dim", "collections", "index", "path", "timeline", "visual",
-        "add_time", "subtract_time", "a_process_batch", "process_batch",
-        "td", "coll", "idx", "vis", "tl"
-    ])
+    return sorted([*globals(), *_ALIASES])

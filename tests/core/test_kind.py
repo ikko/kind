@@ -1,53 +1,10 @@
 import pytest
 from kind.core.kind import Kind
 from kind.core.kind_namespace import k
-from kind.core.base_kind import BaseKind
-from kind.core.lazy import SENTINEL
-from kind.builtin.avl_tree import AVLTree
-from weakref import WeakValueDictionary
-import threading
-import datetime
+from kind.core.lazy_kind import SENTINEL
 
 class NonConvertibleObject:
     pass
-
-# Re-use the setup_and_teardown fixture from test_base_kind.py
-# This ensures a clean state for Kind class-level attributes before each test
-@pytest.fixture(autouse=True)
-def setup_and_teardown_kind_class():
-    # Store original class-level attributes
-    original_pool = BaseKind._pool
-    original_numbered = BaseKind._numbered
-    original_auto_counter = BaseKind._auto_counter
-    original_read_cursor = BaseKind._read_cursor
-    original_write_cursor = BaseKind._write_cursor
-    original_lock = BaseKind._lock
-
-    # Clear for predictable testing
-    BaseKind._pool = WeakValueDictionary()
-    BaseKind._numbered = AVLTree()
-    BaseKind._auto_counter = 0
-    BaseKind._read_cursor = 0.0
-    BaseKind._write_cursor = 0.0
-    BaseKind._lock = threading.RLock()
-
-    yield
-
-    # Restore original class-level attributes after each test
-    BaseKind._pool = original_pool
-    BaseKind._numbered = original_numbered
-    BaseKind._auto_counter = original_auto_counter
-    BaseKind._read_cursor = original_read_cursor
-    BaseKind._write_cursor = original_write_cursor
-    BaseKind._lock = original_lock
-
-    # Clear any remaining kinds from the pool and numbered tree to ensure complete isolation
-    BaseKind._pool.clear()
-    BaseKind._numbered = AVLTree() # Reinitialize to ensure it's empty
-    BaseKind._auto_counter = 0
-    BaseKind._read_cursor = 0.0
-    BaseKind._write_cursor = 0.0
-
 
 def test_kind_index_property():
     kind = Kind("test_index")
@@ -265,7 +222,6 @@ def test_dynamic_relation_no_args_raises_error():
     with pytest.raises(TypeError):
         s_person.some_relation()
 
-@pytest.mark.skip(reason="Skipping due to current limitations in Kind.from_object for non-convertible types.")
 def test_dynamic_relation_non_kind_args_raises_error():
     s_person = k.person
     non_convertible = NonConvertibleObject()
@@ -278,7 +234,6 @@ def test_dynamic_relation_kwargs_non_kind_value_raises_error():
     with pytest.raises(TypeError):
         s_person.some_relation(item=non_convertible)
 
-@pytest.mark.skip(reason="Skipping due to current limitations in Kind.from_object for non-convertible types.")
 def test_dynamic_relation_kwargs_list_non_kind_value_raises_error():
     s_person = k.person
     non_convertible = NonConvertibleObject()
@@ -349,9 +304,7 @@ def test_to_ascii_bfs_children_first():
 """.strip()
     assert root.to_ascii(traverse_mode="bfs", family_mode="children_first") == expected_output
 
-import pytest
 
-@pytest.mark.skip(reason="rest of second refactor - AssertionError: assert '- S1\n  - S2...s_child--> S4' == '- S1\n  - S2...s_child--> S4'")
 def test_to_ascii_with_relations():
     s1 = Kind("S1")
     s2 = Kind("S2")
@@ -365,7 +318,6 @@ def test_to_ascii_with_relations():
     expected_output = """
 - S1
   - S2
-    - S4
 
 --- Relations ---
 S1 --knows--> S3
@@ -390,7 +342,6 @@ def test_from_ascii_simple_tree():
     assert len(reconstructed_root.children[0].children) == 1
     assert reconstructed_root.children[0].children[0].name == "Grandchild1"
 
-@pytest.mark.skip(reason="rest of second refactor - AssertionError: assert None is not None")
 def test_from_ascii_with_relations():
     ascii_input = """
 - S1
@@ -440,33 +391,20 @@ def test_roundtrip_simple_tree():
     assert reconstructed_root.children[1].name == root.children[1].name
     assert reconstructed_root.children[0].children[0].name == root.children[0].children[0].name
 
-@pytest.mark.skip(reason="rest of second refactor - IndexError: list index out of range")
-def test_roundtrip_with_relations():
-    s1 = Kind("S1")
-    s2 = Kind("S2")
-    s3 = Kind("S3")
-    s4 = Kind("S4")
-
+def test_roundtrip_with_relations(reset_pool):
+    s1, s2, s3, s4 = (Kind(f"S{i}") for i in range(1, 5))
     s1.append(s2)
     s1.relate(s3, how="knows")
-    s2.relate(s4, how="has_child")
-
+    s2.relate(s4, how="has_child")  # a relation named like a link is still a relation
     ascii_output = s1.to_ascii()
-    reconstructed_s1 = Kind.from_ascii(ascii_output)
 
-    assert reconstructed_s1.name == s1.name
-    assert len(reconstructed_s1.children) == len(s1.children)
-    reconstructed_s2 = reconstructed_s1.children[0]
-    assert reconstructed_s2.name == s2.name
-    assert len(reconstructed_s2.children) == len(s2.children)
-    reconstructed_s4 = reconstructed_s2.children[0]
-    assert reconstructed_s4.name == s4.name
-
-    # Check relations
-    reconstructed_s3 = Kind._pool.get("S3")
-    assert reconstructed_s3 is not None
-    assert reconstructed_s3 in reconstructed_s1.relations.get("knows")
-    assert reconstructed_s1 in reconstructed_s3.relations.get("_inverse_knows")
-
-    assert reconstructed_s4 in reconstructed_s2.relations.get("has_child")
-    assert reconstructed_s2 in reconstructed_s4.relations.get("_inverse_has_child")
+    reset_pool()
+    root = Kind.from_ascii(ascii_output)
+    assert root is not s1 and root.name == "S1"
+    assert [c.name for c in root.children] == ["S2"]
+    rebuilt_s2 = root.children[0]
+    assert list(rebuilt_s2.children) == []
+    assert [k.name for k in root.relations.get("knows")] == ["S3"]
+    assert [k.name for k in rebuilt_s2.relations.get("has_child")] == ["S4"]
+    assert rebuilt_s2 in Kind("S4").relations.get("_inverse_has_child")
+    assert root.to_ascii() == ascii_output

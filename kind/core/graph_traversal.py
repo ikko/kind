@@ -1,157 +1,65 @@
+"""This module provides GraphTraversal: iterative DFS/BFS over a Kind graph.
+
+Neighbours of a Kind are visited group by group — children and parents in the order
+family_mode names (parents are skipped for "children_only"), then forward relations —
+and by name within each group.
+"""
+from collections import deque
 from typing import Literal
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from kind.core.kind import Kind
+
+TraverseMode = Literal["dfs", "bfs"]
+FamilyMode = Literal["children_first", "parents_first", "children_only"]
+INVERSE_PREFIX = "_inverse_"
 
 
 class GraphTraversal:
-    def __init__(self, root: 'Kind',
-                 traverse_mode: Literal["dfs", "bfs"] = "dfs",
-                 family_mode: Literal["children_first", "parents_first"] = "children_first",
-                 graph_mode: Literal["dfs", "bfs"] = "dfs"):
+    def __init__(self, root: 'Kind', traverse_mode: TraverseMode = "dfs", family_mode: FamilyMode = "children_first"):
+        if traverse_mode not in ("dfs", "bfs"):
+            raise ValueError(f"Unknown traverse_mode: {traverse_mode!r} (expected 'dfs' or 'bfs')")
+        if family_mode not in ("children_first", "parents_first", "children_only"):
+            raise ValueError(f"Unknown family_mode: {family_mode!r} "
+                             f"(expected 'children_first', 'parents_first' or 'children_only')")
         self.root = root
         self.traverse_mode = traverse_mode
         self.family_mode = family_mode
-        self.graph_mode = graph_mode
-        self.visited = set()
-        self.result = []
 
-    def traverse(self):
-        from collections import deque
+    def _neighbours(self, kind: 'Kind', include_relations: bool) -> list:
+        by_name = lambda kinds: sorted(kinds, key=lambda neighbour: neighbour.name)
+        children = by_name(kind.children)
+        parents = [] if self.family_mode == "children_only" else by_name(p for p in kind.parents if p != self.root)
+        family = [*parents, *children] if self.family_mode == "parents_first" else [*children, *parents]
+        related = by_name(r for how, rs in kind.relations.items() if not how.startswith(INVERSE_PREFIX) for r in rs)
+        return family + related if include_relations else family
 
-        if self.traverse_mode == "dfs":
-            collection = [self.root]  # Use as a stack
-            pop_method = collection.pop
-            append_method = collection.append
-        elif self.traverse_mode == "bfs":
-            collection = deque([self.root])  # Use as a queue
-            pop_method = collection.popleft
-            append_method = collection.append
-        else:
-            raise ValueError(f"Unknown traverse_mode: {self.traverse_mode}")
-
-        while collection:
-            kind = pop_method()
-            if kind in self.visited:
+    def _walk(self, include_relations: bool):
+        """Yields (kind, depth) once per reachable Kind, in traversal order."""
+        frontier = deque([(self.root, 0)])
+        take = frontier.pop if self.traverse_mode == "dfs" else frontier.popleft
+        visited = set()
+        while frontier:
+            kind, depth = take()
+            if kind in visited:
                 continue
-            self.visited.add(kind)
-            self.result.append(kind)
+            visited.add(kind)
+            yield kind, depth
+            neighbours = [(n, depth + 1) for n in self._neighbours(kind, include_relations) if n not in visited]
+            frontier.extend(reversed(neighbours) if self.traverse_mode == "dfs" else neighbours)
 
-            neighbors = []
-
-            # Family relationships
-            if self.family_mode == "children_first":
-                neighbors.extend(kind.children)
-                # Add parents if they haven't been visited yet and are not the root
-                for parent in kind.parents:
-                    if parent not in self.visited and parent != self.root:
-                        neighbors.append(parent)
-            elif self.family_mode == "parents_first":
-                # Add parents first
-                for parent in kind.parents:
-                    if parent not in self.visited and parent != self.root:
-                        neighbors.append(parent)
-                neighbors.extend(kind.children)
-            else:
-                raise ValueError(f"Unknown family_mode: {self.family_mode}")
-
-            # General relations
-            for how, related_kinds in kind.relations.items():
-                if not how.startswith('_inverse_'):
-                    for related_kind in related_kinds:
-                        if related_kind not in self.visited:
-                            neighbors.append(related_kind)
-
-            # Sort neighbors for consistent traversal order (important for testing)
-            # Prioritize unvisited nodes
-            unvisited_neighbors = sorted([n for n in neighbors if n not in self.visited], key=lambda s: s.name)
-
-            # For DFS, we append in reverse order to process in sorted order
-            if self.traverse_mode == "dfs":
-                for neighbor in reversed(unvisited_neighbors):
-                    append_method(neighbor)
-            else: # BFS
-                for neighbor in unvisited_neighbors:
-                    append_method(neighbor)
-        return self.result
+    def traverse(self) -> list['Kind']:
+        return [kind for kind, _ in self._walk(include_relations=self.family_mode != "children_only")]
 
     def to_ascii(self) -> str:
-        lines = []
-        visited_ascii = set()
-        from collections import deque
-
-        # Collect all kinds and their relations first
-        all_kinds_in_traversal_order = self.traverse()
-
-        # First pass: print kinds with indentation
-        # We need to re-traverse to get indentation correct, or store it during traverse()
-        # For simplicity, let's re-implement a basic DFS/BFS for printing with indentation
-        # that respects the overall traversal order determined by self.traverse()
-
-        # To get correct indentation, we need to know the parent-child relationships
-        # from the traversal path. This is tricky with a flat list from self.traverse().
-        # Let's modify to_ascii to do its own traversal for printing, but still respect
-        # the traversal modes.
-
-        if self.traverse_mode == "dfs":
-            collection = [(self.root, 0)]  # (kind, depth)
-            pop_method = collection.pop
-            append_method = lambda item: collection.append(item)
-        elif self.traverse_mode == "bfs":
-            collection = deque([(self.root, 0)])
-            pop_method = collection.popleft
-            append_method = lambda item: collection.append(item)
-        else:
-            raise ValueError(f"Unknown traverse_mode: {self.traverse_mode}")
-
-        printed_kinds = set()
-        relations_to_print = set() # Store (source, relation_type, target)
-
-        while collection:
-            kind, depth = pop_method()
-
-            if kind in printed_kinds:
-                continue
-            printed_kinds.add(kind)
-
+        lines, relations = [], set()
+        for kind, depth in self._walk(include_relations=False):
             lines.append(f"{'  ' * depth}- {kind.name}")
-
-            neighbors_to_process = []
-
-            # Family relationships
-            if self.family_mode == "children_first":
-                for child in kind.children:
-                    neighbors_to_process.append((child, depth + 1))
-                for parent in kind.parents:
-                    # Only add parents if they are part of the current traversal path and not already printed
-                    if parent != self.root and parent not in printed_kinds:
-                        neighbors_to_process.append((parent, depth + 1))
-            elif self.family_mode == "parents_first":
-                for parent in kind.parents:
-                    if parent != self.root and parent not in printed_kinds:
-                        neighbors_to_process.append((parent, depth + 1))
-                for child in kind.children:
-                    neighbors_to_process.append((child, depth + 1))
-            else:
-                raise ValueError(f"Unknown family_mode: {self.family_mode}")
-
-            # General relations - collect for later printing
             for how, related_kinds in kind.relations.items():
-                if not how.startswith('_inverse_'):
-                    for related_kind in related_kinds:
-                        relations_to_print.add((kind.name, how, related_kind.name))
-
-            sorted_neighbors = sorted(neighbors_to_process, key=lambda x: x[0].name)
-
-            if self.traverse_mode == "dfs":
-                for neighbor_info in reversed(sorted_neighbors):
-                    append_method(neighbor_info)
-            else:
-                for neighbor_info in sorted_neighbors:
-                    append_method(neighbor_info)
-
-        # Second pass: print relations
-        if relations_to_print:
-            lines.append("") # Add a blank line for separation
-            lines.append("--- Relations ---")
-            for source, how, target in sorted(list(relations_to_print)):
-                lines.append(f"{source} --{how}--> {target}")
-
+                if not how.startswith(INVERSE_PREFIX):
+                    relations.update((kind.name, how, related.name) for related in related_kinds)
+        if relations:
+            lines += ["", "--- Relations ---"]
+            lines += [f"{source} --{how}--> {target}" for source, how, target in sorted(relations)]
         return "\n".join(lines)

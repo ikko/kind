@@ -88,36 +88,3 @@ def test_kind_index_ascii_representation(empty_kind_index):
     assert empty_kind_index.ascii() == expected_ascii
     assert empty_kind_index.to_ascii() == expected_ascii
 
-def test_kind_index_rebalance_avl(empty_kind_index):
-    s1 = Kind("A")
-    s2 = Kind("B")
-    s3 = Kind("C")
-    s4 = Kind("D")
-
-    empty_kind_index.insert(s1, 10.0)
-    empty_kind_index.insert(s2, 20.0)
-    empty_kind_index.insert(s3, 30.0)
-
-    # Tree should be balanced after insertions, so rebalance should not change order
-    empty_kind_index.rebalance(strategy='avl')
-    inorder = empty_kind_index.traverse(order="in")
-    assert inorder == [s1, s2, s3]
-
-    # Test with a more complex rebalancing scenario
-    tree = KindIndex(Kind("rebalance_owner"))
-    nodes = [
-        (Kind("N1"), 10),
-        (Kind("N2"), 20),
-        (Kind("N3"), 30),
-        (Kind("N4"), 40),
-        (Kind("N5"), 50),
-        (Kind("N6"), 60),
-        (Kind("N7"), 70),
-    ]
-    for kind, weight in nodes:
-        tree.insert(kind, weight)
-
-    tree.rebalance(strategy='avl')
-    inorder = tree.traverse(order="in")
-    assert inorder == [nodes[0][0], nodes[1][0], nodes[2][0], nodes[3][0], nodes[4][0], nodes[5][0], nodes[6][0]]
-

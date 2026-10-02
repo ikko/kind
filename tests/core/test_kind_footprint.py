@@ -1,7 +1,5 @@
-import pytest
 from kind import Kind
 
-@pytest.mark.skip(reason="rest of second refactor - assert 3528 >= ((2646 + 882) + 882)")
 def test_footprint():
     # Create a simple hierarchy
     parent = Kind("parent")

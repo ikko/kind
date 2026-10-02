@@ -1,25 +1,32 @@
-import pytest
 import anyio
-from kind.core.batch_processing import process_batch, a_process_batch
+import pytest
 
-# --- Synchronous Tests ---
+from kind.core.batch_processing import a_process_batch, process_batch
 
-def sync_square(x):
+
+def square(x):
     return x * x
 
-def sync_add_one(x):
-    return x + 1
 
-def test_process_batch_sync_direct():
-    batch = [1, 2, 3]
-    results = process_batch(batch, sync_square, new_thread=False, new_process=False)
-    assert results == [1, 4, 9]
-
-def test_process_batch_sync_new_thread():
-    batch = [1, 2, 3]
-    results = process_batch(batch, sync_square, new_thread=True, new_process=False)
-    assert results == [1, 4, 9]
-
-# --- Asynchronous Tests ---
+async def async_square(x):
+    await anyio.sleep(0.01 * (5 - x))  # later items finish first ...
+    return x * x
 
 
+@pytest.mark.parametrize("new_thread", [False, True])
+def test_process_batch_keeps_input_order(new_thread):
+    assert process_batch([1, 2, 3], square, new_thread=new_thread) == [1, 4, 9]
+
+
+@pytest.mark.anyio
+async def test_a_process_batch_async_results_follow_input_order():
+    assert await a_process_batch([1, 2, 3, 4], async_square) == [1, 4, 9, 16]  # ... results still in input order
+
+
+@pytest.mark.anyio
+async def test_a_process_batch_sync_function_in_threads():
+    assert await a_process_batch(range(5), square) == [0, 1, 4, 9, 16]
+
+
+def test_empty_batch():
+    assert process_batch([], square) == []
