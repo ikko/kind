@@ -9,10 +9,10 @@ install:
 	uv pip install --python $(VENV_PATH)/bin/python -e .[dev,visual]
 
 test:
-	PYTHONPATH=. $(VENV_PATH)/bin/python -m pytest
+	$(VENV_PATH)/bin/python -m pytest
 
-lint:
-	echo "was 'ruff check --exit-zero . ' but because big disk size (11.6Mb around??) footprint"
+lint:  # pyflakes, not ruff: ~100 KB instead of ~12 MB, and it catches what matters here (unused, undefined, redefined)
+	$(VENV_PATH)/bin/python -m pyflakes kind tests
 
 build:
 	uv build

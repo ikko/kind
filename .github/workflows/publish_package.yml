@@ -1,28 +1,29 @@
 name: Publish Package
 
+# PyPI Trusted Publishing: no stored password. One-time setup on pypi.org:
+# project "kind" -> Publishing -> add a GitHub publisher (owner ikko, repo kind,
+# workflow publish_package.yml, environment production).
 on:
   push:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      id-token: write
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
-          python-version: '3.11'
-      - name: Install dependencies
+          python-version: '3.12'
+      - name: Build
         run: |
-          pip install uv twine
-          make install
-      - name: Build and publish package
-        env:
-          TWINE_USERNAME: ${{ vars.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          make build
-          bash publish.sh
+          pip install uv
+          uv build
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
