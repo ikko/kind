@@ -3,10 +3,11 @@ name: Publish Package
 # PyPI Trusted Publishing: no stored password. One-time setup on pypi.org:
 # project "kind" -> Publishing -> add a GitHub publisher (owner ikko, repo kind,
 # workflow publish_package.yml, environment production).
+# Manual only: nothing goes to PyPI until kind has proven itself in a few projects
+# (decision 2026-10-02). It would also fail: the `Private :: Do Not Upload`
+# classifier in pyproject.toml makes PyPI refuse the upload.
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: read
