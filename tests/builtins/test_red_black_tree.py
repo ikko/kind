@@ -1,6 +1,6 @@
 import pytest
-from builtin.red_black_tree import RedBlackTree, RedBlackNode, RED, BLACK
-from core.base_kind import BaseKind as Kind
+from kind.builtin.red_black_tree import RedBlackTree, RedBlackNode, RED, BLACK
+from kind.core.base_kind import BaseKind as Kind
 
 @pytest.fixture
 def empty_rb_tree():

@@ -12,7 +12,7 @@ try:
 except ImportError:
     _GRAPHVIZ_AVAILABLE = False
 
-from core.protocols import KindVisualProtocol
+from kind.core.protocols import KindVisualProtocol
 
 
 class KindRender(KindVisualProtocol):
@@ -97,7 +97,7 @@ class KindRender(KindVisualProtocol):
 
     @classmethod
     def from_mmd(cls, mmd_string: str) -> 'Kind':
-        from core.kind import Kind  # Import here to avoid circular dependency
+        from kind.core.kind import Kind  # Import here to avoid circular dependency
 
         lines = mmd_string.strip().split('\n')
         if not lines:

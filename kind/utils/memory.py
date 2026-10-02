@@ -3,7 +3,7 @@ import inspect
 from collections import defaultdict
 from typing import Dict, List, Any, Tuple
 
-from core.kind import Kind 
+from kind.core.kind import Kind 
 
 def get_object_size(obj: Any) -> int:
     """Recursively calculates the size of an object in bytes."""

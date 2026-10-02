@@ -1,6 +1,6 @@
 import pytest
 import anyio
-from core.batch_processing import process_batch, a_process_batch
+from kind.core.batch_processing import process_batch, a_process_batch
 
 # --- Synchronous Tests ---
 

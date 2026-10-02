@@ -1,6 +1,6 @@
 import pytest
 from collections import defaultdict
-from core.maturing import DefDict, deep_del, _apply_merge_strategy
+from kind.core.maturing import DefDict, deep_del, _apply_merge_strategy
 from kind import Kind
 import copy
 

@@ -1,5 +1,5 @@
 import pytest
-from core.kind import Kind 
+from kind.core.kind import Kind 
 from kind import k
 
 
@@ -49,7 +49,7 @@ def test_kind_string_representation():
     assert repr(s) == "Kind('test_repr')"
 
 import pytest
-from core.kind import Kind 
+from kind.core.kind import Kind 
 from kind import k
 
 

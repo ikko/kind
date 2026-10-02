@@ -5,8 +5,8 @@ import logging
 import os
 import anyio
 
-from core.schedule import Scheduler, ScheduledJob
-from core.base_kind import BaseKind
+from kind.core.schedule import Scheduler, ScheduledJob
+from kind.core.base_kind import BaseKind
 from kind.core.kind import Kind
 
 # --- Helper functions for testing jobs ---

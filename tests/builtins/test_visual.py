@@ -1,7 +1,7 @@
 import pytest
 import anyio
 from kind import Kind
-from builtin.visual import KindRender
+from kind.builtin.visual import KindRender
 
 # Apply the mixin to Kind for testing purposes
 # In a real application, this would be handled by apply_builtins

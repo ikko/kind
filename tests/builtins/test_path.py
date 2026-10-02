@@ -1,6 +1,6 @@
 import pytest
 from kind import Kind
-from builtin.path import KindPathMixin
+from kind.builtin.path import KindPathMixin
 
 # Apply the mixin to Kind for testing purposes
 # In a real application, this would be handled by apply_builtins

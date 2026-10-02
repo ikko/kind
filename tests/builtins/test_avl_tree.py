@@ -1,6 +1,6 @@
 import pytest
-from builtin.avl_tree import AVLTree, AVLNode
-from core.base_kind import BaseKind as Kind
+from kind.builtin.avl_tree import AVLTree, AVLNode
+from kind.core.base_kind import BaseKind as Kind
 
 @pytest.fixture
 def empty_avl_tree():

@@ -2,7 +2,7 @@ import pytest
 import anyio
 import datetime
 import time
-from core.schedule import Scheduler, ScheduledJob
+from kind.core.schedule import Scheduler, ScheduledJob
 
 # --- Test Functions ---
 

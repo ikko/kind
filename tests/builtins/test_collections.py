@@ -1,6 +1,6 @@
 import pytest
 from kind import Kind
-from builtin.collections import OrderedKindSet
+from kind.builtin.collections import OrderedKindSet
 
 def test_ordered_kind_set_creation_and_add():
     # Test creation with no initial kinds

@@ -71,7 +71,7 @@ Representing software modules and their dependencies is crucial for understandin
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 
 # Example: Microservices Architecture
 auth_service = k.AuthService
@@ -118,7 +118,7 @@ Map a patient's journey through a healthcare system, from admission to discharge
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 
 # Example: Patient Journey
 admission = k.Admission
@@ -176,7 +176,7 @@ Define an assembly line using a `Kind`-based DSL, where each `Kind` represents a
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 
 # Example: Assembly Line DSL
 line_1 = k.AssemblyLine1
@@ -223,7 +223,7 @@ Model real estate properties, their features, and relationships (e.g., `has_bedr
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 
 # Example: Property Listing
 property_123 = k.Property_123MainSt

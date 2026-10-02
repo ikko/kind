@@ -27,7 +27,7 @@ Kinds can be created directly or via the convenient `k` namespace.
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 from kind.core.kind import Kind
 
 # Direct creation
@@ -64,7 +64,7 @@ Kinds can be linked to form directed graphs, representing relationships like par
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 from kind.core.kind import Kind
 from kind.builtin import apply_builtins
 
@@ -174,7 +174,7 @@ With the pathfinding mixin, you can easily find paths between connected Kinds, u
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 from kind.builtin import apply_builtins
 
 apply_builtins()
@@ -231,7 +231,7 @@ The `KindIndex` allows you to create weighted, searchable indexes of Kinds, enab
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 
 # Example: Financial Portfolio Management (Asset and Wealth Management)
 # Indexing assets by risk score

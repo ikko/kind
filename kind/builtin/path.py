@@ -6,7 +6,7 @@ and for matching Kinds based on a predicate.
 from __future__ import annotations
 from typing import Callable, Iterator, List
 
-from core.protocols import KindPathProtocol
+from kind.core.protocols import KindPathProtocol
 
 class KindPathMixin(KindPathProtocol):
     def path_to(self, target: 'Kind') -> list['Kind']:

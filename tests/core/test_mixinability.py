@@ -1,6 +1,6 @@
 import pytest
 from kind import Kind
-from core.mixinability import freeze, is_frozen, register_mixin, _reset_frozen_state_for_testing
+from kind.core.mixinability import freeze, is_frozen, register_mixin, _reset_frozen_state_for_testing
 
 @pytest.fixture(autouse=True)
 def reset_frozen_state():

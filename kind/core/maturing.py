@@ -91,7 +91,7 @@ def _apply_merge_strategy(current_value: Any, new_value: Any, strategy: MergeStr
     elif strategy == 'patch':
         # This assumes current_value is a Kind and new_value is a Kind
         # We need to import Kind here to avoid circular dependency if Kind is not yet defined
-        from core.kind import Kind 
+        from kind.core.kind import Kind 
         if isinstance(current_value, Kind) and isinstance(new_value, Kind):
             return current_value.patch(new_value)
         else:

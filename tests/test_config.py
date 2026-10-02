@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import toml
-from config import Config
+from kind.config import Config
 import pytest
 
 @pytest.mark.skip(reason="rest of second refactor - AttributeError: 'Config' object has no attribute '_get_default_config_path'. Did you mean: '_default_config_path'?")

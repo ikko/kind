@@ -1,7 +1,7 @@
 import pytest
 import threading
 from weakref import WeakValueDictionary
-from core.base_kind import BaseKind as Kind, _to_kind, AVLTree
+from kind.core.base_kind import BaseKind as Kind, _to_kind, AVLTree
 
 @pytest.fixture(autouse=True)
 def setup_and_teardown_base_kind():

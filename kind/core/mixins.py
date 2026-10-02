@@ -3,8 +3,8 @@ import inspect
 import pkgutil
 import warnings
 
-import builtin
-import core
+from kind import builtin
+from kind import core
 
 
 def _get_available_mixins():

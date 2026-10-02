@@ -1,6 +1,6 @@
 import pytest
 from kind import Kind
-from builtin.visual import KindRender # For to_mmd, if needed for debugging
+from kind.builtin.visual import KindRender # For to_mmd, if needed for debugging
 import yaml
 
 # Assign the methods to Kind for testing purposes

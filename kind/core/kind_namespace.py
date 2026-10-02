@@ -6,15 +6,15 @@ from sys import getsizeof
 from typing import Any, Iterator, Literal, Optional, Set, Type, Union
 
 import orjson
-from core.lazy import SENTINEL
-from core.maturing import _apply_merge_strategy, deep_del
+from kind.core.lazy import SENTINEL
+from kind.core.maturing import _apply_merge_strategy, deep_del
 
-from core.mixinability import freeze, is_frozen
-from core.kind import Kind
-from core.lazy_kind import LazyKind
-from core.mixinability import apply_mixin_to_instance
-from core.mixins import _get_available_mixins
-from core.type_var_t import T
+from kind.core.mixinability import freeze, is_frozen
+from kind.core.kind import Kind
+from kind.core.lazy_kind import LazyKind
+from kind.core.mixinability import apply_mixin_to_instance
+from kind.core.mixins import _get_available_mixins
+from kind.core.type_var_t import T
 
 
 class KindNamespace:

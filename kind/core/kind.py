@@ -9,11 +9,11 @@ import orjson
 import toml
 import yaml
 
-from builtin.index import KindIndex
-from core.lazy import SENTINEL
-from core.lazy_kind import LazyKind
-from core.maturing import _apply_merge_strategy, deep_del, DefDict
-from builtin.avl_tree import AVLTree
+from kind.builtin.index import KindIndex
+from kind.core.lazy import SENTINEL
+from kind.core.lazy_kind import LazyKind
+from kind.core.maturing import _apply_merge_strategy, deep_del, DefDict
+from kind.builtin.avl_tree import AVLTree
 
 from .base_kind import BaseKind
 from .mixinability import apply_mixin_to_instance, freeze, is_frozen

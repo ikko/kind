@@ -1,4 +1,4 @@
-from core.mixinability import register_mixin
+from kind.core.mixinability import register_mixin
 from .path import KindPathMixin
 from .time_dim import KindTimeDimMixin
 from .visual import KindRender

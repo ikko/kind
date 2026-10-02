@@ -1,6 +1,6 @@
 import pytest
 from kind import Kind
-from builtin.index import KindIndex
+from kind.builtin.index import KindIndex
 
 @pytest.fixture
 def owner_kind():

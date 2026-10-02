@@ -1,6 +1,6 @@
 import pytest
-from core.kind import Kind
-from core.kind import to_kind
+from kind.core.kind import Kind
+from kind.core.kind import to_kind
 
 @pytest.mark.skip(reason="rest of second refactor - AssertionError: assert 'core.kind.Kind' == 123")
 def test_from_int():

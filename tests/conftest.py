@@ -1,11 +1,7 @@
-import sys
-import os
 import pytest
 from kind.core.kind import Kind
-from builtin import apply_builtins
-from builtin.avl_tree import AVLTree
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'kind')))
+from kind.builtin import apply_builtins
+from kind.builtin.avl_tree import AVLTree
 
 @pytest.fixture(scope='session', autouse=True)
 def apply_builtins_for_session():

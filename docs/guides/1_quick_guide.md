@@ -14,7 +14,7 @@ At its core, `Kind` implements a stringent interning mechanism. Every unique str
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 from kind.core.kind import Kind
 
 # Direct instantiation: Interning ensures uniqueness
@@ -34,7 +34,7 @@ assert kind_c is kind_d  # True: Same instance
 
 ```python
 
-from core.kind_namespace import k
+from kind.core.kind_namespace import k
 
 # Building a simple hierarchy
 root_node = k.SystemRoot

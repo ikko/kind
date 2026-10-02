@@ -1,8 +1,8 @@
 import pytest
 import datetime
 from kind import Kind
-from builtin.time_dim import KindTimeDimMixin, KindHeadTailView
-from builtin import apply_builtins
+from kind.builtin.time_dim import KindTimeDimMixin, KindHeadTailView
+from kind.builtin import apply_builtins
 
 
 

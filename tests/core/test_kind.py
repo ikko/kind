@@ -1,9 +1,9 @@
 import pytest
-from core.kind import Kind
-from core.kind_namespace import k
-from core.base_kind import BaseKind
-from core.lazy import SENTINEL
-from builtin.avl_tree import AVLTree
+from kind.core.kind import Kind
+from kind.core.kind_namespace import k
+from kind.core.base_kind import BaseKind
+from kind.core.lazy import SENTINEL
+from kind.builtin.avl_tree import AVLTree
 from weakref import WeakValueDictionary
 import threading
 import datetime
@@ -110,7 +110,7 @@ def test_kind_append_child():
     assert parent in child.parents
 
 def test_kind_append_lazy_kind_child():
-    from core.lazy_kind import LazyKind
+    from kind.core.lazy_kind import LazyKind
     parent = Kind("parent_lazy")
     lazy_child = LazyKind("lazy_child_name")
     parent.append(lazy_child)

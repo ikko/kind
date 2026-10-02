@@ -1,6 +1,6 @@
 import pytest
 from kind import Kind
-from core.lazy_kind import LazyKind
+from kind.core.lazy_kind import LazyKind
 
 def test_lazy_kind_evaluation():
     # Create a list that will be converted to a Kind with LazyKind children

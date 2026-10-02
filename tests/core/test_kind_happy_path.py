@@ -1,6 +1,6 @@
 import pytest
 from kind import Kind
-from core.kind_namespace import KindNamespace
+from kind.core.kind_namespace import KindNamespace
 
 
 def test_kind_creation_and_interning():
@@ -37,7 +37,7 @@ def test_kind_string_representation():
 
 import pytest
 from kind import Kind
-from core.kind_namespace import KindNamespace
+from kind.core.kind_namespace import KindNamespace
 
 
 def test_kind_creation_and_interning():
