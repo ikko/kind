@@ -15,6 +15,7 @@ from kind.core.mixinability import get_applied_mixins
 
 ROOT = Path(__file__).resolve().parent.parent
 LINK = re.compile(r"\]\(([^)\s#]+)(?:#[^)]*)?\)")
+LINK_WITH_ANCHOR = re.compile(r"\]\(([^)\s#]*)(?:#([^)\s]*))?\)")
 RECORDS = ("docs/history/", "docs/changelog.md")
 FILLER = ["powerful", "seamless", "robust", "sophisticated", "meticulous", "elegant", "paramount", "testament",
           "versatile", "empower", "unlock", "leverage", "comprehensive", "crucial", "delve", "cutting-edge",
@@ -47,6 +48,28 @@ def test_every_page_is_reachable_from_the_readme():
     generated = {ROOT / "docs" / "package" / "README.md"}  # the PyPI copy of README.md
     orphans = [str(p.relative_to(ROOT)) for p in pages() if p.resolve() not in reachable and p not in generated]
     assert not orphans, f"pages no link reaches from README.md: {orphans}"
+
+
+def github_anchors(page: Path) -> set[str]:
+    """The ids GitHub gives headings: lowercase, punctuation dropped, spaces to hyphens (code blocks skipped)."""
+    text = re.sub(r"^```.*?^```", "", page.read_text(encoding="utf-8"), flags=re.MULTILINE | re.DOTALL)
+    return {re.sub(r"[^\w\- ]", "", heading.strip().lower()).replace(" ", "-")
+            for heading in re.findall(r"^#+ (.+)$", text, re.MULTILINE)}
+
+
+@pytest.mark.parametrize("page", list(pages()), ids=lambda p: str(p.relative_to(ROOT)))
+def test_every_relative_link_resolves(page):
+    """A link to a missing file or heading fails here, not in a reader's browser."""
+    broken = []
+    for target, anchor in LINK_WITH_ANCHOR.findall(page.read_text(encoding="utf-8")):
+        if re.match(r"[a-z]+:", target):
+            continue                                    # http(s), mailto: not checked offline
+        resolved = (page.parent / target).resolve() if target else page
+        if not resolved.exists():
+            broken.append(target)
+        elif anchor and resolved.suffix == ".md" and anchor not in github_anchors(resolved):
+            broken.append(f"{target}#{anchor}")
+    assert not broken, f"broken links in {page.relative_to(ROOT)}: {broken}"
 
 
 @pytest.mark.parametrize("page", current_pages(), ids=lambda p: str(p.relative_to(ROOT)))

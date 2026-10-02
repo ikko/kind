@@ -31,3 +31,5 @@ jobs:
         run: make security
       - name: Test
         run: make test
+      - name: Generated PyPI readme is current
+        run: make readme && git diff --exit-code docs/package/README.md
