@@ -2,34 +2,33 @@
 from kind import builtin, core
 from kind.builtin import apply_builtins
 from kind.core.base_kind import KindLimitError
-from kind.core.batch_processing import a_process_batch, process_batch
+from kind.core.space import KindSpace, SpaceError, current_space
 from kind.core.graph_traversal import GraphTraversal
 from kind.core.kind import Kind
 from kind.core.kind_namespace import k
-from kind.core.time_arithmetics import add_time_objects, subtract_time_objects
 
-__all__ = ["Kind", "k", "KindLimitError", "GraphTraversal", "a_process_batch", "process_batch",
-           "add_time_objects", "subtract_time_objects", "add_time", "subtract_time", "builtin", "core"]
+__all__ = ["Kind", "k", "KindLimitError", "KindSpace", "SpaceError", "current_space", "GraphTraversal",
+           "builtin", "core"]
 
 apply_builtins()
 
 _ALIASES = {
-    "time_dim": "kind.builtin.time_dim", "td": "kind.builtin.time_dim",
+    "time": "kind.time",  # opt-in: the first access enables the time mixins
+    "time_dim": "kind.time.dim", "td": "kind.time.dim",
+    "timeline": "kind.time.timeline", "tl": "kind.time.timeline",
     "collections": "kind.builtin.collections", "coll": "kind.builtin.collections",
     "index": "kind.builtin.index", "idx": "kind.builtin.index",
     "path": "kind.builtin.path",
-    "timeline": "kind.builtin.timeline", "tl": "kind.builtin.timeline",
     "visual": "kind.builtin.visual", "vis": "kind.builtin.visual",
-    "schedule": "kind.core.schedule",
 }
-add_time = add_time_objects
-subtract_time = subtract_time_objects
 
 
 def __getattr__(name: str):
-    """Module aliases (kind.td, kind.schedule, ...), imported on first access."""
+    """Module aliases (kind.td, kind.vis, ...), imported on first access."""
     if name in _ALIASES:
         import importlib
+        if _ALIASES[name].startswith("kind.time"):
+            importlib.import_module("kind.time")  # an alias into kind.time opts in to time, as `import kind.time` does
         return importlib.import_module(_ALIASES[name])
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

@@ -9,6 +9,7 @@ import inspect
 import re
 import sys
 import warnings
+from types import MappingProxyType
 from collections import deque
 from itertools import chain
 from sys import getsizeof
@@ -26,10 +27,12 @@ else:  # Python 3.10
 from kind.builtin.collections import OrderedKindSet
 from kind.builtin.index import KindIndex
 from kind.core.base_kind import BaseKind
+from kind.core.space import KindSpace, SpaceError, current_space
 from kind.core.graph_traversal import GraphTraversal
 from kind.core.lazy_kind import SENTINEL, LazyKind
 from kind.core.maturing import DefDict, _apply_merge_strategy
 from kind.core.mixinability import get_applied_mixins
+from kind.core.protocols import TIME_MIXINS
 from kind.core.relations import Relations
 
 T = TypeVar("T")
@@ -80,8 +83,8 @@ class Kind(BaseKind):
         '_frozen',
     )
 
-    def _init_slots(self, name: str, origin: Optional[Any]) -> None:
-        super()._init_slots(name, origin)
+    def _init_slots(self, name: str, origin: Optional[Any], space: KindSpace) -> None:
+        super()._init_slots(name, origin, space)
         set_slot = object.__setattr__
         set_slot(self, 'parents', OrderedKindSet())
         set_slot(self, 'children', OrderedKindSet())
@@ -101,16 +104,21 @@ class Kind(BaseKind):
         return self._index
 
     @property
-    def metadata(self) -> DefDict:
+    def metadata(self) -> Any:
+        """A DefDict; read-only (top level) once the Kind is frozen or its space is closed."""
         if self._metadata is SENTINEL:
             object.__setattr__(self, '_metadata', DefDict())
-        return self._metadata
+        return self._read_only_if_settled(self._metadata)
 
     @property
-    def context(self) -> DefDict:
+    def context(self) -> Any:
+        """A DefDict; read-only (top level) once the Kind is frozen or its space is closed."""
         if self._context is SENTINEL:
             object.__setattr__(self, '_context', DefDict())
-        return self._context
+        return self._read_only_if_settled(self._context)
+
+    def _read_only_if_settled(self, mapping: DefDict) -> Any:
+        return MappingProxyType(mapping) if self._frozen or self._space.closed else mapping
 
     @property
     def relations(self) -> Relations:
@@ -143,6 +151,8 @@ class Kind(BaseKind):
             return elevated[name]
         if name.startswith('_') or hasattr(type(self), name):
             raise AttributeError(f"{type(self).__name__} {self.name!r} has no attribute {name!r}")
+        if name in TIME_MIXINS:
+            raise AttributeError(f"{name!r} is a time property, and time is opt-in. Hint: `import kind.time`.")
         return getattr(self.relations, name)
 
     def __setattr__(self, name: str, value: Any) -> None:
@@ -171,11 +181,22 @@ class Kind(BaseKind):
         return self
 
     def _ensure_mutable(self) -> None:
+        if object.__getattribute__(self, '_space').closed:
+            raise SpaceError(f"Kind {self.name!r} belongs to a closed space; it can be read but not changed.")
         if object.__getattribute__(self, '_frozen'):
             raise FrozenKindError(f"Kind {self.name!r} is frozen (immute()/freeze()); it cannot change. "
                                   f"Hint: change it before maturing, or build a new Kind.")
 
     # --- graph construction ------------------------------------------------
+
+    def _same_space(self, other: 'Kind') -> None:
+        for end in (self, other):
+            if end._space.closed:
+                raise SpaceError(f"Kind {end.name!r} belongs to a closed space; it can be read but not changed.")
+        if other._space is not self._space:
+            raise SpaceError(f"Cannot link {self.name!r} in {self._space!r} to {other.name!r} in {other._space!r}: "
+                             f"an edge across spaces would make their lifetimes undefined. "
+                             f"Hint: create both inside the same `with KindSpace():` block.")
 
     @classmethod
     def _coerce(cls, value: Any) -> 'Kind':
@@ -188,6 +209,7 @@ class Kind(BaseKind):
     def append(self, child: Any) -> 'Kind':
         """Links `child` under this Kind (idempotent) and returns the child."""
         child = self._coerce(child)
+        self._same_space(child)
         with self._lock:
             self._ensure_mutable()
             child._ensure_mutable()
@@ -203,6 +225,7 @@ class Kind(BaseKind):
     def insert(self, child: Any, at: Optional[int] = None) -> 'Kind':
         """Places `child` at index `at` among the children (moving it if already there)."""
         child = self._coerce(child)
+        self._same_space(child)
         with self._lock:
             self._ensure_mutable()
             child._ensure_mutable()
@@ -251,9 +274,9 @@ class Kind(BaseKind):
                 child.parents.discard(self)
             self.parents.clear()
             self.children.clear()
-            self._numbered.remove(self._position, self)
-            if BaseKind._pool.get(self.name) is self:
-                del BaseKind._pool[self.name]
+            self._space.order.remove(self._position, self)
+            if self._space.pool.get(self.name) is self:
+                del self._space.pool[self.name]
 
     def pop(self) -> 'Kind':
         """Deletes this Kind (re-parenting its children) and returns it."""
@@ -442,6 +465,7 @@ class Kind(BaseKind):
 
     def relate(self, other: 'Kind', how: str = 'related') -> 'Kind':
         """Relates this Kind to `other` under `how`, recording the inverse on `other`."""
+        self._same_space(other)
         with self._lock:
             self._ensure_mutable()
             other._ensure_mutable()
@@ -488,10 +512,11 @@ class Kind(BaseKind):
     @classmethod
     def next(cls) -> 'Kind':
         """Creates kind_<n> and chains it after the previous Kind.next() result."""
-        with cls._lock:
-            previous = BaseKind._pool.get(f"kind_{BaseKind._auto_counter - 1}")
-            kind = cls(f"kind_{BaseKind._auto_counter}")
-            BaseKind._auto_counter += 1
+        space = current_space()
+        with space.lock:
+            previous = space.pool.get(f"kind_{space._auto_counter - 1}")
+            kind = cls(f"kind_{space._auto_counter}")
+            space._auto_counter += 1
             if previous is not None:
                 object.__setattr__(previous, '_next', kind)
                 object.__setattr__(kind, '_prev', previous)
@@ -499,25 +524,25 @@ class Kind(BaseKind):
 
     @classmethod
     def first(cls) -> Optional['Kind']:
-        """The earliest created Kind in the pool."""
-        node = cls._numbered.min_node()
+        """The earliest created Kind in the current space."""
+        node = current_space().order.min_node()
         return node.kind if node else None
 
     @classmethod
     def last(cls) -> Optional['Kind']:
-        """The most recently created Kind in the pool."""
-        node = cls._numbered.max_node()
+        """The most recently created Kind in the current space."""
+        node = current_space().order.max_node()
         return node.kind if node else None
 
     @classmethod
     def len(cls) -> int:
-        """The number of Kinds in the pool."""
-        return len(BaseKind._pool)
+        """The number of Kinds in the current space."""
+        return len(current_space())
 
     @classmethod
     def forget(cls, name: str) -> bool:
         """Deletes the Kind called `name` if there is one; returns whether there was."""
-        kind = BaseKind._pool.get(name)
+        kind = current_space().get(name)
         if kind is None:
             return False
         kind.delete()
@@ -526,7 +551,7 @@ class Kind(BaseKind):
     @classmethod
     def seek(cls, pos: float) -> Optional['Kind']:
         """The Kind created at position `pos`, or None."""
-        return cls._numbered.search(pos)
+        return current_space().order.search(pos)
 
     @classmethod
     def each(cls, start: Union[float, 'Kind', None] = None) -> Iterator['Kind']:
@@ -534,7 +559,7 @@ class Kind(BaseKind):
         if start is not None and not isinstance(start, (int, float, Kind)):
             raise TypeError(f"Invalid start parameter {start!r} of type {type(start).__name__} in each()")
         start_weight = start._position if isinstance(start, Kind) else start
-        yield from cls._numbered.traverse_inorder(start_weight)
+        yield from current_space().order.traverse_inorder(start_weight)
 
     # --- conversion --------------------------------------------------------
 
@@ -650,10 +675,10 @@ class Kind(BaseKind):
 
     @classmethod
     def ps(cls) -> None:
-        """Prints every pooled Kind with its footprint and origin."""
+        """Prints every Kind of the current space with its footprint and origin."""
         rows = ["{:<30} {:<15} {:<50}".format("Name", "Footprint (b)", "Origin"), "-" * 95]
         total = 0
-        for name, kind in sorted(BaseKind._pool.items()):
+        for name, kind in sorted(current_space().pool.items()):
             footprint = kind.footprint() if isinstance(kind, Kind) else getsizeof(kind)
             total += footprint
             origin = kind.origin if kind.origin is not None else f"{type(kind).__module__}.{type(kind).__name__}"

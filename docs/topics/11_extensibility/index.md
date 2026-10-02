@@ -58,7 +58,7 @@ graph TD
 ```
 ## Asynchronous Mixins
 
-There is no separate `MixinFunction` protocol: a mixin method may be `async`, and callers await it like any coroutine method. Where the work runs (event loop, worker thread) is the caller's choice, e.g. `anyio.to_thread.run_sync` or `process_batch`; mixins take no `new_process`/`new_thread` flags.
+There is no separate `MixinFunction` protocol: a mixin method may be `async`, and callers await it like any coroutine method. Where the work runs (event loop, worker thread) is the caller's choice, e.g. `anyio.to_thread.run_sync` (or `process_batch` from the separate `kind-scheduler` distribution); mixins take no `new_process`/`new_thread` flags.
 
 ### Purpose and Usage
 To extend `Kind` with asynchronous operations, such as I/O-bound fetches.

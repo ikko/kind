@@ -6,9 +6,9 @@ import orjson
 import pytest
 from typer.testing import CliRunner
 
-from kind.bin.scheduler import app
+from kind_scheduler.cli import app
 from kind.core.kind import Kind
-from kind.core.schedule import CallableNotAllowedError, ScheduledJob, Scheduler, resolve_callable
+from kind_scheduler.schedule import CallableNotAllowedError, ScheduledJob, Scheduler, resolve_callable
 
 THIS_MODULE = __name__
 RESULTS: list = []

@@ -128,10 +128,11 @@ graph TD
 
 #### 2.1. Enabling Built-in Mixins
 
-The `apply_builtins()` function integrates a set of standard mixins: time dimension handling, pathfinding and Graphviz rendering. `import kind` already applies them; calling it again is idempotent.
+The `apply_builtins()` function integrates the standard mixins: pathfinding and Graphviz rendering. `import kind` already applies them; calling it again is idempotent. Time is opt-in: `import kind.time` attaches the time dimension (`as_datetime`, `hour`, `time_head`, ...) to every Kind.
 
 ```python
 
+import kind.time  # opt in to the time dimension
 from kind.core.kind import Kind
 from kind.builtin import apply_builtins
 
@@ -279,6 +280,6 @@ graph TD
 
 ### Conclusion
 
-This introduction has covered the core aspects of the `Kind` library, from basic creation and relationship building to leveraging built-in mixins for time dimension handling, pathfinding and Graphviz rendering, plus per-instance indexing. `Kind` provides a flexible and powerful foundation for modeling complex systems across various domains. For more in-depth exploration of advanced features and custom extensions, please refer to the Advanced Tutorial and API Documentation.
+This introduction has covered the core aspects of the `Kind` library, from basic creation and relationship building to leveraging built-in mixins for pathfinding and Graphviz rendering, the opt-in time dimension (`import kind.time`), and per-instance indexing. `Kind` provides a flexible and powerful foundation for modeling complex systems across various domains. For more in-depth exploration of advanced features and custom extensions, please refer to the Advanced Tutorial and API Documentation.
 
 ---

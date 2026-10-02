@@ -110,12 +110,12 @@ graph TD
 ```
 ## Timeline Example
 
-This example showcases the use of `kind.builtin.timeline` to manage and analyze temporal data. It demonstrates how to create timelines, add time periods, and perform operations like finding overlaps between different timelines.
+This example showcases the use of `kind.time.timeline` (time is opt-in: importing `kind.time` enables it) to manage and analyze temporal data. It demonstrates how to create timelines, add time periods, and perform operations like finding overlaps between different timelines.
 
 ### Code Example
 
 ```python
-from kind.builtin.timeline import Timeline
+from kind.time import Timeline
 import datetime
 
 timeline1 = Timeline()
@@ -159,103 +159,12 @@ graph TD
     style Y fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style Z fill:#FF1493,stroke:#333,stroke-width:2px,color:#FFFFFF;
 ```
-## Batch Processing Example
+## Batch Processing and Scheduling
 
-This example demonstrates a simple batch processing utility, showcasing how `Kind` can be used in conjunction with functional programming paradigms to apply a given function to a collection of inputs. While `Kind` itself is not a batch processing engine, its extensibility allows for the integration of such utilities.
+Neither is part of `kind`. Running a function over a batch (`process_batch`, `a_process_batch`) and running callables once or on a cron schedule (`Scheduler`, `ScheduledJob`) live in the separate [`kind-scheduler`](../../../scheduler/README.md) distribution (package `kind_scheduler`), where a Kind named like an ISO 8601 datetime can serve as a schedule.
 
-### Code Example
-```python
-from kind.core.batch_processing import process_batch
-
-def square(x): return x * x
-results = process_batch([1, 2, 3, 4], square)
-print(f"Batch processing results: {results}")
-```
-<details>
-<summary>Outcome</summary>
-
-```text
-Batch processing results: [1, 4, 9, 16]
-```
-</details>
-
-### Explanation
-- `process_batch(batch, func, new_thread=True)`: A utility function from `kind.core.batch_processing` (also exported as `kind.process_batch`) that applies the function to each input concurrently in worker threads (or in order in the calling thread with `new_thread=False`) and returns the results in input order; `a_process_batch(batch, func)` is its async form. This highlights how `Kind` can be part of a larger system, where its symbolic representations can be processed by external functions.
-- `square()`: A simple function demonstrating the type of operation that can be applied in a batch.
-
-### Diagram
-```mermaid
-graph LR
-    A[Input List] --> B{process_batch&#40&#41};
-    C[Function &#40e.g., square&#41] --> B;
-    B --> D[Processed Results];
-
-    style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
-    style B fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style C fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
-    style D fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
-```
-## Scheduler Example
-
-This example demonstrates the use of `kind.core.schedule` to schedule and execute tasks at specified times. It showcases the `Scheduler` and `ScheduledJob` classes, allowing for the automation of functions based on time dimension objects.
-
-### Code Example
-```python
-import datetime
-
-import anyio
-
-from kind.core.schedule import ScheduledJob, Scheduler
-
-def my_task(message):
-    print(f"Executing task: {message}")
-
-async def main():
-    scheduler = Scheduler()
-    job = ScheduledJob(my_task, args=("Hello from the scheduler!",),
-                       schedule=datetime.datetime.now() + datetime.timedelta(seconds=1))
-    scheduler.add_job(job)
-
-    async with anyio.create_task_group() as task_group:
-        await scheduler.start(task_group)
-        await anyio.sleep(2)  # wait for the job to run
-        await scheduler.stop()
-
-anyio.run(main)
-```
-<details>
-<summary>Outcome</summary>
-
-```text
-Executing task: Hello from the scheduler!
-```
-</details>
-
-### Explanation
-- `Scheduler()`: Initializes the scheduler (`Scheduler(schedule_file=None, allowed_modules=(), now=datetime.datetime.now)`); schedule files may only name functions from `allowed_modules`.
-- `ScheduledJob()`: Creates a job object, specifying the function to run (`my_task`), its arguments, and the `schedule` (in this case, 1 second from now).
-- `scheduler.add_job(job)`: Adds the created job to the scheduler's queue.
-- `await scheduler.start(task_group)`: Starts the scheduler's execution loop as a task in an `anyio` task group; sync jobs run in a worker thread.
-- `anyio.sleep()`: Lets the loop run the scheduled task; `await scheduler.run_due_jobs()` would run one deterministic step instead.
-- `await scheduler.stop()`: Halts the scheduler's execution loop.
-
-### Diagram
-```mermaid
-graph TD
-    A[Function &#40my_task&#41] --> B[ScheduledJob];
-    C[Schedule &#40datetime.datetime&#41] --> B;
-    B --> D[Scheduler.add_job&#40&#41];
-    D --> E[Scheduler.start&#40task_group&#41];
-    E -- "Executes at time" --> A;
-
-    style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
-    style B fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style C fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
-    style D fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
-```
 ## Conclusion
 
-These examples collectively demonstrate the versatility and power of the `Kind` framework. From basic graph construction to complex supply chain analysis, temporal data management, batch processing, and task scheduling, `Kind` provides a flexible and efficient foundation for building sophisticated applications. Its modular design and extensibility allow developers to tailor its capabilities to specific domain requirements, making it a valuable tool for a wide array of symbolic data manipulation tasks.
+These examples collectively demonstrate the versatility and power of the `Kind` framework. From basic graph construction to complex supply chain analysis and temporal data management, `Kind` provides a flexible and efficient foundation for building sophisticated applications. Its modular design and extensibility allow developers to tailor its capabilities to specific domain requirements, making it a valuable tool for a wide array of symbolic data manipulation tasks.
 
 ---

@@ -287,7 +287,7 @@ _**Disclaimer:**_
 : Delves into the sophisticated capabilities of the `Kind` library, showcasing its versatility in addressing complex modeling challenges. It explores advanced features such as custom mixin development, intricate graph manipulations, and strategic application for DSL construction. This guide aims to empower experienced developers and researchers to unlock the full potential of `Kind` for highly specialized and performant symbolic systems.
 
 🌐 [Framework](docs/README.md)
-: The **Kind Framework** offers a versatile `Kind` object that functions as a node in a directed acyclic graph with features including layered architecture for modularity, per-instance indexing for complex data structures, dynamic mixinability, memory-aware optimization, and built-in scheduling capabilities. The framework documentation presents API highlights covering construction, traversal, visualization, and lifecycle management methods, along with performance characteristics and extensibility options. 
+: The **Kind Framework** offers a versatile `Kind` object that functions as a node in a directed acyclic graph with features including layered architecture for modularity, per-instance indexing for complex data structures, dynamic mixinability, memory-aware optimization, with scheduling available in the separate `kind-scheduler` distribution. The framework documentation presents API highlights covering construction, traversal, visualization, and lifecycle management methods, along with performance characteristics and extensibility options. 
 
 : This framework is primarily targeted at software engineers, data scientists, business analysts, architects, CTOs and domain experts who need to model complex and dynamic relationships, build domain-specific languages, or create knowledge graphs with semantic precision while maintaining high performance and memory efficiency.
 
@@ -316,8 +316,8 @@ _**Disclaimer:**_
 📦 [Publishing_your_mixin](docs/cookbook/1_mixin_recipe/6_publishing_your_mixin.md)
 : Outlines the process of publishing a `kind` mixin, from sharing it as a third-party package on PyPI to potentially integrating it into the `kind` standard library. It covers project structure, `pyproject.toml`, and `twine`. This document provides essential guidance for making mixins available to a wider audience, detailing the steps for packaging, distribution, and contributing to the core `kind` project.
 
-⏰ [scheduling_jobs](docs/cookbook/2_scheduling_jobs.md)
-: Demonstrates how to use the `kind.schedule` module to schedule and manage jobs within `kind` applications. It covers basic usage, job management, and persisting schedules. This recipe provides practical examples and diagrams for automating tasks and orchestrating workflows, making it a valuable resource for integrating scheduling capabilities.
+⏰ [scheduling_jobs](scheduler/docs/cookbook_scheduling_jobs.md)
+: Part of `kind-scheduler`, a distribution separate from `kind`: demonstrates how to use the `kind_scheduler` package to schedule and manage jobs. It covers basic usage, job management, and persisting schedules. This recipe provides practical examples and diagrams for automating tasks and orchestrating workflows, making it a valuable resource for integrating scheduling capabilities.
 
 </details>
 
@@ -383,10 +383,10 @@ _**Disclaimer:**_
 : A Mermaid diagram illustrating the core relationships within a `Kind` object, including children, parents and named relations (`relate(other, how=...)`). This visual aid helps in understanding how `Kind` instances connect to form complex graph structures and represent semantic information.
 
 🧠 [memory_awareness](docs/topics/10_memory_awareness/index.md)
-: Details the `Kind` framework's meticulous design for memory efficiency, covering explicit lifetime (strong intern pool, `delete()`/`forget()`, `max_kinds`), lazily created parts (`metadata`, `context`, `index`, `relations`), `clear_context()`, and maturing. This document explains how `Kind` minimizes its memory footprint and ensures robust, predictable behavior in large-scale, interconnected systems.
+: Details the `Kind` framework's meticulous design for memory efficiency, covering explicit lifetime (a strong intern pool per `KindSpace`, `delete()`/`forget()`, `KindSpace(max_kinds=...)`), lazily created parts (`metadata`, `context`, `index`, `relations`), `clear_context()`, and maturing. This document explains how `Kind` minimizes its memory footprint and ensures robust, predictable behavior in large-scale, interconnected systems.
 
 📊 [memory_awareness_overview diagram](docs/topics/10_memory_awareness/memory_awareness_overview.mmd)
-: A Mermaid diagram providing an overview of the `Kind`'s memory awareness mechanisms, including explicit lifetime of the strong intern pool, context cleanup, and the maturing process. This visual aid helps in understanding the various strategies employed to minimize memory footprint and ensure efficient resource management.
+: A Mermaid diagram providing an overview of the `Kind`'s memory awareness mechanisms, including explicit lifetime of the strong intern pool of each `KindSpace`, context cleanup, and the maturing process. This visual aid helps in understanding the various strategies employed to minimize memory footprint and ensure efficient resource management.
 
 🧩 [extensibility_overview diagram](docs/topics/11_extensibility/extensibility_overview.mmd)
 : A Mermaid diagram illustrating the `Kind` framework's extensibility mechanisms, including the mixin protocols, `register_mixin()`, enum reflection compatibility, and external DSL input. This visual aid helps in understanding how `Kind` can be adapted and integrated into a wide array of applications and domains.
@@ -395,10 +395,10 @@ _**Disclaimer:**_
 : Explores the `Kind` framework's strong emphasis on extensibility, detailing how it adapts to diverse domains through well-defined protocols, dynamic mixin capabilities, and compatibility with external data formats. This document covers the `typing.Protocol` contracts for mixins, `register_mixin()` and `apply_mixin_to_instance()`, and compatibility with enum reflection and external DSL inputs.
 
 💡 [example_use](docs/topics/12_example_use/index.md)
-: Illustrates several practical use cases of the `Kind` framework, demonstrating how its core features can be leveraged to solve real-world problems. Examples include basic kind creation, ESG tracking, timeline management, batch processing, and scheduling. This document provides concrete examples and diagrams, showcasing the versatility and power of `Kind` in various application domains.
+: Illustrates several practical use cases of the `Kind` framework, demonstrating how its core features can be leveraged to solve real-world problems. Examples include basic kind creation, ESG tracking and timeline management (`kind.time`); batch processing and scheduling live in `kind-scheduler`. This document provides concrete examples and diagrams, showcasing the versatility and power of `Kind` in various application domains.
 
 🪶 [flyweight_pattern diagram](docs/topics/2_flyweight_design/flyweight_pattern.mmd)
-: A Mermaid diagram illustrating the Flyweight design pattern as applied to `Kind` instantiation, showing how a central pool ensures uniqueness and efficiency. This visual aid helps in understanding the memory optimization and consistent identity achieved through this pattern.
+: A Mermaid diagram illustrating the Flyweight design pattern as applied to `Kind` instantiation, showing how the pool of the current `KindSpace` ensures uniqueness and efficiency. This visual aid helps in understanding the memory optimization and consistent identity achieved through this pattern.
 
 🪶 [flyweight_design](docs/topics/2_flyweight_design/index.md)
 : Explains how the `Kind` framework leverages the Flyweight design pattern to ensure the uniqueness and efficient management of `Kind` instances. It details the core principle of shared intrinsic state and its advantages. This document provides code examples and industry applications, demonstrating how Flyweight contributes to memory efficiency, consistency, and performance in `Kind`.
@@ -436,17 +436,17 @@ _**Disclaimer:**_
 ✨ [maturing_process_3 diagram](docs/topics/6_memory_aware_maturing/maturing_process_3.mmd)
 : A Mermaid diagram highlighting the benefits of the memory-aware maturing process, including reduced memory footprint, improved performance, stability, and clear lifecycle management. This visual aid helps in understanding the advantages gained from optimizing `Kind` instances.
 
-📅 [scheduling](docs/topics/7_scheduling/index.md)
-: Integrates a robust scheduling mechanism into the `Kind` framework, enabling deferred and automated task execution. It covers `ScheduledJob` and `Scheduler` components. This document provides illustrative examples and diagrams for microservice orchestration and automated report generation, showcasing flexible scheduling paradigms.
+📅 [scheduling](scheduler/docs/topic_scheduling/index.md)
+: Part of `kind-scheduler`, a distribution separate from `kind`: a robust scheduling mechanism enabling deferred and automated task execution. It covers `ScheduledJob` and `Scheduler` components. This document provides illustrative examples and diagrams for microservice orchestration and automated report generation, showcasing flexible scheduling paradigms.
 
-➡ [scheduling_flow diagram](docs/topics/7_scheduling/scheduling_flow.mmd)️
-: A Mermaid diagram illustrating the `Kind` scheduling mechanism, showing how `ScheduledJob` instances are added to a min-heap, monitored by the `Scheduler`, and executed. This visual aid helps in understanding the flow of task automation and job management.
+➡ [scheduling_flow diagram](scheduler/docs/topic_scheduling/scheduling_flow.mmd)️
+: A Mermaid diagram illustrating the `kind_scheduler` scheduling mechanism, showing how `ScheduledJob` instances are added to a min-heap, monitored by the `Scheduler`, and executed. This visual aid helps in understanding the flow of task automation and job management.
 
 🌟 [api_overview diagram](docs/topics/8_api_highlights/api_overview.mmd)
 : A Mermaid diagram providing an overview of the `Kind` API highlights, categorizing methods by core constructors, relationship management, traversal, lifecycle management, visualization, and utility. This visual aid helps in quickly grasping the breadth of `Kind`'s functionality.
 
 💡 [api_highlights](docs/topics/8_api_highlights/index.md)
-: Details the key methods and properties that form the backbone of the `Kind` framework's functionality. It covers `Kind()` constructor, `Kind.next()`, `append()`, `relate()`, traversal methods, `patch()`, visualization, `delete()`, `elevate()`, `slim()`, `immute()`, `ref`, and `Scheduler.add_job()`. This document offers insights into their design principles and practical applications, with code examples and diagrams.
+: Details the key methods and properties that form the backbone of the `Kind` framework's functionality. It covers `Kind()` constructor, `Kind.next()`, `append()`, `relate()`, traversal methods, `patch()`, visualization, `delete()`, `elevate()`, `slim()`, `immute()` and `ref`. This document offers insights into their design principles and practical applications, with code examples and diagrams.
 
 ⚡ [Performance](docs/topics/9_performance/index.md)
 : Explains how the `Kind` framework is engineered for high performance, detailing algorithmic and architectural optimizations for efficient instantiation, relationship management, and traversal. This document covers O(1) kind instantiation (intern pool), O(1) relationship linking, O(V+E) traversal, and O(log n) creation-order insert/search (AVL tree), with code examples and diagrams.

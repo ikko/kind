@@ -1,7 +1,20 @@
 # Plan: an explicit KindSpace, and what belongs in the core
 
-**Status: PLAN — nothing here is implemented.** Written 2026-10-02 as a decision proposal. The
-code is the source of truth until a decision is taken and this page is replaced by a description.
+**Status: DECIDED AND IMPLEMENTED, 2026-10-02.** This page is kept as the record of the decision:
+the reasoning and the measurements that led to it. The author answered all three questions with
+the proposals below: KindSpace now, scheduling as a separate distribution (`scheduler/`, package
+`kind_scheduler`), and time opt-in (`import kind.time`). The code is the source of truth.
+Two details changed from the plan:
+- time is opt-in by import, not a packaging extra: it has no third-party dependencies, so an extra
+  would install nothing;
+- `kind-scheduler` lives in this repository as its own distribution rather than in a new one.
+
+Result, measured:
+- the core is 2 230 lines, plus `kind.time` at 476;
+- `kind-scheduler` is 342 lines;
+- `kind` has 4 runtime dependencies (`orjson`, `anyio`, `PyYAML`, `tomli-w`; `tomli` on 3.10);
+- `import kind` takes ~33 ms;
+- the test fixture is `with KindSpace(): yield`.
 
 ## 1. KindSpace: global state made explicit
 

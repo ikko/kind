@@ -1,3 +1,4 @@
+from kind.core.space import current_space
 import pytest
 from kind.core.base_kind import BaseKind as Kind, _to_kind
 
@@ -35,19 +36,19 @@ def test_kind_position_assignment():
     assert s3._position == 2.0
 
     # Verify write cursor advanced
-    assert Kind._write_cursor == 3.0
+    assert current_space()._write_cursor == 3.0  # the space's next creation position
 
 def test_kind_pool_and_numbered_insertion():
     s1 = Kind("pool_test_1")
     s2 = Kind("pool_test_2")
 
-    assert "pool_test_1" in Kind._pool
-    assert Kind._pool["pool_test_1"] is s1
-    assert "pool_test_2" in Kind._pool
-    assert Kind._pool["pool_test_2"] is s2
+    assert "pool_test_1" in current_space().pool
+    assert current_space().pool["pool_test_1"] is s1
+    assert "pool_test_2" in current_space().pool
+    assert current_space().pool["pool_test_2"] is s2
 
     # Verify insertion into AVLTree
-    inorder_traversal = Kind._numbered.traverse_inorder()
+    inorder_traversal = current_space().order.traverse_inorder()
     assert len(inorder_traversal) == 2
     assert inorder_traversal[0] is s1
     assert inorder_traversal[1] is s2

@@ -4,10 +4,10 @@ The `Kind` framework is engineered for high performance, particularly in scenari
 
 ## O(1) Kind Instantiation (Intern Pool)
 
-Kind instantiation is an average constant-time operation (one dictionary lookup under a lock), achieved through the implementation of an interning pool (a variation of the Flyweight design pattern). When a `Kind` is requested via `Kind(name)`, the framework first checks if a `Kind` with that `name` already exists in the pool, one for all classes. If it does, the existing instance is returned; otherwise, a new instance is created and added to the pool. This ensures that each unique symbolic name maps to a single, canonical `Kind` object, leading to significant memory savings and guaranteeing object identity: the pool is strong, so a name stays the same Kind, with its state, until `delete()` or `Kind.forget(name)` removes it.
+Kind instantiation is an average constant-time operation (one dictionary lookup under a lock), achieved through the implementation of an interning pool (a variation of the Flyweight design pattern). When a `Kind` is requested via `Kind(name)`, the framework first checks if a `Kind` with that `name` already exists in the pool of the current `KindSpace` (shared by all classes; a process starts with one default space). If it does, the existing instance is returned; otherwise, a new instance is created and added to the pool. This ensures that each unique symbolic name maps to a single, canonical `Kind` object, leading to significant memory savings and guaranteeing object identity: the pool is strong, so a name stays the same Kind, with its state, until `delete()`, `Kind.forget(name)` or closing its space removes it.
 
 ### Mechanism
-- **`BaseKind._pool`**: A plain `dict` that stores `Kind` instances, keyed by their `name`; `Kind.max_kinds` can cap its size (`KindLimitError`).
+- **`space.pool`**: A plain `dict` per `KindSpace` that stores `Kind` instances, keyed by their `name`; `KindSpace(max_kinds=N)` can cap its size (`KindLimitError`). The lookup runs under the space's `RLock` (`space.lock`).
 - **`BaseKind.__new__` method**: Overridden to implement the interning logic, ensuring that `Kind('A') is Kind('A')` evaluates to `True`.
 
 ### Code Example
@@ -46,10 +46,10 @@ Timings are one measured run; they vary by machine.
 ### Diagram
 ```mermaid
 graph TD
-    A[Request Kind&#40name&#41] --> B{Check BaseKind._pool};
+    A[Request Kind&#40name&#41] --> B{Check current_space#40;#41;.pool};
     B -- "Found" --> C[Return Existing Kind];
     B -- "Not Found" --> D[Create New Kind];
-    D --> E[Add to BaseKind._pool];
+    D --> E[Add to space.pool];
     E --> C;
 
     style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
@@ -112,11 +112,11 @@ graph TD
 ```
 ## O(1) Sequence Steps and Float-based Positions
 
-While full graph traversals (e.g., `tree()`, `graph()`) are inherently dependent on the number of nodes and edges (O(V+E)), stepping along the `Kind.next()` chain is O(1), and creation order is kept by float positions in an AVL tree. `Kind.len()` is `len(pool)`, O(1).
+While full graph traversals (e.g., `tree()`, `graph()`) are inherently dependent on the number of nodes and edges (O(V+E)), stepping along the `Kind.next()` chain is O(1), and creation order is kept by float positions in an AVL tree. `Kind.len()` is the size of the current space's pool, O(1).
 
 ### Mechanism
 - **Linked Sequence (`_prev`, `_next`)**: `Kind.next()` creates `kind_0`, `kind_1`, ... and links each to the previous one, so a step along the chain is O(1).
-- **Float-based Positions (`_write_cursor`, `_position`)**: Every new Kind gets the next float position from `_write_cursor` and is added to an AVL tree of every pooled Kind (`BaseKind._numbered`) without re-indexing existing elements. `Kind.first()`/`last()`/`seek(pos)` read it in O(log n), and `Kind.each(start)` iterates the pooled Kinds in creation order.
+- **Float-based Positions (`_position`)**: Every new Kind gets the next float position of its space (`space.next_position()`) and is added to the space's AVL tree of every pooled Kind (`space.order`) without re-indexing existing elements. `Kind.first()`/`last()`/`seek(pos)` read the current space's tree in O(log n), and `Kind.each(start)` iterates its Kinds in creation order.
 
 ### Code Example (Conceptual for Float-based Cursor)
 ```python

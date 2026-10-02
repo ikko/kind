@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.2.0] - 2026-10-02
+### Added
+- **`KindSpace`** (`from kind import KindSpace, current_space, SpaceError`): a separate universe of names with its own pool, creation order, counters, lock and `max_kinds`. `Kind(name)` uses the current space (a context variable: right for asyncio/trio tasks and anyio worker threads; plain threads need `contextvars.copy_context().run`). Leaving `with KindSpace():` closes the space: its Kinds are dropped, and survivors are read-only. Edges across spaces raise `SpaceError`; equality is name *and* space; `kind.space` names a Kind's space.
+### Changed
+- **Time is opt-in**: `kind.time` (`dim`, `timeline`, `arithmetic`) attaches its mixins on `import kind.time` (or on first use of the `kind.td`/`kind.tl` aliases). The core no longer gives every Kind `as_date`, `period` and the like; `kind.add_time`/`subtract_time` moved to `kind.time`.
+- **The cap is per space**: `KindSpace(max_kinds=N)` replaces `Kind.max_kinds`.
+### Removed
+- **Scheduling left the package**: it is now the separate distribution `kind-scheduler` (`scheduler/`, package `kind_scheduler`, CLI `kind-scheduler`). `kind` no longer depends on `croniter` or `typer`.
+
 ## [v0.1.0] - 2026-10-02
 ### Changed
 - **Renamed from `symb` to `kind`**: the distribution, the package and the CLI. `Symbol` → `Kind`, `BaseSymbol` → `BaseKind`, `SymbolNamespace` → `KindNamespace`, `to_sym` → `to_kind`, and the namespace object `s` → `k` (`from kind import k`). The console script is `kind-scheduler`, because `kind` is the Kubernetes-in-Docker binary. Earlier entries below use the new names.

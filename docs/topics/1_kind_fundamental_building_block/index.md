@@ -9,7 +9,7 @@ The `Kind` object serves as the atomic unit within the framework, embodying a no
 
 ## Uniqueness and Interning
 
-Each `Kind` instance is uniquely identified by its `name` attribute. This uniqueness is enforced through an interning mechanism, ensuring that `Kind('A')` returns the same object in memory as any subsequent call to `Kind('A')`. The pool is strong: a name stays the same Kind, state included, until `delete()` or `Kind.forget(name)` removes it. This design choice offers significant advantages:
+Each `Kind` instance is uniquely identified by its `name` attribute. This uniqueness is enforced through an interning mechanism, ensuring that `Kind('A')` returns the same object in memory as any subsequent call to `Kind('A')` in the same `KindSpace`. The name is looked up in the current space (a process starts with one default space; `with KindSpace():` opens another, and equality is name *and* space). The space's pool is strong: a name stays the same Kind, state included, until `delete()`, `Kind.forget(name)` or closing the space removes it. This design choice offers significant advantages:
 
 -   **Memory Efficiency**: Prevents redundant object creation, reducing memory footprint, especially in large graphs with many identical symbolic representations.
 -   **Consistency**: Guarantees that operations on a kind consistently refer to the same underlying entity, simplifying identity checks and graph integrity.
@@ -44,7 +44,7 @@ The framework provides intuitive methods for establishing and managing these rel
 
 -   `kind.append(child)`: Establishes a directed relationship from `kind` to `child` (idempotent: `children` is an `OrderedKindSet`, ordered, without duplicates) and returns `child`.
 -   `kind.add(child)`: Like `append`, but returns `kind`, so calls can be chained.
--   `kind.delete()`: Removes a kind from the graph and the pool; its children move up to its parents.
+-   `kind.delete()`: Removes a kind from the graph and its space's pool; its children move up to its parents.
 
 ### Illustrative Example: Supply Chain Modeling
 

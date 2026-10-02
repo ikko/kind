@@ -1,12 +1,12 @@
-# Scheduling: Event-Driven Automation with Kind
+# Scheduling: Event-Driven Automation with kind-scheduler
 
-The `Kind` framework integrates a robust scheduling mechanism, enabling the deferred and automated execution of tasks. This feature is critical for building event-driven architectures, automating workflows, and managing background processes within applications. The scheduler is designed for flexibility, supporting various scheduling paradigms from precise time dimension triggers to recurring cron-like expressions.
+`kind-scheduler` (package `kind_scheduler`), a distribution separate from `kind`, provides a robust scheduling mechanism, enabling the deferred and automated execution of tasks. This feature is critical for building event-driven architectures, automating workflows, and managing background processes within applications. The scheduler is designed for flexibility, supporting various scheduling paradigms from precise time dimension triggers to recurring cron-like expressions.
 
 ## Core Components: ScheduledJob and Scheduler
 
 The scheduling system is built around two primary components:
 
-1.  **`ScheduledJob`**: This class encapsulates a single task to be executed. It holds references to the callable function (`func`), its arguments (`args`, `kwargs`), and crucially, the `schedule` on which it should run. Its signature is `ScheduledJob(func, args=(), kwargs=None, schedule="* * * * *", id=None, now=None)` (`now` is the base time for the first cron `next_run`). The `schedule` can be a `datetime.datetime`, `datetime.date` or `datetime.time` (or an ISO 8601 string) for one-off tasks, a `cron` string for recurring jobs, or even a `Kind` instance whose name represents an ISO 8601 datetime string.
+1.  **`ScheduledJob`**: This class encapsulates a single task to be executed. It holds references to the callable function (`func`), its arguments (`args`, `kwargs`), and crucially, the `schedule` on which it should run. Its signature is `ScheduledJob(func, args=(), kwargs=None, schedule=None, id=None, now=None)`; `schedule` is required (`None` raises `TypeError`), and `now` is the base time for the first cron `next_run`. The `schedule` can be a `datetime.datetime`, `datetime.date` or `datetime.time` (or an ISO 8601 string) for one-off tasks, a `cron` string for recurring jobs, or even a `Kind` instance whose name represents an ISO 8601 datetime string.
 
     ```mermaid
     graph TD
@@ -47,7 +47,7 @@ import datetime
 
 import anyio
 
-from kind.core.schedule import ScheduledJob, Scheduler
+from kind_scheduler.schedule import ScheduledJob, Scheduler
 
 clock = {"now": datetime.datetime(2026, 10, 2, 9, 0, 0)}  # an injectable clock makes runs deterministic
 now = lambda: clock["now"]
@@ -96,14 +96,14 @@ graph TD
 
 Automated Report Generation
 
-For businesses, automated report generation is a common requirement. The `Kind` scheduler can reliably handle tasks like generating daily sales reports, weekly inventory summaries, or monthly financial statements.
+For businesses, automated report generation is a common requirement. `kind_scheduler` can reliably handle tasks like generating daily sales reports, weekly inventory summaries, or monthly financial statements.
 
 ```python
 import datetime
 
 import anyio
 
-from kind.core.schedule import ScheduledJob, Scheduler
+from kind_scheduler.schedule import ScheduledJob, Scheduler
 
 
 def generate_daily_sales_report():
@@ -156,7 +156,7 @@ graph TD
 ```
 ## Conclusion
 
-The `Kind` framework's scheduling capabilities provide a powerful and flexible foundation for automating tasks and orchestrating complex processes. By offering diverse scheduling options and robust job management, it empowers developers to build highly responsive and efficient systems, from sophisticated microservice deployments to routine business operations. The persistence feature further enhances its utility by ensuring that scheduled tasks are not lost across application lifecycles.
+The scheduling capabilities of `kind-scheduler` provide a powerful and flexible foundation for automating tasks and orchestrating complex processes. By offering diverse scheduling options and robust job management, it empowers developers to build highly responsive and efficient systems, from sophisticated microservice deployments to routine business operations. The persistence feature further enhances its utility by ensuring that scheduled tasks are not lost across application lifecycles.
 
 For a visual representation of the scheduling process, refer to the [Scheduling Flow Diagram](scheduling_flow.mmd).
 

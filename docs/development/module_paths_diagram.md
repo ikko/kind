@@ -8,8 +8,8 @@ graph TD
         A[kind] --> B(kind.k)
         A[kind] --> C(kind.Kind)
         A[kind] --> D(kind.GraphTraversal)
-        A[kind] --> E(kind.process_batch / kind.a_process_batch)
-        A[kind] --> E2(kind.add_time / kind.subtract_time)
+        A[kind] --> E(kind.KindSpace / kind.current_space / kind.SpaceError)
+        A[kind] --> E2(kind.KindLimitError)
     end
 
     subgraph "Core Modules"
@@ -19,27 +19,26 @@ graph TD
         C --> G3(kind.core.relations)
         C --> G4(kind.core.lazy_kind)
         C --> G5(kind.core.kind_namespace)
+        C --> G6(kind.core.space)
         C --> I(kind.core.maturing)
         C --> J(kind.core.mixinability)
         C --> K(kind.core.mixin_validator)
         C --> L(kind.core.protocols)
-        C --> N(kind.core.time_arithmetics)
-        C --> O(kind.core.schedule)
-        C --> P(kind.core.batch_processing)
     end
 
     subgraph "Builtin Extensions"
         C --> Q(kind.builtin.collections)
-        C --> R(kind.builtin.time_dim)
         C --> S(kind.builtin.index)
         C --> T(kind.builtin.path)
         C --> U(kind.builtin.visual)
         C --> W(kind.builtin.avl_tree)
-        C --> X(kind.builtin.timeline)
     end
 
-    subgraph "Command Line"
-        A --> Y(kind.bin.scheduler)
+    subgraph "Time (opt-in: import kind.time)"
+        A --> TT(kind.time)
+        TT --> R(kind.time.dim)
+        TT --> X(kind.time.timeline)
+        TT --> N(kind.time.arithmetic)
     end
 
     style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
@@ -60,16 +59,17 @@ graph TD
     style J fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style K fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style L fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style N fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style O fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style P fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
 
     style Q fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
-    style R fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style S fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style T fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style U fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style W fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
-    style X fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
-    style Y fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
+
+    style TT fill:#FF8C00,stroke:#333,stroke-width:2px,color:#000000;
+    style R fill:#FFDAB9,stroke:#333,stroke-width:2px,color:#000000;
+    style X fill:#FFDAB9,stroke:#333,stroke-width:2px,color:#000000;
+    style N fill:#FFDAB9,stroke:#333,stroke-width:2px,color:#000000;
 ```
+
+Scheduling and batch processing (`Scheduler`, `ScheduledJob`, `process_batch`, the `kind-scheduler` CLI) are not part of `kind`: they live in the separate `kind-scheduler` distribution (`scheduler/`, package `kind_scheduler`).

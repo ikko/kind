@@ -28,6 +28,12 @@ class KindPathProtocol(Protocol):
         ...
 
 
+# The attributes `import kind.time` attaches; the core reserves them so that, without the
+# opt-in, `kind.as_date` says what is missing instead of turning into a relation verb.
+TIME_MIXINS = ('time_head', 'time_tail', 'as_date', 'as_time', 'as_datetime', 'day', 'hour', 'minute', 'second',
+               'period', 'as_period', 'duration', 'as_duration', 'delta', 'as_delta')
+
+
 class KindTimeDimProtocol(Protocol):
     @property
     @abstractmethod

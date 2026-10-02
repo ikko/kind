@@ -100,12 +100,12 @@ The philosophers' version is the [type–token distinction](https://plato.stanfo
 ## The limits that follow from "categories are data"
 
 - **No static checking.** A misspelled name is a new Kind, and a misspelled public relation verb (`a.has_knid(b)`) is a new relation, by design. Only private names (`a._x`) raise `AttributeError`.
-- **A name lives until you end it.** The pool is strong, so a Kind keeps its state with no reference held. Why not weak, like `sys.intern`? Losing an interned *string* is unobservable, because a string has no state. Losing a Kind would silently drop its origin, metadata and relations. The cost is memory: names accumulate until deleted, and `max_kinds` caps them when names come from untrusted input.
+- **A name lives until you end it.** The pool is strong, so a Kind keeps its state with no reference held. Why not weak, like `sys.intern`? Losing an interned *string* is unobservable, because a string has no state. Losing a Kind would silently drop its origin, metadata and relations. A name ends by `delete()` / `Kind.forget(name)`, or together with its **space**: `with KindSpace():` opens a separate universe of names that is dropped when the block ends, and `KindSpace(max_kinds=...)` caps one for untrusted input.
 
 ```python
 import gc
 import pytest
-from kind import Kind, KindLimitError
+from kind import Kind, KindLimitError, KindSpace
 
 Kind('x', origin=1).metadata['note'] = 'kept'   # no reference held
 gc.collect()
@@ -115,10 +115,13 @@ assert Kind('x', origin=2).origin == 1          # the first given origin wins
 Kind.forget('x')                                # the name ends here
 assert Kind('x').origin is None
 
-Kind.max_kinds = Kind.len()                     # a cap for untrusted input
-with pytest.raises(KindLimitError):
-    Kind('one too many')
-Kind.max_kinds = None
+outer = Kind('x')
+with KindSpace(max_kinds=2):                    # a separate, capped universe
+    assert Kind('x') is not outer                # same name, another entity
+    Kind('a')
+    with pytest.raises(KindLimitError):
+        Kind('one too many')
+assert Kind('x') is outer                        # back outside: untouched
 ```
 
 - **A multiset becomes a set.** `children` hold each Kind once, so `Kind.from_object([1, 1])` has one child.

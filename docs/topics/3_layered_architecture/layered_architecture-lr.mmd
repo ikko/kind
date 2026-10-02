@@ -3,27 +3,33 @@ graph LR
         A[User Application] --> B[Kind Package];
         B --> C[kind.core];
         B --> D[kind.builtin];
+        B -. "opt-in: import kind.time" .-> T[kind.time];
     end
 
     subgraph "Core Layer #40;kind.core#41;"
         C --> C1[Base Kind Definition];
         C --> C2[Core Kind Functionality];
         C --> C3[Maturing & Mixinability];
+        C --> C4[KindSpace #40;pool, order, lock, cap#41;];
     end
 
     subgraph "Builtin Extensions Layer #40;kind.builtin#41;"
         D --> D1[Collections Extensions];
-        D --> D2[Datetime Extensions];
         D --> D3[Index Extensions];
         D --> D4[Pathfinding Extensions];
         D --> D5[Visualization Extensions];
-        D --> D6[Timeline Extensions];
         D --> D7[AVL Tree #40;creation order#41;];
+    end
+
+    subgraph "Opt-in Time Layer #40;kind.time#41;"
+        T --> T1[Datetime Properties and Views];
+        T --> T2[Timeline];
+        T --> T3[Time Arithmetic];
     end
 
     C2 -- "uses #40;controlled dependency#41;" --> D3;
     C2 -- "uses [controlled dependency]" --> D1;
-    C1 -- "uses [controlled dependency]" --> D7;
+    C4 -- "uses [controlled dependency]" --> D7;
 
     style A fill:#d5b05d,stroke:#333,stroke-width:2px,color:#000000;
 

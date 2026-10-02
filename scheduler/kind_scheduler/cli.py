@@ -8,7 +8,7 @@ from typing import List, Optional
 import anyio
 import typer
 
-from kind.core.schedule import CallableNotAllowedError, ScheduledJob, Scheduler, resolve_callable
+from kind_scheduler.schedule import CallableNotAllowedError, ScheduledJob, Scheduler, resolve_callable
 
 app = typer.Typer()
 state: dict = {}

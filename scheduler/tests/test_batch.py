@@ -1,7 +1,7 @@
 import anyio
 import pytest
 
-from kind.core.batch_processing import a_process_batch, process_batch
+from kind_scheduler.batch import a_process_batch, process_batch
 
 
 def square(x):

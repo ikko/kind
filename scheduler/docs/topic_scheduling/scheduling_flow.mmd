@@ -1,5 +1,5 @@
 graph
-    subgraph "Kind Scheduling Mechanism"
+    subgraph "kind_scheduler Scheduling Mechanism"
         A[ScheduledJob] --> B{Scheduler.add_job#40#41};
         B -- "Adds to" --> C[Min-Heap #40_schedule#41];
         C -- "Stores in" --> D[Job Map #40job_map#41];

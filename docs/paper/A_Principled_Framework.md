@@ -116,8 +116,10 @@
      
         * Interning (Flyweight Pattern): At its essence, «kind» ensures that each unique string
           name corresponds to precisely one Kind object instance in memory. This is achieved by
-          overriding the __new__ method to manage a global, strong interning pool, like a Lisp or Ruby
-          symbol table (a name keeps its identity and state until delete() or Kind.forget(name)). This design choice, an application of the
+          overriding the __new__ method to look names up in a strong interning pool, like a Lisp or Ruby
+          symbol table (a name keeps its identity and state until delete() or Kind.forget(name)).
+          The pool belongs to the current KindSpace (a context variable): a process starts with one
+          default space, and `with KindSpace() as space:` opens a separate universe of names. This design choice, an application of the
           Flyweight pattern [3], offers significant advantages:
             * O(1) Identity Check: Kind("concept") is Kind("concept") evaluates to True until the
               Kind is deleted, enabling constant-time identity comparisons.
@@ -161,10 +163,11 @@
           and minimal external dependencies.
         * `kind.builtin`: This layer comprises a collection of modular, optional extensions that
           provide specialized functionalities. Each module within kind.builtin addresses a
-          specific domain (e.g., time_dim for temporal analysis, index for per-instance indexing,
-          path for graph traversal algorithms, visual for diagram generation). These built-ins are
-          dynamically applied as mixins, ensuring that the core remains lean while offering rich,
-          plug-and-play capabilities.
+          specific domain (e.g., index for per-instance indexing, path for graph traversal
+          algorithms, visual for diagram generation). These built-ins are dynamically applied as
+          mixins, ensuring that the core remains lean while offering rich,
+          plug-and-play capabilities. Time is opt-in: `import kind.time` attaches the temporal
+          mixins (as_date, hour, period, time_head, ...) to every Kind.
      
      
      3.3 Key Abstractions and Operations
@@ -203,8 +206,9 @@
         * `KindIndex`: A per-instance index (part of kind.builtin.index) that allows each Kind
           to maintain a private, weighted, and searchable collection of other Kind references, often
            backed by balanced tree structures for efficient operations.
-        * `ScheduledJob`, `Scheduler`: Components (part of kind.core.schedule) for managing and
-          executing tasks based on time-based triggers or cron expressions.
+        * Scheduling (`ScheduledJob`, `Scheduler`) is not part of kind: it lives in the separate
+          kind-scheduler distribution (package kind_scheduler), where a Kind named like an ISO 8601
+          datetime can serve as a schedule.
      
      
      4 Performance Characteristics

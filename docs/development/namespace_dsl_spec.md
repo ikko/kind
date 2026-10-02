@@ -84,7 +84,7 @@ Installing collected packages
 ## Memory Behavior
 
 - Controlled origin retention (`Kind.origin`; the first non-None origin given wins)
-- Strong pool: a name keeps its identity and state until `delete()` or `Kind.forget(name)`; `Kind.max_kinds` caps the pool
+- Strong pool per `KindSpace`: a name keeps its identity and state until `delete()`, `Kind.forget(name)` or the closing of its space; `KindSpace(max_kinds=N)` caps the pool
 
 ## Extensibility
 

@@ -4,7 +4,7 @@ This document provides empirical validation of the Big O notations asserted for 
 
 ## O(1) Kind Instantiation
 
-**Assertion**: Retrieving an interned Kind by name is an O(1) operation; creating a new Kind is O(log n), because it is also inserted into the creation-order index (an AVL tree) behind `Kind.first()`, `Kind.seek()` and `Kind.each()`.
+**Assertion**: Retrieving an interned Kind by name is an O(1) operation (a dict lookup in the current space's `pool`); creating a new Kind is O(log n), because it is also inserted into the space's creation-order index (`space.order`, an AVL tree) behind `Kind.first()`, `Kind.seek()` and `Kind.each()`.
 
 **Methodology**: We measure the time taken to instantiate a large number of unique and repeated kinds. Timings below are from one run (2026-10-02); they vary by machine.
 

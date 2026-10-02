@@ -16,11 +16,12 @@ _Inspired by Ruby's [Symbol](https://ruby-doc.org/core-2.5.3/Symbol.html)._
 -   **[Kind](topics/1_kind_fundamental_building_block/index.md)**: The fundamental building block. Each kind has a unique name and can be connected to other kinds, forming complex relationships.
 -   **[Kind vs type](topics/1_kind_fundamental_building_block/kind_vs_type.md)**: What a Kind shares with a type, where it differs, and why it is not a Haskell kind.
 -   **[Flyweight Design](topics/2_flyweight_design/index.md)**: Kinds are unique. `Kind('a')` returns the same object, state included, until `delete()` or `Kind.forget(name)` removes it (the pool is strong, like a symbol table), ensuring consistency.
--   **[Layered Architecture](topics/3_layered_architecture/index.md)**: The core is minimal. Functionality is added through modular, "builtin" extensions for features like date/time handling, advanced collections, and visualization.
+-   **[Layered Architecture](topics/3_layered_architecture/index.md)**: The core is minimal. Functionality is added through modular, "builtin" extensions for features like advanced collections, path finding and visualization; date/time handling is opt-in (`import kind.time`).
 -   **[Per-Instance Indexing](topics/4_per_instance_indexing/index.md)**: Every kind has its own private, weighted index of other kinds, allowing for the creation of sophisticated, nested data structures.
 -   **[Mixinability](topics/5_mixinability/index.md)**: The framework supports dynamic extension of `Kind` instances at runtime through mixins; a mixin is trusted code, and registration only checks its signature and refuses to replace core names.
 -   **[Memory-Aware Maturing](topics/6_memory_aware_maturing/index.md)**: Kinds can be "matured" to optimize memory usage and performance by elevating metadata and removing unused components.
--   **[WIP: Scheduling](topics/7_scheduling/index.md)**: A built-in scheduler allows for deferred execution of functions and methods, specified with cron-like strings, datetime objects, or even other Kinds.
+-   **[Spaces](../kind/core/space.py)**: `with KindSpace() as space:` opens a separate universe of names (its own pool, order, lock and `max_kinds` cap); code that never mentions spaces uses the default space.
+-   **Scheduling** is not part of `kind`: it lives in the separate [`kind-scheduler`](../scheduler/README.md) distribution, where a Kind named like an ISO 8601 datetime can be a schedule.
 
 
 Getting Started
@@ -62,7 +63,7 @@ python -m pytest tests
 
 API Highlights
 --------------
-- **[Kind(name: str)](topics/8_api_highlights/index.md#kindname-str-globally-interned-idempotent-constructor)** — globally interned, idempotent constructor
+- **[Kind(name: str)](topics/8_api_highlights/index.md#kindname-str-globally-interned-idempotent-constructor)** — interned in the current `KindSpace`, idempotent constructor
 - **[Kind.next()](topics/8_api_highlights/index.md#kindnext-creates-and-chains-auto-numbered-kinds)** — creates and chains auto-numbered kind (`kind_0`, `kind_1`, …)
 - **[kind.append(child) / kind.relate(other, how)](topics/8_api_highlights/index.md#kindappendchild-and-dynamic-relations-link-construction)** — link construction
 - **[kind.tree() / .graph()](topics/8_api_highlights/index.md#kindtree--kindgraph--graphtraversal-traversal)** — traversal: children only / children, parents and relations
@@ -74,7 +75,7 @@ API Highlights
 - **[kind.slim()](topics/8_api_highlights/index.md#kindslim-drops-elevated-attributes-that-hold-no-value)** — drops elevated attributes that hold no value (`SENTINEL`)
 - **[kind.immute()](topics/8_api_highlights/index.md#kindimmute-orchestrates-maturing-process-elevate-slim-freeze)** — orchestrates maturing process (elevate, slim, freeze)
 - **[kind.ref](topics/8_api_highlights/index.md#kindref-alias-for-kindorigin-to-track-source-provenance)** — alias for `kind.origin` to track source provenance
-- **[Scheduler.add_job(job)](topics/8_api_highlights/index.md#scheduleradd_jobjob-schedules-a-new-job-for-execution)** — schedules a new job for execution
+- Scheduling (`Scheduler.add_job(job)`, ...) is in [`kind-scheduler`](../scheduler/docs/api_reference.md), not in `kind`
 
 Performance
 -----------
@@ -87,7 +88,7 @@ For detailed performance analysis and empirical validation of Big O notations, r
 
 Memory Awareness
 ----------------
--   **[Memory Awareness](topics/10_memory_awareness/index.md)**: explicit lifetime — the intern pool is strong (`delete()`, `Kind.forget(name)`, `Kind.max_kinds` cap), plus lazily created parts, `clear_context()` and maturing
+-   **[Memory Awareness](topics/10_memory_awareness/index.md)**: explicit lifetime — the intern pool is strong per `KindSpace` (`delete()`, `Kind.forget(name)`, `KindSpace(max_kinds=...)` cap), plus lazily created parts, `clear_context()` and maturing
 -   Lazily created `metadata`, `context`, `index` and `relations`; `clear_context()` empties the context
 
 Extensibility:

@@ -1,12 +1,10 @@
 [project]
 name = "kind"
-version = "0.1.0"
+version = "0.2.0"
 description = "Interned, name-identified Kinds: categories as data, in a lazy, graph-oriented, freezable model"
 dependencies = [
     "orjson>=3.10.0",
     "anyio>=4.4.0",
-    "typer>=0.12.3",
-    "croniter>=2.0.1",
     "PyYAML",
     "tomli-w>=1.0",
     "tomli>=2.0; python_version < '3.11'",
@@ -32,9 +30,6 @@ homepage = "https://github.com/ikko/kind"
 repository = "https://github.com/ikko/kind"
 documentation = "https://github.com/ikko/kind"
 
-
-[project.scripts]
-kind-scheduler = "kind.bin.scheduler:app"
 
 [build-system]
 requires = ["setuptools", "wheel"]

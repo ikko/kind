@@ -1,12 +1,12 @@
-import threading
+import contextlib
 
 import pytest
 
+import kind.time
 from kind.builtin import apply_builtins
-from kind.builtin.avl_tree import AVLTree
 from kind.core import mixinability
-from kind.core.base_kind import BaseKind
 from kind.core.kind import Kind
+from kind.core.space import KindSpace, current_space
 
 
 @pytest.fixture(params=["asyncio", "trio"])
@@ -18,37 +18,25 @@ def anyio_backend(request):
 @pytest.fixture(scope='session', autouse=True)
 def apply_builtins_for_session():
     apply_builtins()
-
-
-def _fresh_pool() -> None:
-    """Forgets every Kind: a new pool and creation order (existing objects live on, unpooled)."""
-    BaseKind._pool = {}
-    BaseKind._numbered = AVLTree()
-    BaseKind.max_kinds = None
-    for cls in (Kind, *Kind.__subclasses__()):
-        if "max_kinds" in vars(cls):
-            delattr(cls, "max_kinds")
-    BaseKind._auto_counter = 0
-    BaseKind._write_cursor = 0.0
-    BaseKind._lock = threading.RLock()
+    kind.time.enable()  # the suite runs as an application that opted in to time
 
 
 @pytest.fixture(autouse=True)
 def isolated_kinds():
-    """Every test starts with an empty pool, a fresh creation order and an unlocked mixin registry."""
-    _fresh_pool()
+    """Every test runs in a fresh KindSpace, with an unlocked mixin registry restored afterwards."""
     mixinability._unlock_mixins_for_testing()
     registry = mixinability._snapshot_for_testing()
-    yield
+    with KindSpace(name="test"):
+        yield
     mixinability._restore_for_testing(registry)
     mixinability._unlock_mixins_for_testing()
 
 
 @pytest.fixture
 def reset_pool():
-    """Call it mid-test to rebuild a graph from serialized text alone."""
-    return _fresh_pool
-
+    """Call it mid-test to continue in a new, empty space: rebuild a graph from serialized text alone."""
+    with contextlib.ExitStack() as stack:
+        yield lambda: stack.enter_context(KindSpace(name="rebuilt"))
 
 
 @pytest.fixture(scope='function')
@@ -122,9 +110,9 @@ def kind_fixture():
     # Ensure at least 30 nodes are interconnected
     # The current setup creates 30 unique kinds and establishes many connections.
     # The exact number of interconnections will depend on the append/relate calls.
-    # We can verify the total number of kinds created by checking Kind._pool
-    assert len(Kind._pool) >= 30, "Fixture did not create at least 30 unique kinds."
-    print(f"DEBUG: kind_fixture created {len(Kind._pool)} kinds in pool.")
+    # We can verify the total number of kinds created by checking current_space().pool
+    assert len(current_space()) >= 30, "Fixture did not create at least 30 unique kinds."
+    print(f"DEBUG: kind_fixture created {len(current_space())} kinds in pool.")
     if "Gene" in kinds:
         gene_root = kinds["Gene"]
         reachable_from_gene = gene_root.graph()

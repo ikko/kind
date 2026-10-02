@@ -1,9 +1,10 @@
 graph LR
     subgraph "Kind Memory Awareness"
-        A[Explicit Lifetime] --> B[Strong Intern Pool, like a Symbol Table];
+        A[Explicit Lifetime] --> B[Strong Pool per KindSpace, like a Symbol Table];
         A --> C[Re-parents Children, Removes Relations];
         A --> D[Kind.delete#40#41 / Kind.forget#40;name#41;];
-        A --> X[Kind.max_kinds Cap, KindLimitError];
+        A --> X[KindSpace#40;max_kinds#41; Cap, KindLimitError];
+        A --> Y[Closing a KindSpace Drops Its Kinds];
 
         E[Proactive Memory Management] --> F[Kind.context Attribute];
         E --> G[DefDict for Context];
@@ -17,7 +18,7 @@ graph LR
     subgraph "Key Concepts"
         M[Stateful Names] --> N[A Name Is One Entity, State Included];
         M --> O[Collecting a Kind Would Lose Data];
-        P[Memory Grows With Names] --> Q[delete#40#41, forget#40#41, max_kinds];
+        P[Memory Grows With Names] --> Q[delete#40#41, forget#40#41, max_kinds, with KindSpace#40#41];
     end
 
     subgraph "Benefits"
@@ -32,6 +33,7 @@ graph LR
     style C fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style D fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style X fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style Y fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
 
     %% Proactive management - blue theme
     style E fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;

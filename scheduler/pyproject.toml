@@ -1,0 +1,37 @@
+[project]
+name = "kind-scheduler"
+version = "0.1.0"
+description = "Run callables once or on a cron schedule (with an allowlist for schedule files), and process batches"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+readme = "README.md"
+dependencies = [
+    "kind",
+    "anyio>=4.4.0",
+    "croniter>=2.0.1",
+    "orjson>=3.10.0",
+    "typer>=0.12.3",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "License :: Other/Proprietary License",
+    "Private :: Do Not Upload",
+]
+authors = [
+  {name = "Miklos Beky", email = "miklos.beky@gmail.com"},
+]
+
+[project.scripts]
+kind-scheduler = "kind_scheduler.cli:app"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kind_scheduler*"]
+
+[tool.uv.sources]
+kind = { path = "..", editable = true }

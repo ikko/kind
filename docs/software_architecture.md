@@ -4,8 +4,10 @@ graph TD
         A[Kind Creation & Management] --> B{Kind Class};
         B --> C[BaseKind];
         B --> D[KindNamespace];
-        C --> E[Strong dict Pool, delete/forget, max_kinds];
-        C --> F[AVLTree for Numbered Kinds];
+        C --> S[KindSpace: current space via contextvar];
+        S --> E[space.pool: strong dict, delete/forget, max_kinds];
+        S --> F[space.order: AVLTree by creation position];
+        S --> K[space.lock: one RLock per space];
     end
 
     subgraph Relational System

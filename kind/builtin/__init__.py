@@ -1,22 +1,17 @@
-"""Builtin mixins: path finding, time dimension and Graphviz rendering, attached to every Kind."""
+"""Builtin mixins attached to every Kind: path finding and Graphviz rendering (time is opt-in: kind.time)."""
 import logging
 
 from kind.builtin import visual
 from kind.builtin.path import KindPathMixin
-from kind.builtin.time_dim import KindTimeDimMixin
-from kind.builtin.timeline import Timeline
 from kind.builtin.visual import KindRender
 from kind.core.mixinability import register_mixin
 
 log = logging.getLogger(__name__)
 
-__all__ = ["apply_builtins", "BUILTIN_MIXINS", "KindPathMixin", "KindTimeDimMixin", "KindRender", "Timeline"]
+__all__ = ["apply_builtins", "BUILTIN_MIXINS", "KindPathMixin", "KindRender"]
 
 BUILTIN_MIXINS = {
     **{name: getattr(KindPathMixin, name) for name in ('path_to', 'match')},
-    **{name: getattr(KindTimeDimMixin, name) for name in (
-        'time_head', 'time_tail', 'as_date', 'as_time', 'as_datetime', 'day', 'hour', 'minute', 'second',
-        'period', 'as_period', 'duration', 'as_duration', 'delta', 'as_delta')},
     **{renderer.__name__: renderer for renderer in visual.RENDERERS},
     'from_mmd': staticmethod(visual.from_mmd),
 }

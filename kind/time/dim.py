@@ -57,7 +57,7 @@ class KindTimeDimMixin:
     @property
     def time_head(self: Any) -> 'KindHeadTailView':
         """Every pooled temporal Kind, earliest first."""
-        return KindHeadTailView(KindTimeDimMixin._temporal_kinds(type(self)._numbered))
+        return KindHeadTailView(KindTimeDimMixin._temporal_kinds(self.space))
 
     @property
     def time_tail(self: Any) -> 'KindHeadTailView':

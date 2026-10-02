@@ -1,6 +1,6 @@
 import datetime
 from kind import Kind
-from kind.builtin.time_dim import KindTimeDimMixin
+from kind.time import KindTimeDimMixin
 
 
 

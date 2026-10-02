@@ -1,4 +1,4 @@
-## `kind.core.batch_processing` Module
+## `kind_scheduler.batch` Module
 
 
 > ⚠ _This module is under development and incomplete. Features may differ from what's written here. Should you use it, test comprehensively, especially before using `async batch` features_
@@ -35,9 +35,9 @@ def process_batch(batch: Iterable[T], func: Callable[[T], U], new_thread: bool =
 
 ---
 
-## `kind.core.schedule` Module
+## `kind_scheduler.schedule` Module
 
-This module provides the core scheduling logic for the Kind project. A schedule file names functions by dotted path; loading one imports and runs code, so a `Scheduler` only resolves functions from the modules it was explicitly allowed to use (`allowed_modules`). Anything else raises `CallableNotAllowedError`.
+This module provides the core scheduling logic of `kind-scheduler`. A schedule file names functions by dotted path; loading one imports and runs code, so a `Scheduler` only resolves functions from the modules it was explicitly allowed to use (`allowed_modules`). Anything else raises `CallableNotAllowedError`.
 
 ### Class: `ScheduledJob`
 * **Description**: Represents a single scheduled job.
@@ -83,3 +83,9 @@ def __init__(self, schedule_file: Optional[str] = None, allowed_modules: Iterabl
     *   **Description**: Saves the current schedule to the schedule file.
 * **`load_schedule(self)`**
     *   **Description**: Loads the schedule from the schedule file; functions must come from `allowed_modules`.
+
+---
+
+## `kind_scheduler.cli` Module
+
+The `kind-scheduler` console script (Typer) over a schedule file: `kind-scheduler -f FILE -m MODULE add|list|remove|run`. `-m`/`--allow-module` (repeatable) names the modules whose functions jobs may run.

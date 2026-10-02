@@ -51,10 +51,11 @@ assert root_node in sub_system_1.parents
 
 #### 1.3. Mixin-based Extensibility
 
-`Kind`'s architecture supports dynamic runtime extension via mixins. This allows for the modular injection of domain-specific behaviors (e.g., time dimension parsing, pathfinding, indexing) without modifying the core `Kind` class. This pattern promotes a highly composable design, enabling researchers to tailor `Kind`'s capabilities precisely to their problem domain.
+`Kind`'s architecture supports dynamic runtime extension via mixins. This allows for the modular injection of domain-specific behaviors (e.g., time dimension parsing, pathfinding, indexing) without modifying the core `Kind` class. Time is opt-in: `import kind.time` attaches the time properties (`as_datetime`, `hour`, `time_head`, ...) to every Kind; without it a Kind has none. This pattern promotes a highly composable design, enabling researchers to tailor `Kind`'s capabilities precisely to their problem domain.
 
 ```python
 
+import kind.time  # opt in to the time mixins
 from kind.core.kind import Kind
 
 # Time dimension mixin example
@@ -89,14 +90,12 @@ graph TD
         C --> D[Time Dimension Mixin]
         C --> E[Pathfinding Mixin]
         C --> F[Indexing Mixin]
-        C --> G[Scheduling]
     end
 
     subgraph Applications
         D --> H(Time-Series_Analysis)
         E --> I(Dependency_Mapping)
         F --> J(Semantic_Search)
-        G --> K(Deferred_Execution)
     end
 
     style A fill:#FF6347,stroke:#333,stroke-width:2px,color:#FFFFFF;
@@ -106,12 +105,10 @@ graph TD
     style D fill:#4682B4,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style E fill:#4682B4,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style F fill:#4682B4,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style G fill:#4682B4,stroke:#333,stroke-width:2px,color:#FFFFFF;
 
     style H fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style I fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style J fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
-    style K fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
 ```
 
 *   **Kind Core (Red):** Represents the fundamental, immutable aspects of `Kind` instances.
@@ -123,7 +120,7 @@ graph TD
 *   **Formal Verification:** The stable identity of `Kind` instances (one instance per name), per-instance freezing (`kind.freeze()`, `kind.immute()`) and the explicit graph structure lend themselves well to formal verification techniques for system properties.
 *   **Semantic Web Integration:** `Kind` can serve as a lightweight, in-memory RDF-like store, where `Kind` names are URIs and relationships form triples.
 *   **Dynamic Systems Modeling:** The mixin architecture enables runtime adaptation of system behavior, crucial for simulating adaptive or self-organizing systems.
-*   **Memory Footprint:** While interning optimizes for unique names, be mindful of the graph's overall memory consumption for extremely large-scale graphs. The pool is strong: a `Kind` stays (state included) until `kind.delete()` or `Kind.forget(name)` removes it, so memory grows with the number of names; set `Kind.max_kinds` to cap it (`KindLimitError`) when names come from untrusted input. `kind.footprint()` reports a Kind's size.
+*   **Memory Footprint:** While interning optimizes for unique names, be mindful of the graph's overall memory consumption for extremely large-scale graphs. Each space's pool is strong: a `Kind` stays (state included) until `kind.delete()`, `Kind.forget(name)` or closing its `KindSpace` removes it, so memory grows with the number of names; cap a space with `KindSpace(max_kinds=N)` (`KindLimitError`) when names come from untrusted input, or build a temporary graph inside `with KindSpace():` so leaving the block drops it. `kind.footprint()` reports a Kind's size.
 
 ### 4. Advice to Engineers
 

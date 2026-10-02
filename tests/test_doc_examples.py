@@ -19,7 +19,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-PAGES = sorted([ROOT / "README.md", *(ROOT / "docs").rglob("*.md")])
+PAGES = sorted([ROOT / "README.md", *(ROOT / "docs").rglob("*.md"),
+                ROOT / "scheduler" / "README.md", *(ROOT / "scheduler" / "docs").rglob("*.md")])
 FENCE = re.compile(r"(?:^<!-- doc-example: (?P<kind>not-run|module) ?(?P<arg>[^>]*?) ?-->\n)?^```python\n(?P<code>.*?)^```",
                    re.DOTALL | re.MULTILINE)
 

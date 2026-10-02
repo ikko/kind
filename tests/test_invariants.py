@@ -1,4 +1,5 @@
 """Property-based tests: the contracts hold for generated inputs, not just for chosen examples."""
+import functools
 import itertools
 
 import orjson
@@ -9,15 +10,20 @@ from hypothesis import strategies as st
 from kind import Kind
 from kind.builtin.avl_tree import AVLTree
 from kind.builtin.collections import OrderedKindSet
-from kind.core.base_kind import BaseKind
+from kind.core.space import KindSpace, current_space
 from kind.core.kind import canonical_repr, tomllib
 
 # Each example builds Kinds; the pool is reset per test by conftest, and per example here.
 PER_EXAMPLE = settings(max_examples=60, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
 
 
-def fresh_pool():
-    BaseKind._pool, BaseKind._numbered = {}, AVLTree()
+def in_fresh_space(test):
+    """Hypothesis runs many examples in one test: each example gets its own space."""
+    @functools.wraps(test)
+    def run(*args, **kwargs):
+        with KindSpace(name="example"):
+            return test(*args, **kwargs)
+    return run
 
 
 # --- AVL tree -------------------------------------------------------------------
@@ -65,8 +71,8 @@ OPERATIONS = st.lists(st.tuples(st.sampled_from(["add", "discard", "insert", "po
 
 @PER_EXAMPLE
 @given(OPERATIONS)
+@in_fresh_space
 def test_ordered_kind_set_matches_a_list_without_duplicates(operations):
-    fresh_pool()
     kinds = [Kind(f"k{i}") for i in range(10)]
     subject, model = OrderedKindSet(), []
     for op, which, index in operations:
@@ -119,24 +125,23 @@ def shape():
     """Children order and forward relations of every pooled Kind, by name."""
     return {name: ([c.name for c in kind.children],
                    {how: sorted(k.name for k in ks) for how, ks in kind.relations.items() if not how.startswith("_inverse_")})
-            for name, kind in BaseKind._pool.items()}
+            for name, kind in current_space().pool.items()}
 
 
 @PER_EXAMPLE
 @given(GRAPHS, st.sampled_from(sorted(FORMATS)))
 def test_dump_then_load_rebuilds_the_component(graph, fmt):
     dump, load, parse = FORMATS[fmt]
-    fresh_pool()
-    kinds = build(*graph)
-    root = kinds[0]
-    component = {node["name"] for node in parse(dump(root))}
-    expected = {name: edges for name, edges in shape().items() if name in component}
-    text = dump(root)
+    with KindSpace(name="original"):
+        root = build(*graph)[0]
+        component = {node["name"] for node in parse(dump(root))}
+        expected = {name: edges for name, edges in shape().items() if name in component}
+        text = dump(root)
 
-    fresh_pool()
-    load(text)
-    assert shape() == expected
-    assert dump(Kind(root.name)) == text  # and dumping again gives the same text
+    with KindSpace(name="rebuilt"):
+        load(text)
+        assert shape() == expected
+        assert dump(Kind(root.name)) == text  # and dumping again gives the same text
 
 
 # --- canonical names --------------------------------------------------------------
@@ -167,6 +172,6 @@ def test_set_names_do_not_depend_on_iteration_order(members):
 
 @PER_EXAMPLE
 @given(VALUES)
+@in_fresh_space
 def test_converting_a_value_twice_gives_the_same_kind(value):
-    fresh_pool()
     assert Kind.from_object(value) is Kind.from_object(value)

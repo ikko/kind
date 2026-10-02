@@ -1,4 +1,4 @@
-# [`«kind»`](https://github.com/ikko/kind) cookbook
+# `kind-scheduler` cookbook
 
 **Recipes for Symbolic Mastery**
 
@@ -6,13 +6,13 @@
 
 > ⚠ _This module is under development and incomplete. Features may differ from what's written here. Should you use it, test comprehensively, especially before using `async batch` features_
  
-# Recipe 2: Scheduling Jobs with `kind.schedule`
+# Recipe: Scheduling Jobs with `kind_scheduler`
 
-This recipe demonstrates how to use the `kind.schedule` module to schedule and manage jobs within your `kind` applications. The `kind.schedule` module provides a robust and flexible way to execute functions at specified times or intervals.
+This recipe demonstrates how to use the `kind_scheduler` package (distribution `kind-scheduler`, separate from `kind`) to schedule and manage jobs within your applications. It provides a robust and flexible way to execute functions at specified times or intervals.
 
-## 1. Understanding `kind.schedule`
+## 1. Understanding `kind_scheduler`
 
-The `kind.schedule` module is built around the `Scheduler` class, which manages a collection of `ScheduledJob` instances. Each `ScheduledJob` encapsulates a function to be executed, its arguments, and a schedule (e.g., cron string or ISO 8601 timestamp).
+The `kind_scheduler` package is built around the `Scheduler` class, which manages a collection of `ScheduledJob` instances. Each `ScheduledJob` encapsulates a function to be executed, its arguments, and a schedule (e.g., cron string or ISO 8601 timestamp).
 
 ### Key Components:
 
@@ -25,7 +25,7 @@ Let's start with a simple example: scheduling a function to run every minute.
 
 <!-- doc-example: not-run — the scheduler runs until interrupted (Ctrl+C) -->
 ```python
-import kind
+import kind_scheduler
 import datetime
 import anyio
 
@@ -35,12 +35,12 @@ def my_scheduled_task(message: str):
 
 # 2. Create a Scheduler instance
 #    You can optionally provide a schedule_file to persist jobs
-scheduler = kind.schedule.Scheduler()
+scheduler = kind_scheduler.Scheduler()
 
 # 3. Add a job
 #    The schedule can be a cron string (e.g., "* * * * *" for every minute)
 #    or an ISO 8601 timestamp for a one-time execution.
-job = kind.schedule.ScheduledJob(
+job = kind_scheduler.ScheduledJob(
     func=my_scheduled_task,
     args=("Hello from scheduler!",),
     schedule="* * * * *" # Run every minute
@@ -72,7 +72,7 @@ except KeyboardInterrupt:
 You can inspect and manage the jobs currently in the scheduler. With an injected clock (`now=`) and `run_due_jobs()`, which runs one deterministic step of the loop, no waiting is needed.
 
 ```python
-import kind
+import kind_scheduler
 import datetime
 import anyio
 
@@ -83,10 +83,10 @@ def one_time_task():
     print("One-time job!")
 
 clock = [datetime.datetime(2026, 1, 1, 12, 0)]
-scheduler = kind.schedule.Scheduler(now=lambda: clock[0])
+scheduler = kind_scheduler.Scheduler(now=lambda: clock[0])
 
-job1 = kind.schedule.ScheduledJob(another_task, schedule="*/5 * * * *", now=clock[0]) # Every 5 minutes
-job2 = kind.schedule.ScheduledJob(one_time_task, schedule=clock[0] + datetime.timedelta(seconds=10), now=clock[0])
+job1 = kind_scheduler.ScheduledJob(another_task, schedule="*/5 * * * *", now=clock[0]) # Every 5 minutes
+job2 = kind_scheduler.ScheduledJob(one_time_task, schedule=clock[0] + datetime.timedelta(seconds=10), now=clock[0])
 scheduler.add_jobs([job1, job2])
 
 print("--- Current Jobs ---")
@@ -129,7 +129,7 @@ Jobs run: 1, jobs left: 0
 For long-running applications, you'll want to persist your scheduled jobs so they are not lost when the application restarts. The `Scheduler` saves the schedule to its file whenever jobs change, and loads it on creation. A schedule file names functions by dotted path, and loading it imports code, so a `Scheduler` only resolves functions from the modules listed in `allowed_modules`; anything else raises `CallableNotAllowedError`.
 
 ```python
-import kind
+import kind_scheduler
 import datetime
 import os
 
@@ -144,18 +144,18 @@ if os.path.exists(SCHEDULE_FILE):
 
 # First run: Add a job (add_job saves the schedule)
 print("--- First Run: Adding and Saving Job ---")
-scheduler1 = kind.schedule.Scheduler(schedule_file=SCHEDULE_FILE)
-scheduler1.add_job(kind.schedule.ScheduledJob(persistent_task, schedule="* * * * *"))
+scheduler1 = kind_scheduler.Scheduler(schedule_file=SCHEDULE_FILE)
+scheduler1.add_job(kind_scheduler.ScheduledJob(persistent_task, schedule="* * * * *"))
 print(f"Job added and schedule saved to '{SCHEDULE_FILE}'.")
 
 # Second run: Loading refuses functions from modules that were not allowed
 print("\n--- Second Run: Loading the Job ---")
 try:
-    kind.schedule.Scheduler(schedule_file=SCHEDULE_FILE)
-except kind.schedule.CallableNotAllowedError:
+    kind_scheduler.Scheduler(schedule_file=SCHEDULE_FILE)
+except kind_scheduler.CallableNotAllowedError:
     print("Refused: '__main__' is not in allowed_modules.")
 
-scheduler2 = kind.schedule.Scheduler(schedule_file=SCHEDULE_FILE, allowed_modules=["__main__"])
+scheduler2 = kind_scheduler.Scheduler(schedule_file=SCHEDULE_FILE, allowed_modules=["__main__"])
 print("Loaded jobs:")
 for job_id, job in scheduler2.job_map.items():
     print(f"Schedule: {job.schedule}, Function: {job.func.__name__}")

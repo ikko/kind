@@ -4,11 +4,11 @@ The `Kind` framework leverages the **Flyweight design pattern** to ensure the un
 
 ## Core Principle: Shared Intrinsic State
 
-In the context of `Kind`, the intrinsic state—the `name` of the kind—is shared. When a request is made to create a `Kind` with a specific name (e.g., `Kind('apple')`), the system first checks if a `Kind` with that name already exists in a central pool. If it does, the existing instance is returned; otherwise, a new instance is created and added to the pool. There is one pool for all classes, and it holds its Kinds strongly, like a Lisp or Ruby symbol table: a name stays the same entity, state included, until `delete()` or `Kind.forget(name)` removes it. (Weak interning suits stateless values such as strings; a Kind has state, so collecting it would lose data.)
+In the context of `Kind`, the intrinsic state—the `name` of the kind—is shared. When a request is made to create a `Kind` with a specific name (e.g., `Kind('apple')`), the system first checks if a `Kind` with that name already exists in the pool of the current `KindSpace`. If it does, the existing instance is returned; otherwise, a new instance is created and added to that pool. A process starts with one default space, shared by all Kind classes; `with KindSpace():` opens a separate universe of names (see [Memory Awareness](../10_memory_awareness/index.md)). A space holds its Kinds strongly, like a Lisp or Ruby symbol table: a name stays the same entity, state included, until `delete()`, `Kind.forget(name)` or closing the space removes it. (Weak interning suits stateless values such as strings; a Kind has state, so collecting it would lose data.)
 
 ```mermaid
 graph TD
-    A[Client Request: Kind#40;'apple'#41;] --> B{Kind Pool?};
+    A[Client Request: Kind#40;'apple'#41;] --> B{Pool of the Current KindSpace?};
     B -- "'apple' exists?" --> C{Yes};
     C --> D[Return existing Kind#40;'apple'#41;];
     B -- "'apple' exists?" --> E{No};
@@ -27,7 +27,7 @@ graph TD
 ## Advantages of Flyweight in Kind
 
 -   **Memory Efficiency**: By ensuring that only one instance of a `Kind` exists for each unique name, the framework drastically reduces memory consumption, especially in applications dealing with vast numbers of symbolic representations (e.g., large knowledge graphs, extensive ontologies).
--   **Consistency and Identity**: The Flyweight pattern guarantees referential equality for kinds with the same name. This means `Kind('A') is Kind('A')` evaluates to `True` (for as long as the Kind is referenced), simplifying identity checks and ensuring that all references to a particular concept point to the exact same object.
+-   **Consistency and Identity**: The Flyweight pattern guarantees referential equality for kinds with the same name. This means `Kind('A') is Kind('A')` evaluates to `True` within a space (equality is name *and* space), simplifying identity checks and ensuring that all references to a particular concept point to the exact same object.
 -   **Performance**: Reduced object creation overhead and direct memory address comparisons contribute to faster operations, particularly in graph traversal and relationship management.
 
 ### Code Example: Demonstrating Flyweight Behavior

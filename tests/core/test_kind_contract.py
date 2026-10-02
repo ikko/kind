@@ -3,8 +3,10 @@ import gc
 
 import pytest
 
+from kind.core.space import current_space
+
 from kind import Kind, k
-from kind.builtin.timeline import Timeline
+from kind.time import Timeline
 from kind.core.base_kind import BaseKind
 from kind.core.graph_traversal import GraphTraversal
 from kind.core.kind import FrozenKindError
@@ -35,20 +37,20 @@ def test_a_name_keeps_its_state_without_any_reference():
 def test_forget_and_delete_end_a_name():
     first = Kind("gone", origin=1)
     assert Kind.forget("gone") is True and Kind.forget("gone") is False
-    assert "gone" not in Kind._pool and first not in list(Kind.each())
+    assert "gone" not in current_space().pool and first not in list(Kind.each())
     assert Kind("gone", origin=2).origin == 2  # a new entity
 
 
-def test_max_kinds_caps_the_pool():
-    from kind import KindLimitError
-    Kind("one")
-    Kind.max_kinds = 2
-    Kind("two")
-    assert Kind("one") is Kind("one")  # existing names still resolve
-    with pytest.raises(KindLimitError, match="Hint"):
+def test_max_kinds_caps_a_space():
+    from kind import KindLimitError, KindSpace
+    with KindSpace(max_kinds=2):
+        Kind("one")
+        Kind("two")
+        assert Kind("one") is Kind("one")  # existing names still resolve
+        with pytest.raises(KindLimitError, match="Hint"):
+            Kind("three")
+        Kind.forget("one")
         Kind("three")
-    Kind.forget("one")
-    Kind("three")
 
 
 def test_first_origin_wins():
@@ -104,7 +106,7 @@ def test_delete_reparents_children_and_drops_relations_both_ways():
     middle.delete()
     assert list(parent.children) == [child] and list(child.parents) == [parent]
     assert not other.relations.get("_inverse_x") and not other.relations.get("y")
-    assert "middle" not in Kind._pool
+    assert "middle" not in current_space().pool
 
 
 def test_pop_and_popleft():
@@ -154,7 +156,7 @@ def test_elevate_never_touches_identity_or_structure(key):
     a.metadata[key] = "hijack"
     with pytest.warns(UserWarning, match="identity or structure"):
         assert a.elevate() == set()
-    assert a.name == "a" and Kind._pool["a"] is a
+    assert a.name == "a" and current_space().pool["a"] is a
 
 
 def test_elevate_may_set_origin_and_node_shape():
@@ -321,6 +323,6 @@ def test_index_remove_uses_the_weight_the_kind_was_inserted_with():
 
 
 def test_namespace_never_creates_kinds_for_private_probes():
-    before = len(Kind._pool)
+    before = len(current_space().pool)
     assert not hasattr(k, "__wrapped__")
-    assert len(Kind._pool) == before
+    assert len(current_space().pool) == before

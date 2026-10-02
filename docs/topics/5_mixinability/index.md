@@ -4,7 +4,7 @@ The `Kind` framework introduces a sophisticated mixinability mechanism, enabling
 
 ## Dynamic Extension and Validation
 
-At its core, mixinability in `Kind` is managed through the `register_mixin(value, name=None, target_class=None, safe=True, expand=True)` function, which attaches new functionalities (functions, classes and modules expanded into their public members) to `BaseKind` by default, so every `Kind` sees them. A mixin is trusted code: registering one is the same as editing the class. What `register_mixin` guarantees is that a mixin cannot silently replace the core API.
+At its core, mixinability in `Kind` is managed through the `register_mixin(value, name=None, target_class=None, safe=True, expand=True)` function, which attaches new functionalities (functions, classes and modules expanded into their public members) to `BaseKind` by default, so every `Kind` sees them. Mixins live on the class, so they apply in every `KindSpace`. The time dimension is an opt-in example: `import kind.time` registers `as_date`, `hour`, `time_head` and the other time properties on every Kind; without it a Kind has none. A mixin is trusted code: registering one is the same as editing the class. What `register_mixin` guarantees is that a mixin cannot silently replace the core API.
 
 ### Validation Process
 The checks are:

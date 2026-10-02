@@ -16,10 +16,10 @@ graph LR
     end
 
     subgraph "Underlying Mechanisms"
-        O["BaseKind._pool"] --> B;
+        O["KindSpace.pool"] --> B;
         P["Kind.children/parents"] --> E;
         Q["Kind.next()"] --> H;
-        R["BaseKind._write_cursor"] --> I;
+        R["KindSpace.next_position()"] --> I;
         S["KindIndex"] --> L;
         T["AVLTree"] --> M;
     end

@@ -1,3 +1,4 @@
+from kind.core.space import current_space
 import pytest
 from kind.core.kind import Kind
 from kind.core.kind_namespace import k
@@ -364,7 +365,7 @@ S2 --has_child--> S4
     assert reconstructed_s4.name == "S4"
 
     # Check relations
-    reconstructed_s3 = Kind._pool.get("S3") # Relations are global, so retrieve from pool
+    reconstructed_s3 = current_space().pool.get("S3") # Relations are global, so retrieve from pool
     assert reconstructed_s3 is not None
     assert reconstructed_s3 in reconstructed_s1.relations.get("knows")
     assert reconstructed_s1 in reconstructed_s3.relations.get("_inverse_knows")

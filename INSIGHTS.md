@@ -3,6 +3,24 @@
 Lessons from building and repairing `kind`, kept because each one cost something to learn.
 Newest first.
 
+## 2026-10-02 (afternoon) — making the global state explicit
+
+**A class attribute is a global variable with a nicer name.** The pool, order, counters, lock and cap
+lived on `BaseKind`. Every symptom traced back to that: a five-attribute test fixture that was wrong
+for months, `from_json` merging into unrelated data, one lock for all graphs. Moving them into a
+`KindSpace` selected by a `ContextVar` kept the everyday API (`Kind('x')`) unchanged. It turned the
+fixture into `with KindSpace(): yield` and made "a separate graph" a single line. A `ContextVar`
+rather than a thread-local, because the scheduler runs on asyncio/trio, and anyio copies the context
+into worker threads.
+
+**Equality must include the universe.** Once two spaces can each hold a `Kind('A')`, name-only
+equality would call two different entities equal. Equality is name and space; the hash stays the
+name.
+
+**A Python version matrix finds what one interpreter hides.** On 3.14, annotations are evaluated
+lazily (PEP 649), so a docs example with `self: Kind` and no import worked. On 3.10–3.13 it raised
+`NameError`.
+
 ## 2026-10-02 — the symb → kind rename and the review after it
 
 **A rename is a token problem, not a text problem.** Commit `ddeaab2` ("rename symbol to symb")

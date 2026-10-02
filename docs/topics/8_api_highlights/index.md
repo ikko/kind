@@ -4,7 +4,7 @@ The `Kind` framework provides a concise yet powerful API for manipulating symbol
 
 ## `Kind(name: str)`: Globally Interned, Idempotent Constructor
 
-The `Kind` constructor serves as the fundamental entry point for creating symbolic entities within the framework. Its design adheres to the **Flyweight pattern**, ensuring that for any given `name` string, only a single `Kind` object instance exists in memory. One pool serves all classes, and it is strong: a Kind keeps its identity and state until `delete()` or `Kind.forget(name)` removes it. This global interning mechanism guarantees object identity and optimizes memory utilization, particularly in scenarios involving a large number of recurring symbolic representations. The constructor is idempotent, meaning repeated calls with the same `name` will consistently return the identical `Kind` instance, thereby maintaining referential integrity across the system.
+The `Kind` constructor serves as the fundamental entry point for creating symbolic entities within the framework. Its design adheres to the **Flyweight pattern**, ensuring that for any given `name` string, only a single `Kind` object instance exists in memory. The name is looked up in the pool of the current `KindSpace` (one default space per process, shared by all classes; `with KindSpace():` opens another), and the pool is strong: a Kind keeps its identity and state until `delete()`, `Kind.forget(name)` or closing its space removes it. This interning mechanism guarantees object identity and optimizes memory utilization, particularly in scenarios involving a large number of recurring symbolic representations. The constructor is idempotent, meaning repeated calls with the same `name` will consistently return the identical `Kind` instance, thereby maintaining referential integrity across the system.
 
 ### Purpose and Usage
 This method is used to create or retrieve a unique `Kind` instance based on its string `name`. It's the primary way to introduce new symbolic entities into the graph.
@@ -676,74 +676,48 @@ graph TD
     style D fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
 ```
-## `Scheduler.add_job(job)`: Schedules a New Job for Execution
+## `KindSpace`: A Separate, Disposable Universe of Names
 
-The `Scheduler.add_job()` method is the primary interface for integrating tasks into the `Kind` framework's scheduling system. It allows for the registration of `ScheduledJob` instances, which encapsulate a callable function, its arguments, and the specified execution schedule. This method is crucial for enabling automated, time-based execution of arbitrary functions, supporting both one-off and recurring tasks. `ScheduledJob(func, args=(), kwargs=None, schedule=..., id=None)`; `Scheduler(schedule_file=None, allowed_modules=(), now=datetime.datetime.now)` resolves functions in a schedule file only from `allowed_modules`.
+`Kind(name)` looks the name up in the current `KindSpace`; a process starts with a default one. `with KindSpace(max_kinds=None, name=...) as space:` makes a new space current inside the block, so the same name there is a different Kind (equality is name *and* space), and leaving the block closes the space and drops its Kinds. `kind.space` tells a Kind's space; `current_space()` the current one.
 
 ### Purpose and Usage
-To add a `ScheduledJob` to the scheduler's queue for future execution. This is how you automate tasks within the `Kind` framework.
+To build a graph that must not mix with the rest of the process (a request, a test, a sandbox of untrusted names), and to release it in one step.
 
 ### Code Example
 ```python
-import datetime
+from kind import Kind, KindSpace, current_space
 
-import anyio
-
-from kind.core.schedule import ScheduledJob, Scheduler
-
-clock = {"now": datetime.datetime(2026, 10, 2, 9, 0, 0)}  # injectable clock: deterministic steps
-now = lambda: clock["now"]
-
-def my_scheduled_task(message):
-    print(f"[{now()}] Scheduled task executed: {message}")
-
-# Initialize the scheduler
-scheduler = Scheduler(now=now)
-
-# Schedule a job to run in 5 seconds
-job1 = ScheduledJob(my_scheduled_task, args=("Hello from future!",), schedule=now() + datetime.timedelta(seconds=5))
-scheduler.add_job(job1)
-
-# Schedule a recurring job using cron syntax (every minute)
-job2 = ScheduledJob(my_scheduled_task, args=("Hello from recurring job!",), schedule="* * * * *", now=now())
-scheduler.add_job(job2)
-
-async def main():
-    # run_due_jobs() is one step of the loop; start(task_group) runs that loop as a task
-    for seconds in (10, 60, 120):
-        clock["now"] = datetime.datetime(2026, 10, 2, 9, 0, 0) + datetime.timedelta(seconds=seconds)
-        await scheduler.run_due_jobs()
-
-anyio.run(main)
-print(f"Jobs left: {len(scheduler.job_map)}")
+outside = Kind('Order')
+with KindSpace(name="request") as space:
+    inside = Kind('Order')
+    print(f"{current_space()!r}: inside is outside? {inside is outside}")
+print(f"after: {space!r}, current: {current_space()!r}")
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
-[2026-10-02 09:00:10] Scheduled task executed: Hello from future!
-[2026-10-02 09:01:00] Scheduled task executed: Hello from recurring job!
-[2026-10-02 09:02:00] Scheduled task executed: Hello from recurring job!
-Jobs left: 1
+KindSpace('request', 1 kinds): inside is outside? False
+after: KindSpace('request', closed), current: KindSpace('default', 1 kinds)
 ```
 </details>
 
 ### Diagram
 ```mermaid
 graph TD
-    A[Callable Function] --> B[Create ScheduledJob];
-    C[Schedule Details] --> B;
-    B --> D{Scheduler.add_job#40;job#41;};
-    D --> E[Add to Internal Queue];
-    E --> F[Job Awaits Execution];
+    A[with KindSpace#40;#41;] --> B[Space Becomes Current];
+    B --> C[Kind#40;name#41; Interns in This Space];
+    C --> D[Leave the Block];
+    D --> E[Space Closed, Kinds Dropped];
 
     style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
     style B fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style C fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
     style D fill:#FF4500,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
-    style F fill:#FF1493,stroke:#333,stroke-width:2px,color:#FFFFFF;
 ```
+Scheduling jobs is not part of `kind`: see the separate [`kind-scheduler`](../../../scheduler/README.md) distribution.
+
 For a comprehensive overview of the Kind API, refer to the [API Overview Diagram](api_overview.mmd).
 
 ---

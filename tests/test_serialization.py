@@ -3,6 +3,8 @@ from collections import deque
 
 import orjson
 import pytest
+
+from kind.core.space import current_space
 from kind.core.kind import tomllib  # stdlib on 3.11+, the tomli backport on 3.10
 import yaml
 
@@ -46,7 +48,7 @@ def test_round_trip_rebuilds_the_connected_graph(fmt, kind_fixture, reset_pool):
 
     reset_pool()
     rebuilt_root = load(text)
-    pool = Kind._pool
+    pool = current_space().pool
     assert set(pool) == expected_names
     assert edges(expected_names, pool) == expected_edges
     assert parse(dump(rebuilt_root)) == parse(text)
@@ -59,7 +61,7 @@ def test_dump_leaves_out_unconnected_kinds(fmt):
     a.append(Kind("b"))
     secret = Kind("unrelated secret")  # alive in the pool, not connected to a
     assert {node["name"] for node in parse(dump(a))} == {"a", "b"}
-    assert secret.name in Kind._pool
+    assert secret.name in current_space().pool
 
 
 @pytest.mark.parametrize("fmt", FORMATS)

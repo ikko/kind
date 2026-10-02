@@ -1,3 +1,4 @@
+from kind.core.space import current_space
 from kind import Kind
 from kind.core.lazy_kind import LazyKind
 
@@ -5,7 +6,7 @@ from kind.core.lazy_kind import LazyKind
 def test_lazy_kind_defers_conversion_until_first_use():
     lazy = LazyKind(42)
     assert not lazy.evaluated
-    assert "42" not in Kind._pool  # nothing created yet
+    assert "42" not in current_space().pool  # nothing created yet
 
     assert lazy.name == "42"  # first attribute access converts
     assert lazy.evaluated

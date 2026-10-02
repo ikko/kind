@@ -4,7 +4,7 @@ The `Kind` framework stands as a testament to the power of well-designed abstrac
 
 ## High-Performance and Thread-Safe Abstraction
 
-`Kind` achieves high performance through its average O(1) instantiation (via interning) and efficient relationship linking. The underlying mechanisms, such as ordered sets (`OrderedKindSet`) for children and parents and AVL trees for indexing, contribute to its speed. Furthermore, interning and graph mutations (`append`, `insert`, `relate`, `delete`, ...) run under a process-wide re-entrant lock, ensuring consistent behavior and data integrity in multi-threaded applications.
+`Kind` achieves high performance through its average O(1) instantiation (via interning) and efficient relationship linking. The underlying mechanisms, such as ordered sets (`OrderedKindSet`) for children and parents and AVL trees for indexing, contribute to its speed. Furthermore, interning and graph mutations (`append`, `insert`, `relate`, `delete`, ...) run under the re-entrant lock of the Kind's `KindSpace` (one lock per space), ensuring consistent behavior and data integrity in multi-threaded applications.
 
 ### Diagram: Performance & Thread Safety
 ```mermaid

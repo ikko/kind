@@ -36,9 +36,9 @@ def test_stat_reports_this_kinds_state(capsys):
 
 
 def test_package_aliases_resolve_to_modules():
-    assert kind.td is kind.time_dim and kind.td.__name__ == "kind.builtin.time_dim"
-    assert kind.schedule.__name__ == "kind.core.schedule" and kind.vis is kind.visual
-    assert {"td", "schedule", "Kind"} <= set(dir(kind))
+    assert kind.td is kind.time_dim and kind.td.__name__ == "kind.time.dim"
+    assert kind.vis is kind.visual and kind.tl.__name__ == "kind.time.timeline"
+    assert {"td", "time", "Kind"} <= set(dir(kind)) and "schedule" not in set(dir(kind))
     try:
         kind.no_such_thing
     except AttributeError as error:

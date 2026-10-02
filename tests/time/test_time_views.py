@@ -4,9 +4,9 @@ import datetime
 import pytest
 
 from kind import Kind
-from kind.builtin.time_dim import KindHeadTailView
-from kind.builtin.timeline import Timeline
-from kind.core.time_arithmetics import add_time_objects, subtract_time_objects
+from kind.time import KindHeadTailView
+from kind.time import Timeline
+from kind.time import add_time_objects, subtract_time_objects
 
 # 2024 is a leap year; 2024-01-01 is a Monday.
 NAMES = [
