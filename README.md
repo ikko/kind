@@ -332,10 +332,10 @@ _**Disclaimer:**_
 : Outlines the mechanisms for converting standard Python types to `Kind` objects and vice-versa, enhancing the framework's interoperability and ease of use. It covers primitive and collection types, and nested conversions. This document provides examples of the `Kind.from_object()` class method and the `to_kind()` global function, illustrating seamless data integration.
 
 🗺 [Directory_validation_lr diagram](docs/development/directory_validation_lr.mmd)️
-: A Mermaid diagram illustrating the architecture of a directory validation system, focusing on its components and their interactions in a left-to-right flow. This visual aid helps in understanding the system's structure, including matching engines, project detection, learning analytics, and performance caching.
+: A Mermaid diagram illustrating the architecture of a directory validation system, focusing on its components and their interactions in a left-to-right flow. This visual aid helps in understanding the system's structure, including matching engines, project detection, learning analytics, and performance caching. It is a sample domain modelled with Kinds and exported with `to_mmd()`: an example of what the Mermaid export looks like for a real system's structure, not a part of `kind`.
 
 🧭 [Directory_validation_tb diagram](docs/development/directory_validation_tb.mmd)
-: A Mermaid diagram illustrating the architecture of a directory validation system, focusing on its components and their interactions in a top-to-bottom flow. This visual aid helps in understanding the system's structure, including matching engines, project detection, learning analytics, and performance caching.
+: A Mermaid diagram illustrating the architecture of a directory validation system, focusing on its components and their interactions in a top-to-bottom flow. This visual aid helps in understanding the system's structure, including matching engines, project detection, learning analytics, and performance caching. It is a sample domain modelled with Kinds and exported with `to_mmd()`: an example of what the Mermaid export looks like for a real system's structure, not a part of `kind`.
 
 📖 [Glossary](docs/development/glossary.md)
 : Provides an overview of the design, arithmetic, and algorithmic patterns employed throughout the Kind project. It defines key terms and concepts for better understanding. This document is beneficial for all users, especially when encountering unfamiliar terminology related to the framework's architecture, mixinability, and data-centric design.

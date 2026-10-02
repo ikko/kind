@@ -6,6 +6,8 @@
 ### Changed
 - **Time is opt-in**: `kind.time` (`dim`, `timeline`, `arithmetic`) attaches its mixins on `import kind.time` (or on first use of the `kind.td`/`kind.tl` aliases). The core no longer gives every Kind `as_date`, `period` and the like; `kind.add_time`/`subtract_time` moved to `kind.time`.
 - **The cap is per space**: `KindSpace(max_kinds=N)` replaces `Kind.max_kinds`.
+### Quality
+- **Static security scan**: `make security` runs bandit on `kind` and `kind_scheduler` (in CI too). Result: no medium or high findings; the medium-severity `eval` that v0.0.10's `register_mixin` had (B307) is gone. Two `random` uses (view shuffle and sample) are marked as not cryptographic; asserts are skipped project-wide because they state invariants, not security checks.
 ### Removed
 - **Scheduling left the package**: it is now the separate distribution `kind-scheduler` (`scheduler/`, package `kind_scheduler`, CLI `kind-scheduler`). `kind` no longer depends on `croniter` or `typer`.
 

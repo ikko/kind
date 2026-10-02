@@ -280,10 +280,12 @@ class KindHeadTailView:
         return KindHeadTailView(self._items[::-1])
 
     def shuffled(self) -> 'KindHeadTailView':
-        return KindHeadTailView(random.sample(self._items, len(self._items)))
+        # B311: an ordering for display or tests, not a secret, so `random` is the right tool
+        return KindHeadTailView(random.sample(self._items, len(self._items)))  # nosec B311
 
     def sample(self, n: int) -> 'KindHeadTailView':
-        return KindHeadTailView(random.sample(self._items, n))
+        # B311: a sample of Kinds, not a secret
+        return KindHeadTailView(random.sample(self._items, n))  # nosec B311
 
     def unique(self) -> 'KindHeadTailView':
         return KindHeadTailView(dict.fromkeys(self._items))

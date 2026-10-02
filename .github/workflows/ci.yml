@@ -27,5 +27,7 @@ jobs:
         run: make lint
       - name: Type check
         run: make typecheck
+      - name: Security scan
+        run: make security
       - name: Test
         run: make test
