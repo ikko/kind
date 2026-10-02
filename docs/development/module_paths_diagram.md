@@ -19,7 +19,6 @@ graph TD
         C --> G3(kind.core.relations)
         C --> G4(kind.core.lazy_kind)
         C --> G5(kind.core.kind_namespace)
-        C --> G6(kind.core.mixins)
         C --> I(kind.core.maturing)
         C --> J(kind.core.mixinability)
         C --> K(kind.core.mixin_validator)

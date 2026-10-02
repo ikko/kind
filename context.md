@@ -23,7 +23,6 @@ kind/core/lazy_kind.py
 kind/core/maturing.py
 kind/core/mixin_validator.py
 kind/core/mixinability.py
-kind/core/mixins.py
 kind/core/protocols.py
 kind/core/relations.py
 kind/core/schedule.py

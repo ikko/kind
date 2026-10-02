@@ -57,8 +57,7 @@ def _refusal(name: str, target_class: type, safe: bool) -> Optional[str]:
     if name.startswith('_'):
         return "private and dunder names are reserved for the core"
     owner = next((cls for cls in _class_and_subclasses(target_class) if name in vars(cls)), None)
-    is_core = owner is not None and name not in _applied_mixins
-    if is_core and safe:
+    if owner is not None and name not in _applied_mixins and safe:
         return f"'{name}' is part of the {owner.__name__} API (pass safe=False to replace it deliberately)"
     return None
 
@@ -73,6 +72,7 @@ def register_mixin(value: Any, name: Optional[str] = None, target_class: Optiona
     if target_class is None:
         from kind.core.base_kind import BaseKind
         target_class = BaseKind
+    assert target_class is not None
     if isinstance(value, str):
         raise TypeError(f"register_mixin got the string {value!r}; strings are not evaluated. "
                         f"Hint: pass the function, class or module object itself.")

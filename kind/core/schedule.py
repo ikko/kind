@@ -64,7 +64,7 @@ class ScheduledJob:
         self.args = tuple(args)
         self.kwargs = kwargs or {}
         self.schedule = schedule
-        self.next_run: Optional[datetime.datetime] = None
+        self.next_run: datetime.datetime
         self._calculate_next_run(now)
 
     def _calculate_next_run(self, base_time: Optional[datetime.datetime] = None) -> None:
@@ -195,6 +195,8 @@ class Scheduler:
 
     def load_schedule(self) -> None:
         """Loads jobs from the schedule file; functions must come from allowed_modules."""
+        if not self.schedule_file:
+            return
         try:
             with open(self.schedule_file, "rb") as f:
                 jobs_data = orjson.loads(f.read())

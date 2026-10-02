@@ -9,6 +9,7 @@ This module provides functions for processing batches of items concurrently: syn
 
 
 ### Function: `a_process_batch`
+<!-- doc-example: not-run — a signature, not a program -->
 ```python
 async def a_process_batch(batch: Iterable[T], func: Callable[[T], Union[U, Awaitable[U]]]) -> List[U]
 ```
@@ -20,6 +21,7 @@ async def a_process_batch(batch: Iterable[T], func: Callable[[T], Union[U, Await
 *   **Returns**: `List[U]` - The results, in the order of the input.
 
 ### Function: `process_batch`
+<!-- doc-example: not-run — a signature, not a program -->
 ```python
 def process_batch(batch: Iterable[T], func: Callable[[T], U], new_thread: bool = True) -> List[U]
 ```
@@ -40,6 +42,7 @@ This module provides the core scheduling logic for the Kind project. A schedule 
 ### Class: `ScheduledJob`
 * **Description**: Represents a single scheduled job.
 * **Constructor**: `ScheduledJob()`
+<!-- doc-example: not-run — a signature, not a program -->
 ```python
 def __init__(self, func: Callable[..., Any], args: tuple = (), kwargs: Optional[dict] = None, schedule: Optional[Union[str, datetime.datetime, datetime.date, datetime.time, Kind]] = None, id: Optional[str] = None, now: Optional[datetime.datetime] = None)
 ```
@@ -56,6 +59,7 @@ def __init__(self, func: Callable[..., Any], args: tuple = (), kwargs: Optional[
 ### Class: `Scheduler`
 * **Description**: Manages the schedule of jobs.
 * **Constructor**: `Scheduler()`  
+<!-- doc-example: not-run — a signature, not a program -->
 ```python
 def __init__(self, schedule_file: Optional[str] = None, allowed_modules: Iterable[str] = (), now: Callable[[], datetime.datetime] = datetime.datetime.now)
 ```

@@ -33,6 +33,15 @@ class BaseKind:
         'node_shape',
     )
 
+    name: str
+    origin: Any
+    parents: Any
+    children: Any
+    _position: float
+    _next: Optional['BaseKind']
+    _prev: Optional['BaseKind']
+    node_shape: Optional[str]
+
     _pool: dict = {}
     _numbered: AVLTree = AVLTree()  # every Kind in the pool, by creation position
     max_kinds: Optional[int] = None  # None: unbounded; set it when names come from untrusted input

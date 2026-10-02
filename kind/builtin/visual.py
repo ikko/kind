@@ -8,7 +8,7 @@ and through the `KindRender(kind)` wrapper.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Optional
 
 import anyio
 import anyio.to_thread
@@ -83,7 +83,9 @@ def from_mmd(mmd_string: str) -> 'Kind':
     if not lines or lines[0] not in ("graph LR", "graph TD"):
         raise ValueError(f"Unsupported Mermaid header {lines[:1]}; expected 'graph LR' or 'graph TD'.")
 
-    shapes = sorted({**MERMAID_SHAPES, None: DEFAULT_SHAPE}.items(), key=lambda item: -len(item[1][0]))
+    table: dict[Optional[str], tuple[str, str]] = {shape: pair for shape, pair in MERMAID_SHAPES.items()}
+    table[None] = DEFAULT_SHAPE
+    shapes = sorted(table.items(), key=lambda item: -len(item[1][0]))
     names: dict[str, str] = {}
     node_shapes: dict[str, str] = {}
     edges = []
@@ -92,7 +94,10 @@ def from_mmd(mmd_string: str) -> 'Kind':
         if edge:
             edges.append(edge.groups())
             continue
-        node_id = re.match(r'^[^\[\(\{>]+', line).group(0)
+        declared = re.match(r'^[^\[\(\{>]+', line)
+        if declared is None:
+            raise ValueError(f"Cannot read Mermaid line {line!r}: expected a node declaration or an edge.")
+        node_id = declared.group(0)
         rest = line[len(node_id):]
         for shape, (opening, closing) in shapes:
             if rest.startswith(opening) and rest.endswith(closing):

@@ -53,7 +53,8 @@ class GraphTraversal:
         return [kind for kind, _ in self._walk(include_relations=self.family_mode != "children_only")]
 
     def to_ascii(self) -> str:
-        lines, relations = [], set()
+        lines: list[str] = []
+        relations: set[tuple[str, str, str]] = set()
         for kind, depth in self._walk(include_relations=False):
             lines.append(f"{'  ' * depth}- {kind.name}")
             for how, related_kinds in kind.relations.items():

@@ -18,7 +18,7 @@ The merge proceeds by:
 import copy
 import logging
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from typing import Any, Callable, Literal, TypeVar
 
 log = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ V = TypeVar('V')
 
 class DefDict(defaultdict):
     """A defaultdict of defaultdicts, representing `defaultdict(defaultdict())`."""
-    def __init__(self, default_factory: Callable[[], V] = lambda: defaultdict(dict), **kwargs):
+    def __init__(self, default_factory: Callable[[], Any] = lambda: defaultdict(dict), **kwargs):
         super().__init__(default_factory, **kwargs)
 
     def __repr__(self):
@@ -36,6 +36,7 @@ class DefDict(defaultdict):
     def __missing__(self, key):
         # This ensures that if a key is accessed and not found, a new defaultdict(dict) is created
         # and then returned, allowing for nested assignment like d['a']['b'] = 1
+        assert self.default_factory is not None  # DefDict always has one
         value = self.default_factory()
         self[key] = value
         return value
@@ -90,7 +91,7 @@ def _apply_merge_strategy(current_value: Any, new_value: Any, strategy: MergeStr
             return new_value
     elif strategy == 'update':
         # Assumes both are dictionaries or have an update method
-        if isinstance(current_value, Mapping) and isinstance(new_value, Mapping):
+        if isinstance(current_value, MutableMapping) and isinstance(new_value, Mapping):
             current_value.update(new_value)
             return current_value
         else:
@@ -106,7 +107,7 @@ def _apply_merge_strategy(current_value: Any, new_value: Any, strategy: MergeStr
             return new_value
     elif strategy == 'smooth':
         if isinstance(current_value, Mapping) and isinstance(new_value, Mapping):
-            merged = type(current_value)() # Preserve type (e.g., dict, defaultdict)
+            merged: Any = type(current_value)() # Preserve type (e.g., dict, defaultdict)
             # Start with all items from current_value
             for k, v in current_value.items():
                 merged[k] = v

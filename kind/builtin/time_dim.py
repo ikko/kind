@@ -55,45 +55,45 @@ class KindTimeDimMixin:
         return sorted((k for k in kinds if parse_timestamp(k.name) is not None), key=when)
 
     @property
-    def time_head(self) -> 'KindHeadTailView':
+    def time_head(self: Any) -> 'KindHeadTailView':
         """Every pooled temporal Kind, earliest first."""
         return KindHeadTailView(KindTimeDimMixin._temporal_kinds(type(self)._numbered))
 
     @property
-    def time_tail(self) -> 'KindHeadTailView':
+    def time_tail(self: Any) -> 'KindHeadTailView':
         """Every pooled temporal Kind, latest first."""
         return self.time_head.reversed()
 
     @property
-    def as_date(self) -> datetime.date:
+    def as_date(self: Any) -> datetime.date:
         return when(self).date()
 
     @property
-    def as_time(self) -> datetime.time:
+    def as_time(self: Any) -> datetime.time:
         return when(self).time()
 
     @property
-    def as_datetime(self) -> datetime.datetime:
+    def as_datetime(self: Any) -> datetime.datetime:
         return when(self)
 
     @property
-    def day(self) -> int:
+    def day(self: Any) -> int:
         return when(self).day
 
     @property
-    def hour(self) -> int:
+    def hour(self: Any) -> int:
         return when(self).hour
 
     @property
-    def minute(self) -> int:
+    def minute(self: Any) -> int:
         return when(self).minute
 
     @property
-    def second(self) -> int:
+    def second(self: Any) -> int:
         return when(self).second
 
     @property
-    def period(self) -> datetime.timedelta:
+    def period(self: Any) -> datetime.timedelta:
         """Time from the earliest to the latest pooled temporal Kind."""
         return self.time_head.span()
 

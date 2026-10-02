@@ -6,7 +6,7 @@ and for matching Kinds based on a predicate.
 from __future__ import annotations
 
 from collections import deque
-from typing import Callable, Iterator
+from typing import Any, Callable, Iterator
 
 from kind.core.protocols import KindPathProtocol
 from typing import TYPE_CHECKING
@@ -15,9 +15,9 @@ if TYPE_CHECKING:
     from kind.core.kind import Kind
 
 class KindPathMixin(KindPathProtocol):
-    def path_to(self, target: 'Kind') -> list['Kind']:
+    def path_to(self: Any, target: 'Kind') -> list['Kind']:
         """A path of children links from this Kind to `target` (depth first), or []."""
-        came_from = {self: None}
+        came_from: dict[Any, Any] = {self: None}
         stack = [self]
         while stack:
             node = stack.pop()
@@ -33,7 +33,7 @@ class KindPathMixin(KindPathProtocol):
                     stack.append(child)
         return []
 
-    def match(self, predicate: Callable[['Kind'], bool], traversal: str = 'dfs') -> Iterator['Kind']:
+    def match(self: Any, predicate: Callable[['Kind'], bool], traversal: str = 'dfs') -> Iterator['Kind']:
         visited = set()
 
         frontier = deque([self])

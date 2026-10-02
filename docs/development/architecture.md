@@ -33,7 +33,6 @@ graph TD
         B --> B11[kind.core.batch_processing]
         B --> B12[kind.core.lazy_kind]
         B --> B13[kind.core.kind_namespace]
-        B --> B14[kind.core.mixins]
     end
 
     subgraph "Builtin Extensions Layer (kind.builtin)"
@@ -119,7 +118,6 @@ The Core Layer provides the fundamental building blocks of the `kind` library. I
 *   **`relations`**: Holds a Kind's named relations (strong references) and the dynamic relation verbs (`a.has_kind(b)`).
 *   **`lazy_kind`**: Defines `LazyKind` (deferred conversion to `Kind`) and the `SENTINEL` marker.
 *   **`kind_namespace`**: Provides `k`, where `k.Stock is Kind('Stock')`.
-*   **`mixins`**: Discovers the mixin classes available in `kind.builtin` and `kind.core` (used by `Kind.ls()` and `Kind.stat()`).
 *   **`maturing`**: Implements the "maturing" process for `Kind` objects, which involves elevating metadata to first-class attributes and methods.
 *   **`mixinability`**: Provides the core functionality for mixin-based extensibility of the `Kind` class (`register_mixin`, `apply_mixin_to_instance`, `lock_mixins`).
 *   **`mixin_validator`**: Checks a mixin's signature (first parameter `self`); a mixin is trusted code, so it does not judge what the code does.

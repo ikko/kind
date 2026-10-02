@@ -21,6 +21,12 @@
 ### Added
 - **`Timeline.overlap(other)`**: returns a Timeline of the common periods.
 - **`Kind.forget(name)`**, **`max_kinds`** and **`KindLimitError`**: explicit lifetime for names.
+- **`Kind.ls()`** lists the registered mixins and **`kind.stat()`** reports this Kind's own state; the module that guessed "mixins" from every class in the package (`kind/core/mixins.py`) is removed.
+- **`from_mmd`** raises `ValueError` on a line it cannot read, instead of an `AttributeError`.
+### Quality
+- Every runnable Python block in README.md and docs/ runs in the test suite (86 blocks; 6 opt out with a stated reason).
+- Property-based tests (Hypothesis) for the AVL tree, `OrderedKindSet`, serialization round trips and canonical names; a mutation check confirmed each catches a deliberate fault.
+- `mypy` is clean for Python 3.10–3.14 (`make typecheck`); CI runs lint, type check and tests on 3.10, 3.11, 3.12, 3.13 and 3.14. The 3.10–3.13 runs found a documentation example that only worked on 3.14 (deferred annotations).
 ### Security
 - **Schedule files** may only name functions from `allowed_modules` (CLI: `kind-scheduler -f FILE -m MODULE add|list|remove|run`).
 - **`register_mixin`** no longer evaluates strings.

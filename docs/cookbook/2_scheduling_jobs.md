@@ -23,6 +23,7 @@ The `kind.schedule` module is built around the `Scheduler` class, which manages 
 
 Let's start with a simple example: scheduling a function to run every minute.
 
+<!-- doc-example: not-run — the scheduler runs until interrupted (Ctrl+C) -->
 ```python
 import kind
 import datetime

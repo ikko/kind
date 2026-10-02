@@ -22,7 +22,8 @@ async def a_process_batch(batch: Iterable[T], func: Callable[[T], Union[U, Await
         if inspect.iscoroutinefunction(func):
             results[position] = await func(item)
         else:
-            results[position] = await anyio.to_thread.run_sync(func, item)
+            sync_func: Callable[[T], U] = func  # type: ignore[assignment]  # not a coroutine function here
+            results[position] = await anyio.to_thread.run_sync(sync_func, item)
 
     async with anyio.create_task_group() as task_group:
         for position, item in enumerate(items):

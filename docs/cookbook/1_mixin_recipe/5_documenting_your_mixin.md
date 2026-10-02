@@ -29,6 +29,9 @@ Every mixin class, its methods, and properties should have clear and concise doc
 **Example Docstring for `DescendantCounterMixin`:**
 
 ```python
+from kind import Kind
+
+
 class DescendantCounterMixin:
     """A mixin for Kind objects that provides methods to count their descendants.
 

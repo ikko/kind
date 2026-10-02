@@ -13,6 +13,7 @@ Let's walk through a practical example of creating a simple mixin for the `kind`
 
 Create a new Python file (e.g., `my_counter_mixin.py`) and define your mixin class. Remember to import `Kind` and any other necessary modules.
 
+<!-- doc-example: module my_counter_mixin -->
 ```python
 # my_counter_mixin.py
 

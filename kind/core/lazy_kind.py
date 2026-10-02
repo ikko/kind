@@ -1,5 +1,5 @@
 """This module defines LazyKind, a deferred conversion to Kind, and the SENTINEL marker."""
-from typing import Any
+from typing import Any, Optional
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ class LazyKind:
 
     def __init__(self, obj: Any):
         self._obj = obj
-        self._kind = None
+        self._kind: Optional['Kind'] = None
 
     @property
     def evaluated(self) -> bool:

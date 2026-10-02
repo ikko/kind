@@ -9,7 +9,7 @@ from typing import Iterator, List, Optional, Tuple
 class Timeline:
     """Represents a series of periods, typically associated with a Kind."""
     def __init__(self, periods: Optional[List[Tuple[datetime.datetime, datetime.datetime]]] = None):
-        self._periods = []
+        self._periods: List[Tuple[datetime.datetime, datetime.datetime]] = []
         if periods:
             for start, end in periods:
                 self.add_period(start, end)

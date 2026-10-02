@@ -7,6 +7,7 @@ metadata/context/index, attributes attached at runtime, and a per-instance freez
 import datetime
 import inspect
 import re
+import sys
 import warnings
 from collections import deque
 from itertools import chain
@@ -17,9 +18,9 @@ import orjson
 import tomli_w
 import yaml
 
-try:
+if sys.version_info >= (3, 11):
     import tomllib
-except ModuleNotFoundError:  # Python 3.10
+else:  # Python 3.10
     import tomli as tomllib
 
 from kind.builtin.collections import OrderedKindSet
@@ -28,8 +29,7 @@ from kind.core.base_kind import BaseKind
 from kind.core.graph_traversal import GraphTraversal
 from kind.core.lazy_kind import SENTINEL, LazyKind
 from kind.core.maturing import DefDict, _apply_merge_strategy
-from kind.core.mixinability import apply_mixin_to_instance
-from kind.core.mixins import _get_available_mixins
+from kind.core.mixinability import get_applied_mixins
 from kind.core.relations import Relations
 
 T = TypeVar("T")
@@ -308,10 +308,11 @@ class Kind(BaseKind):
                 stack.append(target._outgoing())
                 owners.append(target)
 
-        declarations = sorted({
-            f"{node_id(kind)}{MERMAID_SHAPES.get(kind.node_shape, DEFAULT_SHAPE)[0]}{kind.name}"
-            f"{MERMAID_SHAPES.get(kind.node_shape, DEFAULT_SHAPE)[1]}"
-            for kind in visited})
+        def declaration(kind: 'Kind') -> str:
+            opening, closing = MERMAID_SHAPES.get(kind.node_shape or "", DEFAULT_SHAPE)
+            return f"{node_id(kind)}{opening}{kind.name}{closing}"
+
+        declarations = sorted({declaration(kind) for kind in visited})
         return "\n".join(["graph LR", *declarations, *dict.fromkeys(edges)])
 
     def to_ascii(self, traverse_mode: Literal["dfs", "bfs"] = "dfs",
@@ -460,14 +461,14 @@ class Kind(BaseKind):
 
     # --- the Kind.next() sequence and creation order -----------------------
 
-    def head(self, up_to_position: float = 5.0) -> 'Kind':
-        cur = self
+    def head(self, up_to_position: float = 5.0) -> 'BaseKind':
+        cur: BaseKind = self
         while cur._prev and cur._prev._position >= up_to_position:
             cur = cur._prev
         return cur
 
-    def tail(self, from_position: float = -10.0) -> 'Kind':
-        cur = self
+    def tail(self, from_position: float = -10.0) -> 'BaseKind':
+        cur: BaseKind = self
         while cur._next and cur._next._position <= from_position:
             cur = cur._next
         return cur
@@ -576,12 +577,13 @@ class Kind(BaseKind):
     def to(self, target_type: Type[T]) -> T:
         """Converts the Kind's name back to a value of `target_type`."""
         if target_type is str:
-            return self.name
+            return self.name  # type: ignore[return-value]  # T is str here
         try:
             value = orjson.loads(self.name)
         except orjson.JSONDecodeError:
             raise TypeError(f"Cannot convert Kind '{self.name}' to {target_type.__name__}") from None
-        return value if isinstance(value, target_type) else target_type(value)
+        converter: Any = target_type
+        return value if isinstance(value, target_type) else converter(value)
 
     def each_parents(self) -> Iterator['Kind']:
         return iter(self.parents)
@@ -661,31 +663,28 @@ class Kind(BaseKind):
 
     @classmethod
     def ls(cls) -> None:
-        """Prints the available mixin classes."""
-        print("Available Mixins:")
-        for name in sorted(_get_available_mixins()):
+        """Prints the registered mixins: the names every Kind has gained at runtime."""
+        print("Registered mixins:")
+        for name in sorted(get_applied_mixins()):
             print(f"- {name}")
 
     def stat(self) -> None:
-        """Prints this Kind's footprint and what each available mixin would add to it."""
-        rows = [f"Statistics for Kind: '{self.name}'", "\n--- Mixin Analysis ---",
-                "{:<30} {:<15}".format("Mixin Name", "Footprint (b)"), "-" * 46]
-        for name, mixin_cls in sorted(_get_available_mixins().items()):
-            probe = Kind(f"_stat_probe_{name}")
-            try:
-                apply_mixin_to_instance(probe, mixin_cls)
-                rows.append("{:<30} {:<15}".format(name, probe.footprint()))
-            except Exception as error:  # a mixin class that cannot be instantiated bare
-                rows.append("{:<30} {:<15}".format(name, f"n/a ({type(error).__name__})"))
-            finally:
-                probe.delete()
-        rows += ["-" * 46, "\n--- Kind Footprint ---", f"Current Footprint: {self.footprint()} bytes"]
+        """Prints this Kind's footprint, its own attributes and the mixins it shares."""
+        rows = [f"Statistics for Kind: '{self.name}'",
+                f"Footprint (with descendants): {self.footprint()} bytes",
+                f"Children: {len(self.children)}  Parents: {len(self.parents)}  "
+                f"Relations: {sum(1 for how in self.relations if not how.startswith(INVERSE_PREFIX))}",
+                f"Own attributes: {', '.join(sorted(self._elevated_attributes)) or '-'}",
+                f"Registered mixins: {len(get_applied_mixins())} (Kind.ls() lists them)",
+                f"Frozen: {self._frozen}"]
         print("\n".join(rows))
 
     def footprint(self) -> int:
         """Bytes used by this Kind and its descendants (each object counted once)."""
         shared = (None, True, False, SENTINEL)
-        memo, total, stack = set(), 0, [self]
+        memo: set[int] = set()
+        total = 0
+        stack: list[Any] = [self]
         while stack:
             obj = stack.pop()
             if id(obj) in memo or any(obj is s for s in shared):
