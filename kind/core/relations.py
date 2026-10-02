@@ -42,9 +42,12 @@ class Relations:
 
     def add(self, how, related_kind):
         """Strong, ordered references: a relation keeps its target alive, like a child link does."""
-        self._relations.setdefault(how, OrderedKindSet()).add(related_kind)
+        if how not in self._relations:
+            self._relations[how] = OrderedKindSet(guard=self._owner._ensure_mutable)
+        self._relations[how].add(related_kind)
 
     def get(self, how):
+        """The Kinds related under `how`; an empty, unattached set if there are none."""
         return self._relations.get(how, OrderedKindSet())
 
     def remove(self, how, related_kind):

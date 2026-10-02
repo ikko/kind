@@ -4,10 +4,10 @@ from kind.builtin import apply_builtins
 from kind.core.base_kind import KindLimitError
 from kind.core.space import KindSpace, SpaceError, current_space
 from kind.core.graph_traversal import GraphTraversal
-from kind.core.kind import Kind
+from kind.core.kind import FrozenKindError, Kind
 from kind.core.kind_namespace import k
 
-__all__ = ["Kind", "k", "KindLimitError", "KindSpace", "SpaceError", "current_space", "GraphTraversal",
+__all__ = ["Kind", "k", "FrozenKindError", "KindLimitError", "KindSpace", "SpaceError", "current_space", "GraphTraversal",
            "builtin", "core"]
 
 apply_builtins()

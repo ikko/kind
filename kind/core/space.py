@@ -6,7 +6,8 @@ isolates a graph completely:
 
     with KindSpace() as space:      # a fresh universe, current inside the block
         Kind('Stock')               # unrelated to any 'Stock' outside
-    # leaving the block closes the space: its Kinds are dropped in O(1)
+    # leaving the block closes the space: it drops its references to its Kinds (O(n));
+    # the garbage collector reclaims them once nothing else refers to them
 
 The current space is a context variable, so it is right for threads started with a
 copied context and for asyncio/trio tasks (anyio's worker threads copy it too).
@@ -67,7 +68,7 @@ class KindSpace:
         self.close()
 
     def close(self) -> None:
-        """Drops every Kind of this space; Kinds still referenced elsewhere become read-only."""
+        """Drops this space's references to its Kinds, O(n); Kinds referenced elsewhere become read-only."""
         if self is DEFAULT_SPACE:
             raise SpaceError("The default space cannot be closed; use Kind.forget() or a KindSpace of your own.")
         with self.lock:

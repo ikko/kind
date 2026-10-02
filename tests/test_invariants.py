@@ -10,6 +10,7 @@ from hypothesis import strategies as st
 from kind import Kind
 from kind.builtin.avl_tree import AVLTree
 from kind.builtin.collections import OrderedKindSet
+from kind.core.graph_traversal import GraphTraversal
 from kind.core.space import KindSpace, current_space
 from kind.core.kind import canonical_repr, tomllib
 
@@ -175,3 +176,54 @@ def test_set_names_do_not_depend_on_iteration_order(members):
 @in_fresh_space
 def test_converting_a_value_twice_gives_the_same_kind(value):
     assert Kind.from_object(value) is Kind.from_object(value)
+
+
+# --- every edge on both ends, whatever the sequence of edits --------------------
+
+EDITS = st.lists(st.tuples(st.sampled_from(["append", "relate", "unrelate", "reparent", "delete"]),
+                           st.integers(0, 7), st.integers(0, 7)), max_size=60)
+
+
+def assert_edges_symmetric(kinds):
+    for kind in kinds:
+        assert all(kind in child.parents for child in kind.children), f"{kind.name}: child without back-edge"
+        assert all(kind in parent.children for parent in kind.parents), f"{kind.name}: parent without back-edge"
+        for how, related in kind.relations.items():
+            inverse = how[len("_inverse_"):] if how.startswith("_inverse_") else f"_inverse_{how}"
+            assert all(kind in other.relations.get(inverse) for other in related), f"{kind.name}: one-sided {how}"
+
+
+@settings(max_examples=400, deadline=None)  # the self-loop case needed more than the default to show up
+@given(EDITS)
+@in_fresh_space
+def test_edges_stay_symmetric_under_any_edit_sequence(edits):
+    kinds = [Kind(f"k{i}") for i in range(8)]
+    for op, i, j in edits:
+        a, b = kinds[i], kinds[j]
+        if op == "append":
+            a.append(b)
+        elif op == "relate":
+            a.relate(b, how="r")
+        elif op == "unrelate":
+            a.unrelate(b)
+        elif op == "reparent":
+            a.reparent()
+        elif op == "delete" and Kind.forget(a.name):
+            kinds[i] = Kind(f"k{i}")  # the name starts afresh
+        assert_edges_symmetric(kinds)
+
+
+@PER_EXAMPLE
+@given(GRAPHS, st.sampled_from(["children_first", "parents_first"]))
+def test_ascii_round_trip_restores_the_family_edges(graph, family_mode):
+    """Depth-first output is an outline, so it reads back exactly; breadth-first output is display only."""
+    traverse_mode = "dfs"
+    with KindSpace(name="original"):
+        start = build(*graph)[-1]  # render from an arbitrary Kind, not only a root
+        text = start.to_ascii(traverse_mode=traverse_mode, family_mode=family_mode)
+        family = {node.name for node in GraphTraversal(start, family_mode=family_mode).traverse_family()}
+        expected = {name: sorted(c.name for c in current_space().get(name).children) for name in family}
+    with KindSpace(name="rebuilt"):
+        rebuilt = Kind.from_ascii(text)
+        assert rebuilt.name == start.name
+        assert {name: sorted(c.name for c in current_space().get(name).children) for name in family} == expected

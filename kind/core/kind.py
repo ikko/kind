@@ -59,7 +59,7 @@ MERMAID_SHAPES = {
 DEFAULT_SHAPE = ("[", "]")
 
 # Slots that make up a Kind's identity and place in the graph: never set from metadata.
-STRUCTURAL_SLOTS = frozenset({'name', 'parents', 'children', '_position', '_next', '_prev'})
+STRUCTURAL_SLOTS = frozenset({'name', 'parents', 'children', '_position', '_next', '_prev', '_space'})
 
 
 def _is_settable(class_attribute: Any) -> bool:
@@ -86,8 +86,8 @@ class Kind(BaseKind):
     def _init_slots(self, name: str, origin: Optional[Any], space: KindSpace) -> None:
         super()._init_slots(name, origin, space)
         set_slot = object.__setattr__
-        set_slot(self, 'parents', OrderedKindSet())
-        set_slot(self, 'children', OrderedKindSet())
+        set_slot(self, 'parents', OrderedKindSet(guard=self._ensure_mutable))
+        set_slot(self, 'children', OrderedKindSet(guard=self._ensure_mutable))
         set_slot(self, '_elevated_attributes', {})
         set_slot(self, '_index', SENTINEL)
         set_slot(self, '_metadata', SENTINEL)
@@ -157,6 +157,10 @@ class Kind(BaseKind):
 
     def __setattr__(self, name: str, value: Any) -> None:
         self._ensure_mutable()
+        if name in STRUCTURAL_SLOTS:
+            raise AttributeError(f"{name!r} is part of Kind {self.name!r}'s identity or structure and cannot be "
+                                 f"assigned. Hint: use append/insert/relate/delete to change edges; a different "
+                                 f"name is a different Kind.")
         if _is_settable(getattr(type(self), name, None)):
             object.__setattr__(self, name, value)
         else:
@@ -164,6 +168,8 @@ class Kind(BaseKind):
 
     def __delattr__(self, name: str) -> None:
         self._ensure_mutable()
+        if name in STRUCTURAL_SLOTS:
+            raise AttributeError(f"{name!r} is part of Kind {self.name!r}'s identity or structure and cannot be deleted.")
         if name in self._elevated_attributes:
             del self._elevated_attributes[name]
         else:
@@ -234,15 +240,31 @@ class Kind(BaseKind):
             child.parents.add(self)
         return self
 
+    def _ensure_all_mutable(self, kinds: Iterable['Kind']) -> None:
+        """Checks every Kind an operation will change *before* changing any, so a refusal
+        never leaves a half-applied edit."""
+        for kind in kinds:
+            kind._ensure_mutable()
+
     def reparent(self) -> None:
-        """Connects the children of this Kind directly to its parents."""
+        """Detaches this Kind from the hierarchy, linking each of its children to each of its parents.
+
+        Afterwards this Kind has no parents and no children, and every edge exists on both ends.
+        A self-loop is dropped with the rest of this Kind's edges.
+        """
         with self._lock:
-            for parent in list(self.parents):
+            parents = [parent for parent in self.parents if parent is not self]
+            children = [child for child in self.children if child is not self]
+            self._ensure_all_mutable([self, *parents, *children])
+            for parent in parents:
                 parent.children.discard(self)
-                for child in self.children:
+                for child in children:
                     parent.children.add(child)
-                    child.parents.discard(self)
                     child.parents.add(parent)
+            for child in children:
+                child.parents.discard(self)
+            self.parents.clear()
+            self.children.clear()
 
     def rebind_linear_sequence(self) -> None:
         """Removes this Kind from the Kind.next() chain, joining its neighbours."""
@@ -257,7 +279,8 @@ class Kind(BaseKind):
     def delete(self) -> None:
         """Removes this Kind from the graph and the pool; its children move up to its parents."""
         with self._lock:
-            self._ensure_mutable()
+            related = [k for _, kinds in self.relations.items() for k in kinds]
+            self._ensure_all_mutable([self, *self.parents, *self.children, *related])
             self.reparent()
             self.rebind_linear_sequence()
             if self._index is not SENTINEL:
@@ -268,12 +291,6 @@ class Kind(BaseKind):
                         related_kind.unrelate(self, how=how[len(INVERSE_PREFIX):])
                     else:
                         self.unrelate(related_kind, how=how)
-            for parent in self.parents:
-                parent.children.discard(self)
-            for child in self.children:
-                child.parents.discard(self)
-            self.parents.clear()
-            self.children.clear()
             self._space.order.remove(self._position, self)
             if self._space.pool.get(self.name) is self:
                 del self._space.pool[self.name]
@@ -300,11 +317,20 @@ class Kind(BaseKind):
         """This Kind and its descendants, depth first."""
         return GraphTraversal(self, traverse_mode='dfs', family_mode='children_only').traverse()
 
+    def _snapshot(self) -> tuple[list['Kind'], list['Kind'], list[tuple[str, list['Kind']]]]:
+        """Children, parents and relations copied under the space lock, so a read never iterates
+        a collection another thread is changing."""
+        with self._lock:
+            relations = [] if self._relations is SENTINEL else \
+                [(how, list(kinds)) for how, kinds in list(self._relations.items())]
+            return list(self.children), list(self.parents), relations
+
     def _outgoing(self) -> Iterator[tuple['Kind', str]]:
         """Child edges (how='') then forward relations, in a deterministic order."""
-        for child in self.children:
+        children, _, relations = self._snapshot()
+        for child in children:
             yield child, ""
-        for how, related_kinds in self.relations.items():
+        for how, related_kinds in relations:
             if not how.startswith(INVERSE_PREFIX):
                 for related_kind in sorted(related_kinds, key=lambda k: k.name):
                     yield related_kind, how
@@ -340,7 +366,7 @@ class Kind(BaseKind):
 
     def to_ascii(self, traverse_mode: Literal["dfs", "bfs"] = "dfs",
                  family_mode: Literal["children_first", "parents_first"] = "children_first") -> str:
-        """Indented text rendering of the graph, followed by its relations."""
+        """Indented outline of the graph, then its relations; from_ascii() reads back "dfs" output exactly."""
         return GraphTraversal(self, traverse_mode=traverse_mode, family_mode=family_mode).to_ascii()
 
     # --- serialization -----------------------------------------------------
@@ -350,8 +376,8 @@ class Kind(BaseKind):
         seen, queue = {self}, deque([self])
         while queue:
             kind = queue.popleft()
-            neighbours = chain(kind.children, kind.parents,
-                               *(related for _, related in kind.relations.items()))
+            children, parents, relations = kind._snapshot()
+            neighbours = chain(children, parents, *(related for _, related in relations))
             for neighbour in neighbours:
                 if neighbour not in seen:
                     seen.add(neighbour)
@@ -359,13 +385,16 @@ class Kind(BaseKind):
         return sorted(seen, key=lambda kind: kind.name)
 
     def _graph_dump(self) -> list[dict]:
-        return [{
-            "name": kind.name,
-            "children": [child.name for child in kind.children],
-            "relations": {how: sorted(related.name for related in related_kinds)
-                          for how, related_kinds in kind.relations.items()
-                          if not how.startswith(INVERSE_PREFIX)},
-        } for kind in self._component()]
+        nodes = []
+        for kind in self._component():
+            children, _, relations = kind._snapshot()
+            nodes.append({
+                "name": kind.name,
+                "children": [child.name for child in children],
+                "relations": {how: sorted(related.name for related in related_kinds)
+                              for how, related_kinds in relations if not how.startswith(INVERSE_PREFIX)},
+            })
+        return nodes
 
     @classmethod
     def _graph_load(cls, nodes: list[dict], source: str) -> 'Kind':
@@ -417,7 +446,11 @@ class Kind(BaseKind):
 
     @classmethod
     def from_ascii(cls, ascii_string: str) -> 'Kind':
-        """Rebuilds a graph from the output of to_ascii()."""
+        """Rebuilds a graph from the output of to_ascii(); returns the Kind on the first line.
+
+        `- name` under a line is a child of that line's Kind, `^ name` a parent; a repeated
+        name is the same Kind (it records one more edge).
+        """
         kinds: dict[str, Kind] = {}
         parent_stack: list[tuple[int, Kind]] = []
         in_relations = False
@@ -432,25 +465,31 @@ class Kind(BaseKind):
                     source_kind = kinds.setdefault(source, cls(source))
                     source_kind.relate(kinds.setdefault(target, cls(target)), how=how)
                 continue
-            node = re.match(r'^(\s*)- (.+)$', line)
+            node = re.match(r'^(\s*)([-^]) (.+)$', line)
             if not node:
                 continue
-            indent, name = len(node.group(1)), node.group(2)
+            indent, marker, name = len(node.group(1)), node.group(2), node.group(3)
             kind = kinds.setdefault(name, cls(name))
             while parent_stack and parent_stack[-1][0] >= indent:
                 parent_stack.pop()
             if parent_stack:
-                parent_stack[-1][1].append(kind)
+                anchor = parent_stack[-1][1]
+                if marker == "-":
+                    anchor.append(kind)
+                else:
+                    kind.append(anchor)
             parent_stack.append((indent, kind))
         if not kinds:
             raise ValueError("No kinds found in the ASCII input.")
-        return next((kind for kind in kinds.values() if not kind.parents), next(iter(kinds.values())))
+        return next(iter(kinds.values()))
 
     # --- relations ---------------------------------------------------------
 
     def patch(self, other: 'Kind') -> 'Kind':
         """Merges another Kind's origin (if unset), children, parents and relations into this one."""
-        self._ensure_mutable()
+        self._ensure_all_mutable([self, *other.children, *other.parents,
+                                  *(k for how, ks in other.relations.items() if not how.startswith(INVERSE_PREFIX)
+                                    for k in ks)])
         if other.origin is not None and self.origin is None:
             self.origin = other.origin
         for child in list(other.children):
@@ -476,6 +515,7 @@ class Kind(BaseKind):
     def unrelate(self, other: 'Kind', how: Optional[str] = None) -> 'Kind':
         """Removes the relation(s) to `other`: one `how`, or all of them."""
         with self._lock:
+            self._ensure_all_mutable([self, other])
             hows = [how] if how is not None else [h for h, kinds in self.relations.items()
                                                   if other in kinds and not h.startswith(INVERSE_PREFIX)]
             for h in hows:

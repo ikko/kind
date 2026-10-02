@@ -92,11 +92,21 @@ class ScheduledJob:
     def __lt__(self, other: "ScheduledJob") -> bool:
         return self.next_run < other.next_run
 
+    @property
+    def dotted_path(self) -> str:
+        """`module.function`, the form a schedule file stores and resolve_callable reads back."""
+        qualname = getattr(self.func, "__qualname__", "")
+        if not qualname or "." in qualname or "<" in qualname:
+            raise ValueError(f"Job {self.id} runs {self.func!r}, which a schedule file cannot name: only "
+                             f"module-level functions can be saved and reloaded. Hint: move it to module level, "
+                             f"or use a Scheduler without schedule_file.")
+        return f"{self.func.__module__}.{qualname}"
+
     def to_dict(self) -> dict:
         """JSON-ready form: a recurring job keeps its cron string, a one-off job its next run."""
         return {
             "id": self.id,
-            "func": f"{self.func.__module__}.{self.func.__qualname__}",
+            "func": self.dotted_path,
             "args": list(self.args),
             "kwargs": self.kwargs,
             "schedule": self.schedule if is_recurring(self.schedule) else self.next_run.isoformat(),
@@ -128,6 +138,10 @@ class Scheduler:
         self.add_jobs([job])
 
     def add_jobs(self, jobs: Iterable[ScheduledJob]) -> None:
+        jobs = list(jobs)
+        if self.schedule_file:
+            for job in jobs:
+                job.dotted_path  # fail at add time, not at a later save, if the job cannot be persisted
         with self._lock:
             for job in jobs:
                 heapq.heappush(self._schedule, job)

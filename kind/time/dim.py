@@ -52,7 +52,13 @@ class KindTimeDimMixin:
 
     @staticmethod
     def _temporal_kinds(kinds: Iterable['Kind']) -> list['Kind']:
-        return sorted((k for k in kinds if parse_timestamp(k.name) is not None), key=when)
+        temporal = [(moment, k) for k in kinds if (moment := parse_timestamp(k.name)) is not None]
+        try:
+            temporal.sort(key=lambda pair: pair[0])
+        except TypeError:
+            raise ValueError("The space mixes naive and timezone-aware datetimes in Kind names, which cannot be "
+                             "ordered. Hint: give every temporal name an offset (e.g. +00:00), or none.") from None
+        return [kind for _, kind in temporal]
 
     @property
     def time_head(self: Any) -> 'KindHeadTailView':

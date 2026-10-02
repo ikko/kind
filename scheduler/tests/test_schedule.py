@@ -220,3 +220,14 @@ def test_cli_refuses_to_load_a_file_naming_disallowed_functions(tmp_path):
     path.write_bytes(orjson.dumps([{"id": "x", "func": "os.system", "args": [], "kwargs": {}, "schedule": "* * * * *"}]))
     result = CliRunner().invoke(app, ["-f", str(path), "list"])
     assert result.exit_code == 2
+
+
+def test_a_scheduler_with_a_file_refuses_jobs_it_could_not_reload(tmp_path):
+    scheduler = Scheduler(schedule_file=str(tmp_path / "s.json"))
+    def nested():
+        return None
+
+    for unsaveable in (lambda: None, nested, ScheduledJob.to_dict):  # a lambda, a nested function, a method
+        with pytest.raises(ValueError, match="module-level"):
+            scheduler.add_job(ScheduledJob(unsaveable, schedule="* * * * *"))
+    Scheduler().add_job(ScheduledJob(lambda: None, schedule="* * * * *"))  # without a file it is fine
