@@ -32,11 +32,18 @@ wheel installed into a fresh venv outside the repo are the test that matters.
 What found these: pyflakes (redefinition), running in a fresh interpreter, and reading what each
 assertion can possibly fail on.
 
-**Weak identity needs every index to be weak.** The pool was a `WeakValueDictionary`, but the
-creation-order AVL tree held strong references, so nothing was ever collected. Conversely,
-relations held targets in a `WeakSet` while children were strong, so a Kind connected only by a
-relation vanished under GC. Tests passed or failed depending on when the collector ran. Decide per
-edge whether it owns its target, and make it the same for every edge of that kind.
+**Weak interning is only invisible for stateless values.** `sys.intern` can drop a string
+because nobody can tell; a Kind carries origin, metadata and relations, so collecting it loses
+data silently. The pool *looked* weak (`WeakValueDictionary`) while a strong creation-order tree
+kept everything alive, so the real semantics were strong. Making the tree weak too made the pool
+really weak, and `Kind('x').metadata['a'] = 1` vanished on the next line. The design question was
+never memory but *who decides when a name ends*: now `delete()`/`forget()`, with `max_kinds` for
+untrusted input. Before "fixing" one of two mechanisms that cancel each other, measure what the
+system actually does, not what its parts declare.
+
+**Every edge of one kind should own its target the same way.** Relations held targets in a
+`WeakSet` while children were strong, so a Kind connected only by a relation vanished under GC,
+and tests passed or failed depending on when the collector ran.
 
 **Class attributes shadow `__getattr__`.** `KindNamespace` carried ~450 lines copied from `Kind`.
 Because methods are found before `__getattr__`, `k.next`, `k.first` and `k.ref` returned those

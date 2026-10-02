@@ -1,13 +1,14 @@
 """kind: interned, name-identified Kinds that form a graph of categories as data."""
 from kind import builtin, core
 from kind.builtin import apply_builtins
+from kind.core.base_kind import KindLimitError
 from kind.core.batch_processing import a_process_batch, process_batch
 from kind.core.graph_traversal import GraphTraversal
 from kind.core.kind import Kind
 from kind.core.kind_namespace import k
 from kind.core.time_arithmetics import add_time_objects, subtract_time_objects
 
-__all__ = ["Kind", "k", "GraphTraversal", "a_process_batch", "process_batch",
+__all__ = ["Kind", "k", "KindLimitError", "GraphTraversal", "a_process_batch", "process_batch",
            "add_time_objects", "subtract_time_objects", "add_time", "subtract_time", "builtin", "core"]
 
 apply_builtins()

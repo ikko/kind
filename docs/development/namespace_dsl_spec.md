@@ -84,7 +84,7 @@ Installing collected packages
 ## Memory Behavior
 
 - Controlled origin retention (`Kind.origin`; the first non-None origin given wins)
-- Weak pool: a Kind keeps its identity only while something references it
+- Strong pool: a name keeps its identity and state until `delete()` or `Kind.forget(name)`; `Kind.max_kinds` caps the pool
 
 ## Extensibility
 

@@ -116,11 +116,11 @@
      
         * Interning (Flyweight Pattern): At its essence, «kind» ensures that each unique string
           name corresponds to precisely one Kind object instance in memory. This is achieved by
-          overriding the __new__ method to manage a global, weak interning pool (a Kind keeps its
-          identity while something references it). This design choice, an application of the
+          overriding the __new__ method to manage a global, strong interning pool, like a Lisp or Ruby
+          symbol table (a name keeps its identity and state until delete() or Kind.forget(name)). This design choice, an application of the
           Flyweight pattern [3], offers significant advantages:
-            * O(1) Identity Check: Kind("concept") is Kind("concept") evaluates to True while the
-              Kind is alive, enabling constant-time identity comparisons.
+            * O(1) Identity Check: Kind("concept") is Kind("concept") evaluates to True until the
+              Kind is deleted, enabling constant-time identity comparisons.
             * Memory Efficiency: Prevents redundant object creation, drastically reducing memory
               footprint in applications with recurring symbolic representations.
             * Canonical Representation: Guarantees that all references to a particular concept point

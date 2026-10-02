@@ -75,7 +75,7 @@ The `kind-scheduler` command line tool lives in `kind.bin.scheduler`, on top of 
 
 ## Inter-Layer Communication
 
-The `kind.core` package, particularly `kind.py`, integrates with selected `kind.builtin` modules to enhance its fundamental capabilities. For instance, `KindIndex` from `kind.builtin.index` is used within the `Kind` class to manage per-instance indexing, `OrderedKindSet` from `kind.builtin.collections` holds `children` and `parents`, and `AVLTree` from `kind.builtin.avl_tree` keeps the live Kinds in creation order. This controlled dependency allows the core to leverage specialized, well-encapsulated functionalities without compromising its lean design.
+The `kind.core` package, particularly `kind.py`, integrates with selected `kind.builtin` modules to enhance its fundamental capabilities. For instance, `KindIndex` from `kind.builtin.index` is used within the `Kind` class to manage per-instance indexing, `OrderedKindSet` from `kind.builtin.collections` holds `children` and `parents`, and `AVLTree` from `kind.builtin.avl_tree` keeps the pooled Kinds in creation order. This controlled dependency allows the core to leverage specialized, well-encapsulated functionalities without compromising its lean design.
 
 ### Code Example: Core Leveraging Builtins
 

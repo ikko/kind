@@ -25,7 +25,7 @@ print(hello.tree())
 </details>
 
 ### Explanation
-- `Kind('hello')`: Creates a `Kind` instance named 'hello'. Due to the interning mechanism, if 'hello' already exists (and is still referenced: the pool is weak), the existing instance is returned.
+- `Kind('hello')`: Creates a `Kind` instance named 'hello'. Due to the interning mechanism, if 'hello' already exists, the existing instance is returned.
 - `k.world`: Utilizes the `KindNamespace` (`k`) for a more concise way to create a `Kind` named 'world'. This is syntactic sugar for `Kind('world')`.
 - `hello.add(world)`: Establishes a directed relationship from `hello` to `world`, making `world` a child of `hello`. If the relationship already exists, it's idempotent.
 - `print(hello.tree())`: Performs a depth-first traversal of `hello` and its descendants (children only) and prints the resulting list of kinds.

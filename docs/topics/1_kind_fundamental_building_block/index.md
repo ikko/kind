@@ -9,7 +9,7 @@ The `Kind` object serves as the atomic unit within the framework, embodying a no
 
 ## Uniqueness and Interning
 
-Each `Kind` instance is uniquely identified by its `name` attribute. This uniqueness is enforced through an interning mechanism, ensuring that `Kind('A')` returns the same object in memory as any subsequent call to `Kind('A')`. The pool is weak: a Kind keeps its identity only while something references it. This design choice offers significant advantages:
+Each `Kind` instance is uniquely identified by its `name` attribute. This uniqueness is enforced through an interning mechanism, ensuring that `Kind('A')` returns the same object in memory as any subsequent call to `Kind('A')`. The pool is strong: a name stays the same Kind, state included, until `delete()` or `Kind.forget(name)` removes it. This design choice offers significant advantages:
 
 -   **Memory Efficiency**: Prevents redundant object creation, reducing memory footprint, especially in large graphs with many identical symbolic representations.
 -   **Consistency**: Guarantees that operations on a kind consistently refer to the same underlying entity, simplifying identity checks and graph integrity.

@@ -22,7 +22,7 @@ The `immute()` method orchestrates three distinct phases:
     style E fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
     ```
     
-2.  **Slim Down (`slim()`):** Following elevation, the `slim()` method drops elevated attributes whose value is `SENTINEL` (a placeholder for a part that holds no value), unless they are protected; `immute()` protects the keys it just elevated. It does not delete slots and does not call `gc.collect()`; Python's garbage collector reclaims what is no longer referenced.
+2.  **Slim Down (`slim()`):** Following elevation, the `slim()` method drops elevated attributes whose value is `SENTINEL` (a placeholder for a part that holds no value), unless they are protected; `immute()` protects the keys it just elevated. It does not delete slots and does not call `gc.collect()`.
 
     ```mermaid
     graph TD

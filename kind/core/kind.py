@@ -498,29 +498,38 @@ class Kind(BaseKind):
 
     @classmethod
     def first(cls) -> Optional['Kind']:
-        """The earliest created live Kind."""
+        """The earliest created Kind in the pool."""
         node = cls._numbered.min_node()
         return node.kind if node else None
 
     @classmethod
     def last(cls) -> Optional['Kind']:
-        """The most recently created live Kind."""
+        """The most recently created Kind in the pool."""
         node = cls._numbered.max_node()
         return node.kind if node else None
 
     @classmethod
     def len(cls) -> int:
-        """The number of live Kinds."""
-        return cls._numbered.size()
+        """The number of Kinds in the pool."""
+        return len(BaseKind._pool)
+
+    @classmethod
+    def forget(cls, name: str) -> bool:
+        """Deletes the Kind called `name` if there is one; returns whether there was."""
+        kind = BaseKind._pool.get(name)
+        if kind is None:
+            return False
+        kind.delete()
+        return True
 
     @classmethod
     def seek(cls, pos: float) -> Optional['Kind']:
-        """The live Kind created at position `pos`, or None."""
+        """The Kind created at position `pos`, or None."""
         return cls._numbered.search(pos)
 
     @classmethod
     def each(cls, start: Union[float, 'Kind', None] = None) -> Iterator['Kind']:
-        """Live Kinds in creation order, optionally from a position or a Kind on."""
+        """Kinds in creation order, optionally from a position or a Kind on."""
         if start is not None and not isinstance(start, (int, float, Kind)):
             raise TypeError(f"Invalid start parameter {start!r} of type {type(start).__name__} in each()")
         start_weight = start._position if isinstance(start, Kind) else start
@@ -533,9 +542,9 @@ class Kind(BaseKind):
         """Converts a value to a Kind.
 
         Scalars become the Kind of their text (`123` -> Kind('123')). A container becomes
-        the Kind of its content (`[1, 2]` -> Kind('[1, 2]')) with its items as children and
-        a `has_kind` relation to the container's kind (Kind('list')). Equal content means
-        the same Kind, as for any name.
+        the Kind of its canonical content (`[1, 2]` -> Kind('[1, 2]'); dict keys and set
+        members sorted) with its items as children and a `has_kind` relation to the
+        container's kind (Kind('list')). Equal values mean the same Kind, as for any name.
         """
         if isinstance(obj, Kind):
             return obj
@@ -553,13 +562,8 @@ class Kind(BaseKind):
 
     @classmethod
     def _from_container(cls, value: Union[list, tuple, set, frozenset, dict]) -> 'Kind':
-        if isinstance(value, (set, frozenset)):
-            items = sorted(value, key=repr)
-            name = f"{type(value).__name__}({{{', '.join(map(repr, items))}}})" if items else f"{type(value).__name__}()"
-        else:
-            items = value
-            name = repr(value)
-        kind = cls(name, origin=value)
+        items = sorted(value, key=canonical_repr) if isinstance(value, (set, frozenset)) else value
+        kind = cls(canonical_repr(value), origin=value)
         if isinstance(value, dict):
             for key, val in value.items():
                 kind.append(key).append(val)
@@ -644,7 +648,7 @@ class Kind(BaseKind):
 
     @classmethod
     def ps(cls) -> None:
-        """Prints all live Kinds with their footprint and origin."""
+        """Prints every pooled Kind with its footprint and origin."""
         rows = ["{:<30} {:<15} {:<50}".format("Name", "Footprint (b)", "Origin"), "-" * 95]
         total = 0
         for name, kind in sorted(BaseKind._pool.items()):
@@ -701,6 +705,26 @@ class Kind(BaseKind):
             elif hasattr(obj, '__dict__') and not inspect.isroutine(obj) and not inspect.isclass(obj):
                 stack.append(vars(obj))
         return total
+
+
+def canonical_repr(value: Any) -> str:
+    """repr() with the order of unordered containers fixed, so equal values get equal names.
+
+    Dict keys and set members are sorted by their own canonical form; lists and tuples
+    keep their order. `{'b': 2, 'a': 1}` and `{'a': 1, 'b': 2}` both give "{'a': 1, 'b': 2}".
+    """
+    if isinstance(value, dict):
+        pairs = sorted((canonical_repr(k), canonical_repr(v)) for k, v in value.items())
+        return "{" + ", ".join(f"{k}: {v}" for k, v in pairs) + "}"
+    if isinstance(value, (set, frozenset)):
+        members = sorted(canonical_repr(member) for member in value)
+        return f"{type(value).__name__}({{{', '.join(members)}}})" if members else f"{type(value).__name__}()"
+    if isinstance(value, list):
+        return "[" + ", ".join(canonical_repr(item) for item in value) + "]"
+    if isinstance(value, tuple):
+        inner = ", ".join(canonical_repr(item) for item in value)
+        return f"({inner},)" if len(value) == 1 else f"({inner})"
+    return repr(value)
 
 
 def to_kind(obj: Any) -> Kind:

@@ -1,5 +1,4 @@
 import threading
-from weakref import WeakValueDictionary
 
 import pytest
 
@@ -23,8 +22,12 @@ def apply_builtins_for_session():
 
 def _fresh_pool() -> None:
     """Forgets every Kind: a new pool and creation order (existing objects live on, unpooled)."""
-    BaseKind._pool = WeakValueDictionary()
-    BaseKind._numbered = AVLTree(weak=True)
+    BaseKind._pool = {}
+    BaseKind._numbered = AVLTree()
+    BaseKind.max_kinds = None
+    for cls in (Kind, *Kind.__subclasses__()):
+        if "max_kinds" in vars(cls):
+            delattr(cls, "max_kinds")
     BaseKind._auto_counter = 0
     BaseKind._write_cursor = 0.0
     BaseKind._lock = threading.RLock()

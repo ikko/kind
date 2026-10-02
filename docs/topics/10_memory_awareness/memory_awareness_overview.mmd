@@ -1,28 +1,29 @@
 graph LR
     subgraph "Kind Memory Awareness"
-        A[GC-aware Deletion] --> B[Weak Intern Pool];
+        A[Explicit Lifetime] --> B[Strong Intern Pool, like a Symbol Table];
         A --> C[Re-parents Children, Removes Relations];
-        A --> D[Kind.delete#40#41 Method];
+        A --> D[Kind.delete#40#41 / Kind.forget#40;name#41;];
+        A --> X[Kind.max_kinds Cap, KindLimitError];
 
         E[Proactive Memory Management] --> F[Kind.context Attribute];
         E --> G[DefDict for Context];
         E --> H[Kind.clear_context#40#41 Method];
 
         I[slim#40#41;] --> J[Drops SENTINEL Elevated Attributes];
-        I --> K[Leaves Collection to Python's GC];
+        I --> K[Lazily Created Parts Stay SENTINEL Until Used];
         I --> L[Part of immute#40#41;];
     end
 
     subgraph "Key Concepts"
-        M[Python's Garbage Collector] --> N[Reference Counting];
-        M --> O[Cycle Detection];
-        P[Weak References] --> Q[Pool Does Not Keep Kinds Alive];
+        M[Stateful Names] --> N[A Name Is One Entity, State Included];
+        M --> O[Collecting a Kind Would Lose Data];
+        P[Memory Grows With Names] --> Q[delete#40#41, forget#40#41, max_kinds];
     end
 
     subgraph "Benefits"
         R[Reduced Memory Footprint] --> S[Efficient Resource Utilization];
         T[Prevention of Memory Leaks] --> U[Stable Long-Running Applications];
-        V[Predictable Performance] --> W[Minimizes GC Pauses];
+        V[Predictable Behavior] --> W[No Kind Disappears Behind Your Back];
     end
 
     %% Core deletion functionality - purple theme
@@ -30,6 +31,7 @@ graph LR
     style B fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style C fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style D fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
+    style X fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
 
     %% Proactive management - blue theme
     style E fill:#1E90FF,stroke:#333,stroke-width:2px,color:#FFFFFF;

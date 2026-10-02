@@ -123,7 +123,7 @@ graph TD
 *   **Formal Verification:** The stable identity of `Kind` instances (one instance per name), per-instance freezing (`kind.freeze()`, `kind.immute()`) and the explicit graph structure lend themselves well to formal verification techniques for system properties.
 *   **Semantic Web Integration:** `Kind` can serve as a lightweight, in-memory RDF-like store, where `Kind` names are URIs and relationships form triples.
 *   **Dynamic Systems Modeling:** The mixin architecture enables runtime adaptation of system behavior, crucial for simulating adaptive or self-organizing systems.
-*   **Memory Footprint:** While interning optimizes for unique names, be mindful of the graph's overall memory consumption for extremely large-scale graphs. The pool is weak: a `Kind` keeps its identity only while something references it (a parent, a relation or your own variable); `kind.footprint()` reports its size.
+*   **Memory Footprint:** While interning optimizes for unique names, be mindful of the graph's overall memory consumption for extremely large-scale graphs. The pool is strong: a `Kind` stays (state included) until `kind.delete()` or `Kind.forget(name)` removes it, so memory grows with the number of names; set `Kind.max_kinds` to cap it (`KindLimitError`) when names come from untrusted input. `kind.footprint()` reports a Kind's size.
 
 ### 4. Advice to Engineers
 

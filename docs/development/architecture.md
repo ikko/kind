@@ -113,7 +113,7 @@ graph TD
 
 The Core Layer provides the fundamental building blocks of the `kind` library. It includes the `Kind` class itself, along with essential services for graph traversal, mixin-based extensibility, and memory management.
 
-*   **`base_kind`**: Defines `BaseKind`, the interned, name-identified node: one weak pool for all classes (a Kind keeps its identity while something references it) and the creation-order index (an `AVLTree`).
+*   **`base_kind`**: Defines `BaseKind`, the interned, name-identified node: one strong pool for all classes (a name keeps its identity and state until `delete()`/`Kind.forget(name)`; `max_kinds` caps it) and the creation-order index (an `AVLTree`).
 *   **`kind`**: Extends the `base_kind` with advanced features such as graph traversal, indexing, relations, per-instance freezing, maturing, Mermaid/ASCII rendering and serialization.
 *   **`graph_traversal`**: Provides `GraphTraversal(root, traverse_mode, family_mode)`, iterative DFS/BFS over a `Kind` graph.
 *   **`relations`**: Holds a Kind's named relations (strong references) and the dynamic relation verbs (`a.has_kind(b)`).
@@ -133,7 +133,7 @@ The Core Layer provides the fundamental building blocks of the `kind` library. I
 The Builtin Extensions Layer provides a collection of optional modules that extend the functionality of the `Kind` class. These modules are designed to be self-contained and can be used independently of one another.
 
 *   **`collections`**: Provides custom collection classes for `Kind` objects, such as `OrderedKindSet`.
-*   **`time_dim`**: Provides time dimension-related functionality for `Kind` objects.
+*   **`time_dim`**: Gives a Kind named like an ISO 8601 date or time a time dimension (`as_date`, `hour`, ...; any other name raises `ValueError`, no fallback). `kind.time_head` / `kind.time_tail` are `KindHeadTailView`s over the temporal Kinds only, whose operations are named for what they return: filters `filter_by_*` → view; selectors `first()`, `last()`, `nth(n)`, `closest(x)`, `furthest(x)` → Kind; reshapers `reversed()`, `shuffled()`, `sample(n)`, `unique()` → view; aggregates `map`, `reduce`, `sum`, `min`, `max`, `average`, `median`, `mode`, `std`, `variance`, `percentile`, `quantile` (taking a function), plus `count()`, `is_empty()`, `any(pred)`, `all(pred)`, `none(pred)`, `span()`.
 *   **`index`**: Provides index capabilities for `Kind` objects.
 *   **`path`**: Provides pathfinding capabilities for `Kind` objects.
 *   **`visual`**: Provides Graphviz rendering (`to_dot`, `to_svg`, `to_png`, `a_to_svg`, `a_to_png`) and `from_mmd`, as mixins on every `Kind`; Mermaid and ASCII output belong to `Kind` itself.

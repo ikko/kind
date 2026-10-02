@@ -1,7 +1,7 @@
 
 graph
     subgraph "Kind API Highlights"
-        A[Kind#40;name: str#41;] --> B[Interned in a Weak Pool, Idempotent Constructor];
+        A[Kind#40;name: str#41;] --> B[Interned in a Strong Pool, Idempotent Constructor];
         A --> C[Kind.next#40;#41;];
         C --> D[Creates Auto-Numbered Kind];
         A --> E[kind.append#40;child#41;];

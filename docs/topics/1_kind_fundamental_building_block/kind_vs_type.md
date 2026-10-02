@@ -7,7 +7,7 @@ Every Python code block on this page runs in the test suite (`tests/test_doc_exa
 ## What a Kind is, precisely
 
 - **An ordinary object, not a class.** `Kind('Stock')` is an instance of the Python class `Kind` ([kind.py](../../../kind/core/kind.py)). It has no instances of its own.
-- **Identity by name.** All Kinds share one pool, so one name means one object, as long as something references it: the pool is weak, like `sys.intern` ([base_kind.py](../../../kind/core/base_kind.py)).
+- **Identity by name.** All Kinds share one pool, so one name means one object, state included, until `delete()` or `Kind.forget(name)` ends it: the pool is a symbol table, as in Lisp and Ruby ([base_kind.py](../../../kind/core/base_kind.py)).
 - **Equality and hash by name.**
 - **Hierarchy is data:** `children`/`parents` form an ordered graph, and named **relations** carry an inverse (`a.relate(b, how='x')`, or the verb form `a.x(b)`).
 - **Extensible at runtime:** mixins attach behaviour to every Kind; elevated attributes attach values to one.
@@ -36,7 +36,7 @@ assert stock == Kind('Stock') and hash(stock) == hash('Stock')
 
 | dimension | Python `type` (class) | `Kind` | Lisp / Ruby symbol |
 |---|---|---|---|
-| **identity** | object identity for its lifetime | one per name, while referenced (weak pool) | one per name (per package in Lisp) |
+| **identity** | object identity for its lifetime | one per name, until deleted (strong pool) | one per name (per package in Lisp) |
 | **equality** | identity by default | by name | by identity |
 | **instantiation** | `C()` makes values of type `C` | `Kind(name)` returns the shared node; nothing is *of* a Kind | none: the symbol is the value |
 | **membership test** | `isinstance` / `issubclass` | an edge: `b in a.relations.get('has_kind')` | none built in |
@@ -100,18 +100,25 @@ The philosophers' version is the [type–token distinction](https://plato.stanfo
 ## The limits that follow from "categories are data"
 
 - **No static checking.** A misspelled name is a new Kind, and a misspelled public relation verb (`a.has_knid(b)`) is a new relation, by design. Only private names (`a._x`) raise `AttributeError`.
-- **Identity lasts while referenced.** The pool is weak. An unreferenced Kind is collected, and the name later starts afresh, with no origin:
+- **A name lives until you end it.** The pool is strong, so a Kind keeps its state with no reference held. Why not weak, like `sys.intern`? Losing an interned *string* is unobservable, because a string has no state. Losing a Kind would silently drop its origin, metadata and relations. The cost is memory: names accumulate until deleted, and `max_kinds` caps them when names come from untrusted input.
 
 ```python
 import gc
-from kind import Kind
+import pytest
+from kind import Kind, KindLimitError
 
-Kind('fleeting', origin=1)           # nothing keeps it
+Kind('x', origin=1).metadata['note'] = 'kept'   # no reference held
 gc.collect()
-assert Kind('fleeting', origin=2).origin == 2    # a new Kind of the same name
+assert Kind('x').metadata['note'] == 'kept'     # same entity, same state
+assert Kind('x', origin=2).origin == 1          # the first given origin wins
 
-kept = Kind('kept', origin=1)
-assert Kind('kept', origin=2).origin == 1        # the first given origin wins
+Kind.forget('x')                                # the name ends here
+assert Kind('x').origin is None
+
+Kind.max_kinds = Kind.len()                     # a cap for untrusted input
+with pytest.raises(KindLimitError):
+    Kind('one too many')
+Kind.max_kinds = None
 ```
 
 - **A multiset becomes a set.** `children` hold each Kind once, so `Kind.from_object([1, 1])` has one child.

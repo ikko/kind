@@ -15,7 +15,7 @@ _Inspired by Ruby's [Symbol](https://ruby-doc.org/core-2.5.3/Symbol.html)._
 
 -   **[Kind](topics/1_kind_fundamental_building_block/index.md)**: The fundamental building block. Each kind has a unique name and can be connected to other kinds, forming complex relationships.
 -   **[Kind vs type](topics/1_kind_fundamental_building_block/kind_vs_type.md)**: What a Kind shares with a type, where it differs, and why it is not a Haskell kind.
--   **[Flyweight Design](topics/2_flyweight_design/index.md)**: Kinds are unique. `Kind('a')` returns the same object as long as something references it (the pool is weak), saving memory and ensuring consistency.
+-   **[Flyweight Design](topics/2_flyweight_design/index.md)**: Kinds are unique. `Kind('a')` returns the same object, state included, until `delete()` or `Kind.forget(name)` removes it (the pool is strong, like a symbol table), ensuring consistency.
 -   **[Layered Architecture](topics/3_layered_architecture/index.md)**: The core is minimal. Functionality is added through modular, "builtin" extensions for features like date/time handling, advanced collections, and visualization.
 -   **[Per-Instance Indexing](topics/4_per_instance_indexing/index.md)**: Every kind has its own private, weighted index of other kinds, allowing for the creation of sophisticated, nested data structures.
 -   **[Mixinability](topics/5_mixinability/index.md)**: The framework supports dynamic extension of `Kind` instances at runtime through mixins; a mixin is trusted code, and registration only checks its signature and refuses to replace core names.
@@ -87,7 +87,7 @@ For detailed performance analysis and empirical validation of Big O notations, r
 
 Memory Awareness
 ----------------
--   **[Memory Awareness](topics/10_memory_awareness/index.md)**: the intern pool is weak — a Kind lives while something references it (children and relations hold strong references)
+-   **[Memory Awareness](topics/10_memory_awareness/index.md)**: explicit lifetime — the intern pool is strong (`delete()`, `Kind.forget(name)`, `Kind.max_kinds` cap), plus lazily created parts, `clear_context()` and maturing
 -   Lazily created `metadata`, `context`, `index` and `relations`; `clear_context()` empties the context
 
 Extensibility:

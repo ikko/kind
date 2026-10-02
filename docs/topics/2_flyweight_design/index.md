@@ -4,7 +4,7 @@ The `Kind` framework leverages the **Flyweight design pattern** to ensure the un
 
 ## Core Principle: Shared Intrinsic State
 
-In the context of `Kind`, the intrinsic state—the `name` of the kind—is shared. When a request is made to create a `Kind` with a specific name (e.g., `Kind('apple')`), the system first checks if a `Kind` with that name already exists in a central pool. If it does, the existing instance is returned; otherwise, a new instance is created and added to the pool. There is one pool for all classes, and it is weak: a Kind stays in it only while something references it.
+In the context of `Kind`, the intrinsic state—the `name` of the kind—is shared. When a request is made to create a `Kind` with a specific name (e.g., `Kind('apple')`), the system first checks if a `Kind` with that name already exists in a central pool. If it does, the existing instance is returned; otherwise, a new instance is created and added to the pool. There is one pool for all classes, and it holds its Kinds strongly, like a Lisp or Ruby symbol table: a name stays the same entity, state included, until `delete()` or `Kind.forget(name)` removes it. (Weak interning suits stateless values such as strings; a Kind has state, so collecting it would lose data.)
 
 ```mermaid
 graph TD

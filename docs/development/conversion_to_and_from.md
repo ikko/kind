@@ -39,6 +39,17 @@ print(Kind('123').to(int))          # 123
 
 A container becomes the Kind named by its content, with its items as children and a `has_kind` relation to `Kind('list')` (or `tuple`, `set`, `dict`). A dict's values hang under their keys.
 
+The name is canonical (`canonical_repr` in `kind.core.kind`): dict keys and set members are sorted by their own canonical form, recursively, while lists and tuples keep their order. So equal values are one Kind, whatever their insertion order.
+
+```python
+from kind import Kind
+from kind.core.kind import canonical_repr
+
+print(Kind.from_object({'b': 2, 'a': 1}).name)                  # {'a': 1, 'b': 2}
+print(Kind.from_object({'a': 1, 'b': 2}) is Kind.from_object({'b': 2, 'a': 1}))  # True
+print(canonical_repr({'z': {3, 1}, 'y': [2, 1]}))               # {'y': [2, 1], 'z': set({1, 3})}
+```
+
 ```python
 from kind import Kind
 

@@ -18,34 +18,43 @@ def test_one_name_has_one_identity_across_the_hierarchy():
 
 
 def test_a_name_cannot_be_both_a_base_kind_and_a_kind():
-    plain = BaseKind("plain")  # identity lasts while referenced: the pool is weak
+    BaseKind("plain")
     with pytest.raises(TypeError, match="one name has one identity"):
         Kind("plain")
-    assert Kind._pool["plain"] is plain
 
 
-def test_unreferenced_kinds_leave_the_pool_and_the_creation_order():
-    keep = Kind("keep")
-    for i in range(100):
-        Kind(f"temporary_{i}")
+def test_a_name_keeps_its_state_without_any_reference():
+    """The pool is strong: a name is the same entity, state included, until deleted."""
+    Kind("x").metadata["a"] = 1
+    Kind("y", origin="source")
     gc.collect()
-    Kind("trigger_purge")  # the creation-order tree purges collected entries on its next write
-    assert "keep" in Kind._pool and "temporary_0" not in Kind._pool
-    assert Kind.len() <= 2 and keep in list(Kind.each())
+    assert Kind("x").metadata["a"] == 1
+    assert Kind("y").origin == "source"
+
+
+def test_forget_and_delete_end_a_name():
+    first = Kind("gone", origin=1)
+    assert Kind.forget("gone") is True and Kind.forget("gone") is False
+    assert "gone" not in Kind._pool and first not in list(Kind.each())
+    assert Kind("gone", origin=2).origin == 2  # a new entity
+
+
+def test_max_kinds_caps_the_pool():
+    from kind import KindLimitError
+    Kind("one")
+    Kind.max_kinds = 2
+    Kind("two")
+    assert Kind("one") is Kind("one")  # existing names still resolve
+    with pytest.raises(KindLimitError, match="Hint"):
+        Kind("three")
+    Kind.forget("one")
+    Kind("three")
 
 
 def test_first_origin_wins():
-    o = Kind("o")
-    assert o.origin is None
+    assert Kind("o").origin is None
     assert Kind("o", origin=1).origin == 1
     assert Kind("o", origin=2).origin == 1
-
-
-def test_identity_lasts_while_referenced():
-    """The pool is weak: an unreferenced Kind is collected, and the name starts afresh."""
-    Kind("fleeting", origin=1)
-    gc.collect()
-    assert Kind("fleeting", origin=2).origin == 2
 
 
 # --- attributes and dynamic relations -----------------------------------------
@@ -259,10 +268,30 @@ def test_cycles_terminate(family):
 
 # --- builtins -----------------------------------------------------------------
 
-def test_time_head_and_tail_order_kinds_chronologically():
+def test_time_head_and_tail_order_temporal_kinds_only():
     late, early, middle = Kind("2023-01-03"), Kind("2023-01-01"), Kind("2023-01-02")  # created out of order
+    Kind("not a date")
     assert list(early.time_head) == [early, middle, late]
     assert list(early.time_tail) == [late, middle, early]
+
+
+def test_time_properties_refuse_names_that_are_not_dates():
+    with pytest.raises(ValueError, match="not a date or time"):
+        Kind("tuesday-ish").as_date
+
+
+def test_view_operations_are_named_for_what_they_return():
+    import datetime
+    days = [Kind(f"2026-10-0{d}") for d in (5, 3, 4, 10 - 9)]  # Oct 5, 3, 4, 1
+    view = days[0].time_head
+    assert names(view.filter_by_weekday(0)) == ["2026-10-05"]           # filter -> view (Monday)
+    assert names(view.filter_by_workday()) == ["2026-10-01", "2026-10-02"][:1] + ["2026-10-05"]
+    assert view.first().name == "2026-10-01" and view.closest(datetime.datetime(2026, 10, 4, 20)).name == "2026-10-05"
+    assert names(view.reversed())[0] == "2026-10-05"                      # reshaper -> view
+    day_of = lambda kind: kind.day
+    assert (view.count(), view.sum(day_of), view.average(day_of), view.median(day_of)) == (4, 13, 3.25, 3.5)
+    assert view.quantile(day_of, 0.5) == 3.5 and view.percentile(day_of, 100) == 5
+    assert view.span() == datetime.timedelta(days=4)
 
 
 def test_period_properties_span_the_earliest_to_the_latest_kind():

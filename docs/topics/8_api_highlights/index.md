@@ -4,7 +4,7 @@ The `Kind` framework provides a concise yet powerful API for manipulating symbol
 
 ## `Kind(name: str)`: Globally Interned, Idempotent Constructor
 
-The `Kind` constructor serves as the fundamental entry point for creating symbolic entities within the framework. Its design adheres to the **Flyweight pattern**, ensuring that for any given `name` string, only a single `Kind` object instance exists in memory. One pool serves all classes, and it is weak: a Kind keeps its identity only while something references it. This global interning mechanism guarantees object identity and optimizes memory utilization, particularly in scenarios involving a large number of recurring symbolic representations. The constructor is idempotent, meaning repeated calls with the same `name` will consistently return the identical `Kind` instance, thereby maintaining referential integrity across the system.
+The `Kind` constructor serves as the fundamental entry point for creating symbolic entities within the framework. Its design adheres to the **Flyweight pattern**, ensuring that for any given `name` string, only a single `Kind` object instance exists in memory. One pool serves all classes, and it is strong: a Kind keeps its identity and state until `delete()` or `Kind.forget(name)` removes it. This global interning mechanism guarantees object identity and optimizes memory utilization, particularly in scenarios involving a large number of recurring symbolic representations. The constructor is idempotent, meaning repeated calls with the same `name` will consistently return the identical `Kind` instance, thereby maintaining referential integrity across the system.
 
 ### Purpose and Usage
 This method is used to create or retrieve a unique `Kind` instance based on its string `name`. It's the primary way to introduce new symbolic entities into the graph.
@@ -109,7 +109,7 @@ graph TD
 The `Kind` framework provides intuitive methods for establishing relationships between symbolic entities, forming the edges of the underlying directed acyclic graph (DAG). `append(child)` creates a direct parent-child relationship. For more semantically rich and arbitrary connections, the framework now supports dynamic relation creation via attribute access, allowing for a highly expressive and readable way to define the nature of the relationship.
 
 ### Purpose and Usage
-These methods are used to build the graph structure by defining directed relationships between `Kind` instances. `append` is for simple hierarchical relationships. Dynamic relations allow for custom relationship types using a natural, dot-notation syntax, where the attribute name becomes the 'how' of the relation: `a.depends_on(b)` is `a.relate(b, how='depends_on')` (any public name; private names such as `_x` raise `AttributeError`), and `a.unrelate(b, how=None)` removes one or all relations to `b`. A relation holds a strong reference, so a related Kind stays alive.
+These methods are used to build the graph structure by defining directed relationships between `Kind` instances. `append` is for simple hierarchical relationships. Dynamic relations allow for custom relationship types using a natural, dot-notation syntax, where the attribute name becomes the 'how' of the relation: `a.depends_on(b)` is `a.relate(b, how='depends_on')` (any public name; private names such as `_x` raise `AttributeError`), and `a.unrelate(b, how=None)` removes one or all relations to `b`. A relation holds a strong reference to the related Kind.
 
 ### Code Example
 ```python

@@ -3,12 +3,21 @@
 One name has one identity in a process: all classes in the hierarchy share one pool,
 so `BaseKind('A') is Kind('A')` holds whichever was created first, as long as the first
 one is at least as specific as the one requested.
+
+The pool holds its Kinds strongly, like a Lisp or Ruby symbol table: a name stays the
+same entity, with its state, until `delete()` or `Kind.forget(name)` removes it. A weak
+pool would be invisible only for stateless values such as interned strings; a Kind
+carries state, so collecting it would silently lose data. `max_kinds` caps the pool
+when names come from untrusted input.
 """
 import threading
 from typing import Any, Optional
-from weakref import WeakValueDictionary
 
 from kind.builtin.avl_tree import AVLTree
+
+
+class KindLimitError(RuntimeError):
+    """Raised when creating a Kind would exceed BaseKind.max_kinds."""
 
 
 class BaseKind:
@@ -24,8 +33,9 @@ class BaseKind:
         'node_shape',
     )
 
-    _pool: WeakValueDictionary = WeakValueDictionary()
-    _numbered: AVLTree = AVLTree(weak=True)  # every live Kind, by creation position
+    _pool: dict = {}
+    _numbered: AVLTree = AVLTree()  # every Kind in the pool, by creation position
+    max_kinds: Optional[int] = None  # None: unbounded; set it when names come from untrusted input
     _auto_counter: int = 0
     _write_cursor: float = 0.0
     _lock = threading.RLock()
@@ -46,6 +56,10 @@ class BaseKind:
                     object.__setattr__(existing, 'origin', origin)  # the first given origin wins
                 return existing
 
+            if cls.max_kinds is not None and len(BaseKind._pool) >= cls.max_kinds:
+                raise KindLimitError(
+                    f"Cannot create {name!r}: the pool already holds max_kinds={cls.max_kinds} Kinds. "
+                    f"Hint: delete() or Kind.forget() Kinds you no longer need, or raise {cls.__name__}.max_kinds.")
             obj = super().__new__(cls)
             obj._init_slots(name, origin)
             BaseKind._pool[name] = obj

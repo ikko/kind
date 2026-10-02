@@ -4,7 +4,7 @@ graph TD
         A[Kind Creation & Management] --> B{Kind Class};
         B --> C[BaseKind];
         B --> D[KindNamespace];
-        C --> E[WeakValueDictionary for Pooling];
+        C --> E[Strong dict Pool, delete/forget, max_kinds];
         C --> F[AVLTree for Numbered Kinds];
     end
 
@@ -18,7 +18,7 @@ graph TD
 
     subgraph Advanced Features
         B --> L[Graph Traversal];
-        B --> M[Lazy Loading & Maturing];
+        B --> M[Lazily Created Parts & Maturing];
         B --> N[Mixinability];
         B --> O[Serialization (orjson)];
     end

@@ -2,19 +2,19 @@
 
 The `Kind` framework is meticulously designed with memory efficiency as a core principle. In graph-based systems, managing memory effectively is paramount to scalability and performance, especially when dealing with a large number of interconnected entities. `Kind` employs several strategies to minimize its memory footprint and prevent common issues like memory leaks, ensuring robust and predictable behavior.
 
-## GC-aware Deletion and the Weak Pool
+## Explicit Lifetime: a Strong Pool, `delete()` and `forget()`
 
-`Kind` relies on Python's garbage collection (GC) to release resources when they are no longer needed. The intern pool is weak: it does not keep a Kind alive, so a Kind that nothing references is collected, and a later `Kind(name)` creates a fresh one. The `delete()` method, when invoked on a `Kind` instance, severs its explicit connections and removes it from the pool; Python's GC handles the deallocation.
+The intern pool holds its Kinds strongly, like a Lisp or Ruby symbol table: a name stays the same entity, with all its state (origin, metadata, relations, elevated attributes), until `kind.delete()` or `Kind.forget(name)` removes it. Kinds are never collected behind your back. A weak pool would be invisible only for stateless values such as interned strings; a Kind carries state, so collecting it would silently lose data. The price is that memory grows with the number of names, so the lifetime of a Kind is explicit, and the pool can be capped.
 
 ### Mechanism
-- **`BaseKind._pool`**: A `weakref.WeakValueDictionary`, one for all classes; it holds Kinds only while something else references them. Children, parents and relations are strong references, so a Kind reachable from a referenced Kind stays alive.
-- **`Kind.delete()`**: Moves its children up to its parents, removes its relations in both directions, clears its parents and children, and removes it from the pool and from the creation-order tree.
-- **No forced collection**: the library does not call `gc.collect()`; breaking references is enough for reference counting, and the cycle collector handles the rest.
+- **`BaseKind._pool`**: A plain `dict` from name to Kind, one for all classes. `Kind.len()` is `len(pool)`, O(1).
+- **`Kind.delete()`**: Moves its children up to its parents, removes its relations in both directions, clears its parents and children, and removes it from the pool and from the creation-order tree. A later `Kind(name)` creates a fresh Kind.
+- **`Kind.forget(name)`**: Deletes the Kind called `name` if there is one; returns `True` if there was, else `False`.
+- **`Kind.max_kinds`** (`BaseKind.max_kinds`, default `None` = unbounded): caps the pool; creating a Kind beyond it raises `KindLimitError` (importable from `kind`). Set it when names come from untrusted input.
 
 ### Code Example
 ```python
-import gc
-from kind import Kind
+from kind import Kind, KindLimitError
 
 # Create some kinds and relationships
 root = Kind('Root')
@@ -34,11 +34,19 @@ print(f"After delete: Root children: {[c.name for c in root.children]}")
 print(f"After delete: Child1 parents: {[p.name for p in child1.parents]}")
 print(f"After delete: Kind('Child1') is child1? {Kind('Child1') is child1}")  # a new Kind
 
-# The pool is weak: a Kind nobody references is collected
-live = Kind.len()
-Kind('Temporary')
-gc.collect()  # not needed under reference counting; makes the example explicit
-print(f"Temporary kept alive by the pool? {Kind.len() > live}")
+# The pool is strong: a Kind keeps its state with no variable referencing it
+Kind('Temporary').metadata['note'] = 'kept'
+print(f"Temporary still holds its state? {Kind('Temporary').metadata['note']}")
+print(f"forget('Temporary'): {Kind.forget('Temporary')}, again: {Kind.forget('Temporary')}")
+
+# Cap the pool when names come from untrusted input
+Kind.max_kinds = Kind.len()
+try:
+    Kind('one-too-many')
+except KindLimitError:
+    print("KindLimitError: the pool is full")
+finally:
+    Kind.max_kinds = None
 ```
 <details>
 <summary>Outcome</summary>
@@ -49,7 +57,9 @@ Before delete: Child1 parents: ['Root']
 After delete: Root children: ['Child2']
 After delete: Child1 parents: []
 After delete: Kind('Child1') is child1? False
-Temporary kept alive by the pool? False
+Temporary still holds its state? kept
+forget('Temporary'): True, again: False
+KindLimitError: the pool is full
 ```
 </details>
 
@@ -59,8 +69,8 @@ graph TD
     A[Kind to Delete] --> B{delete&#40&#41};
     B -- "Re-parents" --> C[Children to Parents];
     B -- "Removes" --> D[Relations, Edges, Pool Entry];
-    D --> E[No Strong References Left];
-    E --> F[Eligible for GC];
+    D --> E[Name Free Again];
+    E --> F[Next Kind#40;name#41; Is a Fresh Kind];
 
     style A fill:#2E8B57,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style B fill:#4169E1,stroke:#333,stroke-width:2px,color:#FFFFFF;
@@ -124,7 +134,7 @@ graph LR
 ```
 ## Conclusion
 
-Memory awareness is a fundamental aspect of the `Kind` framework's design, ensuring its suitability for high-performance and long-running applications. Through a weak intern pool, GC-aware deletion and proactive management of dynamic attributes like `context`, `Kind` minimizes its memory footprint and contributes to overall system stability. This commitment to efficient resource management allows developers to build complex symbolic systems without undue concern for memory-related performance bottlenecks.
+Memory awareness is a fundamental aspect of the `Kind` framework's design, ensuring its suitability for high-performance and long-running applications. Through explicit lifetime (a strong intern pool, `delete()`/`forget()` and the `max_kinds` cap), lazily created parts, maturing and proactive management of dynamic attributes like `context`, `Kind` minimizes its memory footprint and contributes to overall system stability. This commitment to efficient resource management allows developers to build complex symbolic systems without undue concern for memory-related performance bottlenecks.
 
 For a comprehensive overview of the Kind's memory awareness, refer to the [Memory Awareness Overview Diagram](memory_awareness_overview.mmd).
 

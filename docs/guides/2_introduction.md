@@ -279,6 +279,6 @@ graph TD
 
 ### Conclusion
 
-This introduction has covered the core aspects of the `Kind` library, from basic creation and relationship building to leveraging built-in mixins for time dimension handling, pathfinding, and indexing. `Kind` provides a flexible and powerful foundation for modeling complex systems across various domains. For more in-depth exploration of advanced features and custom extensions, please refer to the Advanced Tutorial and API Documentation.
+This introduction has covered the core aspects of the `Kind` library, from basic creation and relationship building to leveraging built-in mixins for time dimension handling, pathfinding and Graphviz rendering, plus per-instance indexing. `Kind` provides a flexible and powerful foundation for modeling complex systems across various domains. For more in-depth exploration of advanced features and custom extensions, please refer to the Advanced Tutorial and API Documentation.
 
 ---

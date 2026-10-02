@@ -6,7 +6,7 @@ This document provides empirical validation of the Big O notations asserted for 
 
 **Assertion**: Retrieving an interned Kind by name is an O(1) operation; creating a new Kind is O(log n), because it is also inserted into the creation-order index (an AVL tree) behind `Kind.first()`, `Kind.seek()` and `Kind.each()`.
 
-**Methodology**: We measure the time taken to instantiate a large number of unique and repeated kinds. The pool is weak, so the measurement keeps references to the Kinds it creates. Timings below are from one run (2026-10-02); they vary by machine.
+**Methodology**: We measure the time taken to instantiate a large number of unique and repeated kinds. Timings below are from one run (2026-10-02); they vary by machine.
 
 **Empirical Results**:
 
@@ -15,14 +15,14 @@ import time
 from kind import Kind, k
 
 def measure_kind_instantiation(num_kinds):
-    kept = []  # the pool is weak: an unreferenced Kind is collected and would be created anew
+    kept = []
     start_time = time.perf_counter_ns()
     for i in range(num_kinds):
         kept.append(Kind(f"test_kind_{num_kinds}_{i}")) # Unique kinds
     end_time = time.perf_counter_ns()
     time_unique = (end_time - start_time) / 1_000_000 # milliseconds
 
-    repeated = Kind("repeated_kind")  # held, so the loop below measures retrieval from the pool
+    repeated = Kind("repeated_kind")  # created once, so the loop below measures retrieval from the pool
     start_time = time.perf_counter_ns()
     for i in range(num_kinds):
         Kind("repeated_kind") # Repeated kind

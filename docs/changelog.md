@@ -4,7 +4,7 @@
 ### Changed
 - **Renamed from `symb` to `kind`**: the distribution, the package and the CLI. `Symbol` → `Kind`, `BaseSymbol` → `BaseKind`, `SymbolNamespace` → `KindNamespace`, `to_sym` → `to_kind`, and the namespace object `s` → `k` (`from kind import k`). The console script is `kind-scheduler`, because `kind` is the Kubernetes-in-Docker binary. Earlier entries below use the new names.
 - **Requires Python >= 3.10.**
-- **Weak, shared intern pool**: one pool for all Kind classes; a Kind keeps its identity only while something references it.
+- **One strong intern pool**: one pool for all Kind classes, a symbol table as in Lisp and Ruby. A name is the same entity, state included, until `kind.delete()` or `Kind.forget(name)` ends it; `max_kinds` caps the pool (`KindLimitError`) for names from untrusted input.
 - **`origin` defaults to `None`**; the first non-`None` origin given wins. `kind.ref` is a settable alias of `origin`.
 - **Per-instance freezing**: `kind.freeze()`, `kind.frozen`, and `kind.immute()` (elevate → slim → freeze) act on one Kind; a frozen Kind raises `FrozenKindError` on any attribute, edge or relation change. The process-wide mixin registry lock is `lock_mixins()` / `mixins_locked()`.
 - **`register_mixin(value, name=None, target_class=None, safe=True, expand=True)`**: refuses strings (no `eval`), private/dunder names, and core names unless `safe=False`; replacing a registered mixin is allowed. The validator checks the signature only (first parameter `self`); a mixin is trusted code.
@@ -13,13 +13,14 @@
 - **Traversal**: `to_ascii(traverse_mode, family_mode)` and `GraphTraversal(root, traverse_mode, family_mode)` (`family_mode` also accepts `'children_only'`); `kind.tree()` walks children only, `kind.graph()` children, parents and relations.
 - **Relations**: `a.relate(b, how=...)`, `a.unrelate(b, how=None)`, and dynamic verbs (`a.has_kind(b)`) for any public name; relations hold strong references.
 - **Serialization**: `to_json`/`to_yaml`/`to_toml` dump only the connected component of the Kind; `from_*` merge into existing Kinds by name.
-- **`Kind.from_object`**: scalars become the Kind of their text (`123` → `Kind('123')`); containers become a Kind named by their content, with items as children and a `has_kind` relation to `Kind('list')` (or `tuple`/`set`/`dict`).
-- **Creation order**: `Kind.next()` chains `kind_0`, `kind_1`, …; `Kind.first()`/`last()`/`len()`/`seek(pos)`/`each(start)` cover all live Kinds in creation order. `insert(child, at)` places a child at list index `at`.
+- **`Kind.from_object`**: scalars become the Kind of their text (`123` → `Kind('123')`); containers become a Kind named by their canonical content (dict keys and set members sorted, so equal values are one Kind), with items as children and a `has_kind` relation to `Kind('list')` (or `tuple`/`set`/`dict`).
+- **Creation order**: `Kind.next()` chains `kind_0`, `kind_1`, …; `Kind.first()`/`last()`/`len()`/`seek(pos)`/`each(start)` cover the pool in creation order (`len()` is O(1)). `insert(child, at)` places a child at list index `at`.
 - **`children`/`parents` are `OrderedKindSet`**: ordered, O(1) membership, no duplicates.
-- **Time views** are `kind.time_head` / `kind.time_tail`; `KindHeadTailView.filter_by_weekday(weekday)` filters by weekday number, `filter_by_workday()` keeps Monday–Friday.
+- **Time dimension**: a name that is not ISO 8601 has no time; `as_date`, `hour` and the like raise `ValueError` instead of assuming today at midnight, and `kind.time_head` / `kind.time_tail` include only temporal Kinds. `KindHeadTailView` operations are named for what they return: filters `filter_by_*` (a view; `filter_by_weekday(n)`, `filter_by_workday()`), selectors `first/last/nth/closest/furthest` (a Kind), reshapers `reversed/shuffled/sample/unique` (a view), aggregates `map/reduce/sum/min/max/average/median/mode/std/variance/percentile/quantile/count/is_empty/any/all/none/span` (a value).
 - **Scheduler**: `Scheduler(schedule_file=None, allowed_modules=(), now=datetime.datetime.now)`; `ScheduledJob(func, args=(), kwargs=None, schedule=..., id=None)`; `run_due_jobs()` runs one deterministic step. `process_batch(batch, func, new_thread=True)` and `a_process_batch(batch, func)`.
 ### Added
 - **`Timeline.overlap(other)`**: returns a Timeline of the common periods.
+- **`Kind.forget(name)`**, **`max_kinds`** and **`KindLimitError`**: explicit lifetime for names.
 ### Security
 - **Schedule files** may only name functions from `allowed_modules` (CLI: `kind-scheduler -f FILE -m MODULE add|list|remove|run`).
 - **`register_mixin`** no longer evaluates strings.
@@ -27,6 +28,8 @@
 ### Removed
 - The global `freeze()` / `is_frozen()` (see per-instance freezing above), `apply_mixin` (use `apply_mixin_to_instance`), `Kind.prev()`, the length cache, `que()`, `graph_mode`, the `mode` argument of `to_mmd()`, `KindRender.to_mmd`/`to_ascii`, the `from_int`/`from_float`/`from_str`/`from_bool`/`from_none`/`from_enum`/`from_list` constructors (use `Kind.from_object` / `to_kind`), the `new_process`/`new_thread` flags of `ScheduledJob`, and the `new_process` flag of `process_batch`.
 - Modules `kind/builtin/red_black_tree.py` (`AVLTree` remains), `kind/core/kindable.py`, `kind/core/lazy.py`, `kind/core/type_var_t.py`, `kind/utils/memory.py` and `kind/config.py`; `SENTINEL` lives in `kind/core/lazy_kind.py`.
+- `filter_by_timezone` and `filter_by_dst` (they always returned an empty view), and the `filter_by_` prefix on operations that do not filter.
+- The plan for lazy loading of builtins (`import kind` takes ~35 ms with them).
 - Import-time `logging.basicConfig` calls: the library no longer configures root logging.
 ### Fixed
 - **Installable package**: the `symb` 0.0.10 wheel installed top-level `core`, `builtin`, `bin` and `utils` packages, so `import symb` failed after `pip install`. All imports are now absolute (`kind.core…`), and the wheel contains only `kind/`.

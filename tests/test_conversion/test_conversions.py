@@ -35,6 +35,12 @@ def test_equal_content_is_the_same_kind_and_different_content_is_not():
     assert [c.name for c in Kind.from_object([3, 4]).children] == ["3", "4"]  # no merging across lists
 
 
+def test_equal_dicts_are_one_kind_whatever_their_key_order():
+    assert Kind.from_object({"b": 2, "a": 1}) is Kind.from_object({"a": 1, "b": 2})
+    assert Kind.from_object({"b": 2, "a": 1}).name == "{'a': 1, 'b': 2}"
+    assert Kind.from_object([{"y": 1, "x": (1,)}]).name == "[{'x': (1,), 'y': 1}]"  # nested too
+
+
 def test_dict_keys_are_children_and_values_hang_under_their_key():
     kind = Kind.from_object({"a": 1, "b": "two"})
     assert kind.name == "{'a': 1, 'b': 'two'}"

@@ -383,10 +383,10 @@ _**Disclaimer:**_
 : A Mermaid diagram illustrating the core relationships within a `Kind` object, including children, parents and named relations (`relate(other, how=...)`). This visual aid helps in understanding how `Kind` instances connect to form complex graph structures and represent semantic information.
 
 🧠 [memory_awareness](docs/topics/10_memory_awareness/index.md)
-: Details the `Kind` framework's meticulous design for memory efficiency, covering the weak intern pool, lazily created parts (`metadata`, `context`, `index`, `relations`), `clear_context()`, and maturing. This document explains how `Kind` minimizes its memory footprint and ensures robust, predictable behavior in large-scale, interconnected systems.
+: Details the `Kind` framework's meticulous design for memory efficiency, covering explicit lifetime (strong intern pool, `delete()`/`forget()`, `max_kinds`), lazily created parts (`metadata`, `context`, `index`, `relations`), `clear_context()`, and maturing. This document explains how `Kind` minimizes its memory footprint and ensures robust, predictable behavior in large-scale, interconnected systems.
 
 📊 [memory_awareness_overview diagram](docs/topics/10_memory_awareness/memory_awareness_overview.mmd)
-: A Mermaid diagram providing an overview of the `Kind`'s memory awareness mechanisms, including the weak intern pool, context cleanup, and the maturing process. This visual aid helps in understanding the various strategies employed to minimize memory footprint and ensure efficient resource management.
+: A Mermaid diagram providing an overview of the `Kind`'s memory awareness mechanisms, including explicit lifetime of the strong intern pool, context cleanup, and the maturing process. This visual aid helps in understanding the various strategies employed to minimize memory footprint and ensure efficient resource management.
 
 🧩 [extensibility_overview diagram](docs/topics/11_extensibility/extensibility_overview.mmd)
 : A Mermaid diagram illustrating the `Kind` framework's extensibility mechanisms, including the mixin protocols, `register_mixin()`, enum reflection compatibility, and external DSL input. This visual aid helps in understanding how `Kind` can be adapted and integrated into a wide array of applications and domains.

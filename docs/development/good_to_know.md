@@ -16,8 +16,8 @@
 - resolution: Modified the `to_mmd` function to collect all generated lines (excluding the header) and then sort them alphabetically before joining them into the final Mermaid string. The header is prepended after sorting. Today `to_mmd` is `Kind.to_mmd` in `kind/core/kind.py`: node declarations are sorted, and edges follow a deterministic depth-first walk (children in insertion order, relations by name).
 - takeaway: For deterministic output from recursive functions that build strings, especially for visual representations, consider collecting all parts and sorting them before final assembly.
 
-### Lazy Loading of Core Components
+### Import Order of Core Components
 - cause: Import errors and circular dependencies when importing `kind` due to eager loading of submodules.
 - reason: Initial design loaded all submodules directly in `kind/__init__.py`, leading to issues when certain modules depended on others that were not yet fully initialized or caused circular imports.
-- resolution: Implemented lazy loading for core components and builtin submodules in `kind/__init__.py`. Today `Kind`, `k` and `GraphTraversal` are imported eagerly; only the module aliases (`kind.td`, `kind.schedule`, `kind.vis`, ...) are imported on first access through the module-level `__getattr__`.
-- takeaway: For complex Python packages with interdependencies, lazy loading can be an effective strategy to manage import order, prevent circular dependencies, and optimize initial load times. This requires careful consideration of `__getattr__` and `__all__` in `__init__.py` files.
+- resolution: At the time, core components and builtin submodules were loaded lazily in `kind/__init__.py`. Today lazy loading is not a goal: all imports are absolute, and `import kind` loads `Kind`, `k`, `GraphTraversal` and the builtins eagerly (about 35–50 ms, measured 2026-10-02). Only the module aliases (`kind.td`, `kind.schedule`, `kind.vis`, ...) are resolved on first access through the module-level `__getattr__`.
+- takeaway: Circular imports are fixed at their cause (absolute imports, a clear layer order), not hidden behind lazy loading; a module-level `__getattr__` is still handy for optional aliases.
