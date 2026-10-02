@@ -1,11 +1,11 @@
 import sys
 import os
 import pytest
-from symb.core.symbol import Symbol
+from kind.core.kind import Kind
 from builtin import apply_builtins
 from builtin.avl_tree import AVLTree
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'symb')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'kind')))
 
 @pytest.fixture(scope='session', autouse=True)
 def apply_builtins_for_session():
@@ -14,8 +14,8 @@ def apply_builtins_for_session():
 
 
 @pytest.fixture(scope='function')
-def symb_fixture():
-    Symbol._pool.clear() # Ensure a clean slate for the fixture
+def kind_fixture():
+    Kind._pool.clear() # Ensure a clean slate for the fixture
 
     # Define a set of core bioinformatics terms for nodes
     core_nodes = [
@@ -27,73 +27,73 @@ def symb_fixture():
         "Sequence", "Structure", "Function", "Ontology", "Annotation"
     ]
 
-    # Create Symbol instances for core nodes
-    symbols = {name: Symbol(name) for name in core_nodes}
+    # Create Kind instances for core nodes
+    kinds = {name: Kind(name) for name in core_nodes}
 
     # Establish parent-child relationships (tree-like structure)
-    symbols["Gene"].append(symbols["Protein"])
-    symbols["Protein"].append(symbols["Enzyme"])
-    symbols["Enzyme"].append(symbols["Reaction"])
-    symbols["Reaction"].append(symbols["Metabolite"])
-    symbols["Gene"].append(symbols["Transcription Factor"])
-    symbols["Transcription Factor"].append(symbols["Regulation"])
-    symbols["Regulation"].append(symbols["Expression"])
-    symbols["Protein"].append(symbols["Structure"])
-    symbols["Structure"].append(symbols["Function"])
-    symbols["Gene"].append(symbols["SNP"])
-    symbols["SNP"].append(symbols["Disease"])
-    symbols["Disease"].append(symbols["Phenotype"])
-    symbols["Drug"].append(symbols["Disease"])
-    symbols["Cell"].append(symbols["Tissue"])
-    symbols["Tissue"].append(symbols["Organism"])
-    symbols["Experiment"].append(symbols["Data Set"])
-    symbols["Data Set"].append(symbols["Algorithm"])
-    symbols["Algorithm"].append(symbols["Network"])
-    symbols["Network"].append(symbols["Interaction"])
-    symbols["Interaction"].append(symbols["Binding"])
-    symbols["Binding"].append(symbols["Activation"])
-    symbols["Activation"].append(symbols["Inhibition"])
-    symbols["Sequence"].append(symbols["Gene"])
-    symbols["Ontology"].append(symbols["Annotation"])
+    kinds["Gene"].append(kinds["Protein"])
+    kinds["Protein"].append(kinds["Enzyme"])
+    kinds["Enzyme"].append(kinds["Reaction"])
+    kinds["Reaction"].append(kinds["Metabolite"])
+    kinds["Gene"].append(kinds["Transcription Factor"])
+    kinds["Transcription Factor"].append(kinds["Regulation"])
+    kinds["Regulation"].append(kinds["Expression"])
+    kinds["Protein"].append(kinds["Structure"])
+    kinds["Structure"].append(kinds["Function"])
+    kinds["Gene"].append(kinds["SNP"])
+    kinds["SNP"].append(kinds["Disease"])
+    kinds["Disease"].append(kinds["Phenotype"])
+    kinds["Drug"].append(kinds["Disease"])
+    kinds["Cell"].append(kinds["Tissue"])
+    kinds["Tissue"].append(kinds["Organism"])
+    kinds["Experiment"].append(kinds["Data Set"])
+    kinds["Data Set"].append(kinds["Algorithm"])
+    kinds["Algorithm"].append(kinds["Network"])
+    kinds["Network"].append(kinds["Interaction"])
+    kinds["Interaction"].append(kinds["Binding"])
+    kinds["Binding"].append(kinds["Activation"])
+    kinds["Activation"].append(kinds["Inhibition"])
+    kinds["Sequence"].append(kinds["Gene"])
+    kinds["Ontology"].append(kinds["Annotation"])
 
     # Establish custom relationships (graph-like structure)
-    symbols["Protein"].relate(symbols["Drug"], how="targets")
-    symbols["Gene"].relate(symbols["Disease"], how="associated_with")
-    symbols["Metabolite"].relate(symbols["Pathway"], how="participates_in")
-    symbols["Pathway"].relate(symbols["Regulation"], how="regulated_by")
-    symbols["Protein"].relate(symbols["Protein"], how="interacts_with") # Self-loop for PPI
-    symbols["Gene"].relate(symbols["Gene"], how="co_expresses_with")
-    symbols["Drug"].relate(symbols["Enzyme"], how="inhibits")
-    symbols["Disease"].relate(symbols["Organism"], how="affects")
-    symbols["Experiment"].relate(symbols["Phenotype"], how="measures")
-    symbols["Algorithm"].relate(symbols["Network"], how="analyzes")
-    symbols["Network"].relate(symbols["Interaction"], how="contains")
-    symbols["Ontology"].relate(symbols["Gene"], how="annotates")
-    symbols["Annotation"].relate(symbols["Protein"], how="describes")
-    symbols["Chromosome"].relate(symbols["Gene"], how="contains")
-    symbols["SNP"].relate(symbols["Gene"], how="located_in")
-    symbols["Cell"].relate(symbols["Protein"], how="expresses")
-    symbols["Tissue"].relate(symbols["Cell"], how="composed_of")
-    symbols["Organism"].relate(symbols["Tissue"], how="has_tissue")
-    symbols["Sequence"].relate(symbols["Structure"], how="determines")
-    symbols["Function"].relate(symbols["Protein"], how="performed_by")
+    kinds["Protein"].relate(kinds["Drug"], how="targets")
+    kinds["Gene"].relate(kinds["Disease"], how="associated_with")
+    kinds["Metabolite"].relate(kinds["Pathway"], how="participates_in")
+    kinds["Pathway"].relate(kinds["Regulation"], how="regulated_by")
+    kinds["Protein"].relate(kinds["Protein"], how="interacts_with") # Self-loop for PPI
+    kinds["Gene"].relate(kinds["Gene"], how="co_expresses_with")
+    kinds["Drug"].relate(kinds["Enzyme"], how="inhibits")
+    kinds["Disease"].relate(kinds["Organism"], how="affects")
+    kinds["Experiment"].relate(kinds["Phenotype"], how="measures")
+    kinds["Algorithm"].relate(kinds["Network"], how="analyzes")
+    kinds["Network"].relate(kinds["Interaction"], how="contains")
+    kinds["Ontology"].relate(kinds["Gene"], how="annotates")
+    kinds["Annotation"].relate(kinds["Protein"], how="describes")
+    kinds["Chromosome"].relate(kinds["Gene"], how="contains")
+    kinds["SNP"].relate(kinds["Gene"], how="located_in")
+    kinds["Cell"].relate(kinds["Protein"], how="expresses")
+    kinds["Tissue"].relate(kinds["Cell"], how="composed_of")
+    kinds["Organism"].relate(kinds["Tissue"], how="has_tissue")
+    kinds["Sequence"].relate(kinds["Structure"], how="determines")
+    kinds["Function"].relate(kinds["Protein"], how="performed_by")
 
     # Add some more complex relationships or cycles
-    symbols["Disease"].relate(symbols["Drug"], how="treated_by") # Bidirectional
-    symbols["Drug"].relate(symbols["Disease"], how="treats")
+    kinds["Disease"].relate(kinds["Drug"], how="treated_by") # Bidirectional
+    kinds["Drug"].relate(kinds["Disease"], how="treats")
 
     # Ensure at least 30 nodes are interconnected
-    # The current setup creates 30 unique symbols and establishes many connections.
+    # The current setup creates 30 unique kinds and establishes many connections.
     # The exact number of interconnections will depend on the append/relate calls.
-    # We can verify the total number of symbols created by checking Symbol._pool
-    assert len(Symbol._pool) >= 30, "Fixture did not create at least 30 unique symbols."
-    print(f"DEBUG: symb_fixture created {len(Symbol._pool)} symbols in pool.")
-    if "Gene" in symbols:
-        gene_root = symbols["Gene"]
+    # We can verify the total number of kinds created by checking Kind._pool
+    assert len(Kind._pool) >= 30, "Fixture did not create at least 30 unique kinds."
+    print(f"DEBUG: kind_fixture created {len(Kind._pool)} kinds in pool.")
+    if "Gene" in kinds:
+        gene_root = kinds["Gene"]
         reachable_from_gene = gene_root.graph()
-        print(f"DEBUG: {len(reachable_from_gene)} symbols reachable from 'Gene'.")
+        print(f"DEBUG: {len(reachable_from_gene)} kinds reachable from 'Gene'.")
 
-    yield symbols
+    yield kinds
 
     # Clean up after the fixture if necessary (though setup_and_teardown handles most of it)
-    Symbol._pool.clear()
+    Kind._pool.clear()

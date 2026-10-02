@@ -1,18 +1,18 @@
-# Scheduling: Event-Driven Automation with Symbol
+# Scheduling: Event-Driven Automation with Kind
 
-The `Symbol` framework integrates a robust scheduling mechanism, enabling the deferred and automated execution of tasks. This feature is critical for building event-driven architectures, automating workflows, and managing background processes within applications. The scheduler is designed for flexibility, supporting various scheduling paradigms from precise time dimension triggers to recurring cron-like expressions.
+The `Kind` framework integrates a robust scheduling mechanism, enabling the deferred and automated execution of tasks. This feature is critical for building event-driven architectures, automating workflows, and managing background processes within applications. The scheduler is designed for flexibility, supporting various scheduling paradigms from precise time dimension triggers to recurring cron-like expressions.
 
 ## Core Components: ScheduledJob and Scheduler
 
 The scheduling system is built around two primary components:
 
-1.  **`ScheduledJob`**: This class encapsulates a single task to be executed. It holds references to the callable function (`func`), its arguments (`args`, `kwargs`), and crucially, the `schedule` on which it should run. The `schedule` can be a `datetime.datetime` object for one-off tasks, a `cron` string for recurring jobs, or even a `Symbol` instance whose name represents an ISO 8601 datetime string.
+1.  **`ScheduledJob`**: This class encapsulates a single task to be executed. It holds references to the callable function (`func`), its arguments (`args`, `kwargs`), and crucially, the `schedule` on which it should run. The `schedule` can be a `datetime.datetime` object for one-off tasks, a `cron` string for recurring jobs, or even a `Kind` instance whose name represents an ISO 8601 datetime string.
 
     ```mermaid
     graph TD
             A[Callable Function] --> B[ScheduledJob];
             C[Arguments #40;args, kwargs#41;] --> B;
-            D[Schedule #40;datetime.datetime, cron string, Symbol#41;] --> B;
+            D[Schedule #40;datetime.datetime, cron string, Kind#41;] --> B;
             B -- "Calculates" --> E[Next Run Time];
     
         style A fill:#FFD700,stroke:#333,stroke-width:2px,color:#000000;
@@ -43,7 +43,7 @@ The scheduling system is built around two primary components:
 
 ### Microservice Orchestration
 ```python
-from symb.core.schedule import Scheduler, ScheduledJob
+from kind.core.schedule import Scheduler, ScheduledJob
 import datetime, time
 
 def data_ingestion(): print(f"[{datetime.datetime.now()}] Data Ingestion.")
@@ -88,10 +88,10 @@ graph TD
 
 Automated Report Generation
 
-For businesses, automated report generation is a common requirement. The `Symbol` scheduler can reliably handle tasks like generating daily sales reports, weekly inventory summaries, or monthly financial statements.
+For businesses, automated report generation is a common requirement. The `Kind` scheduler can reliably handle tasks like generating daily sales reports, weekly inventory summaries, or monthly financial statements.
 
 ```python
-from symb.core.schedule import Scheduler, ScheduledJob
+from kind.core.schedule import Scheduler, ScheduledJob
 import datetime
 import time
 
@@ -159,7 +159,7 @@ graph TD
 ```
 ## Conclusion
 
-The `Symbol` framework's scheduling capabilities provide a powerful and flexible foundation for automating tasks and orchestrating complex processes. By offering diverse scheduling options and robust job management, it empowers developers to build highly responsive and efficient systems, from sophisticated microservice deployments to routine business operations. The persistence feature further enhances its utility by ensuring that scheduled tasks are not lost across application lifecycles.
+The `Kind` framework's scheduling capabilities provide a powerful and flexible foundation for automating tasks and orchestrating complex processes. By offering diverse scheduling options and robust job management, it empowers developers to build highly responsive and efficient systems, from sophisticated microservice deployments to routine business operations. The persistence feature further enhances its utility by ensuring that scheduled tasks are not lost across application lifecycles.
 
 For a visual representation of the scheduling process, refer to the [Scheduling Flow Diagram](scheduling_flow.mmd).
 

@@ -1,19 +1,19 @@
 graph LR
-    subgraph "Symbol Extensibility"
-        A[Symbolable Type] --> B[Robust Callable Integration];
+    subgraph "Kind Extensibility"
+        A[Kindable Type] --> B[Robust Callable Integration];
         A --> C[Defines __call__ method];
 
         D[MixinFunction Protocol] --> E[Formal Mixin Interface];
         D --> F[Supports Async, Process/Thread Execution];
 
-        G[SymbolAdapter - Mixinable Interface] --> H[Enables Different Logical Structures];
+        G[KindAdapter - Mixinable Interface] --> H[Enables Different Logical Structures];
         G --> I[Implemented via Mixinability];
 
-        J[Compatible with Enum Reflection] --> K[Symbol.from_enum#40#41; Method];
-        K --> L[Converts Enum Members to Symbols];
+        J[Compatible with Enum Reflection] --> K[Kind.from_enum#40#41; Method];
+        K --> L[Converts Enum Members to Kinds];
 
         M[External DSL Inputs] --> N[Flexible Parsing];
-        N --> O[Integration with Symbol Graph];
+        N --> O[Integration with Kind Graph];
     end
 
     subgraph "Key Concepts"
@@ -29,7 +29,7 @@ graph LR
         AB[Domain-Specific Modeling] --> AC[Tailored Abstractions];
     end
 
-    %% Symbol Extensibility - Purple/Blue spectrum
+    %% Kind Extensibility - Purple/Blue spectrum
     style A fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style B fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style C fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;

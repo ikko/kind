@@ -10,28 +10,28 @@ from core.lazy import SENTINEL
 from core.maturing import _apply_merge_strategy, deep_del
 
 from core.mixinability import freeze, is_frozen
-from core.symbol import Symbol
-from core.lazy_symb import LazySymbol
+from core.kind import Kind
+from core.lazy_kind import LazyKind
 from core.mixinability import apply_mixin_to_instance
 from core.mixins import _get_available_mixins
 from core.type_var_t import T
 
 
-class SymbolNamespace:
-    """Provides a convenient way to create Symbol instances via attribute access."""
+class KindNamespace:
+    """Provides a convenient way to create Kind instances via attribute access."""
     def __getattr__(self, name):
-        return Symbol(name)
+        return Kind(name)
 
     def __getitem__(self, name):
-        return Symbol(name)
+        return Kind(name)
 
     def __setitem__(self, name, value):
-        raise TypeError(f"SymbolNamespace is read-only, cannot set {name} to {value}")
+        raise TypeError(f"KindNamespace is read-only, cannot set {name} to {value}")
 
     def __setattr__(self, name, value):
-        raise TypeError(f"SymbolNamespace is read-only, cannot set {name} to {value}")
+        raise TypeError(f"KindNamespace is read-only, cannot set {name} to {value}")
 
-    def patch(self, other: 'Symbol') -> 'Symbol':
+    def patch(self, other: 'Kind') -> 'Kind':
         if other.origin and not self.origin:
             self.origin = other.origin
         for attr in ("children", "parents"):
@@ -41,13 +41,13 @@ class SymbolNamespace:
                 if e not in existing:
                     existing.append(e)
         # Patch relations
-        for how, related_symbols in other.relations.items():
-            for related_sym in related_symbols:
-                self.relate(related_sym, how=how)
+        for how, related_kinds in other.relations.items():
+            for related_kind in related_kinds:
+                self.relate(related_kind, how=how)
         return self
 
-    def relate(self, other: 'Symbol', how: str = 'related') -> 'Symbol':
-        """Establishes a bidirectional relationship with another Symbol."""
+    def relate(self, other: 'Kind', how: str = 'related') -> 'Kind':
+        """Establishes a bidirectional relationship with another Kind."""
         with self._lock:
             # Add forward relationship
             self.relations.add(how, other)
@@ -57,13 +57,13 @@ class SymbolNamespace:
             other.relations.add(inverse_how, self)
         return self
 
-    def unrelate(self, other: 'Symbol', how: Optional[str] = None) -> 'Symbol':
-        """Removes a bidirectional relationship with another Symbol."""
+    def unrelate(self, other: 'Kind', how: Optional[str] = None) -> 'Kind':
+        """Removes a bidirectional relationship with another Kind."""
         with self._lock:
             # Remove forward relationship
             if how is None:
                 # Remove all relationships with 'other'
-                hows_to_remove = [h for h, syms in self.relations.items() if other in syms]
+                hows_to_remove = [h for h, kinds in self.relations.items() if other in kinds]
                 for h in hows_to_remove:
                     self.relations.remove(h, other)
             else:
@@ -71,7 +71,7 @@ class SymbolNamespace:
 
             # Remove inverse relationship
             if how is None:
-                hows_to_remove_inverse = [h for h, syms in other.relations.items() if self in syms and h.startswith('_inverse_')]
+                hows_to_remove_inverse = [h for h, kinds in other.relations.items() if self in kinds and h.startswith('_inverse_')]
                 for h in hows_to_remove_inverse:
                     other.relations.remove(h, self)
             else:
@@ -83,7 +83,7 @@ class SymbolNamespace:
 
     @property
     def ref(self) -> Optional[Any]:
-        """Alias for .origin, representing the original source or reference of the Symbol."""
+        """Alias for .origin, representing the original source or reference of the Kind."""
         return self.origin
 
     def head(self, up_to_position: float = 5.0):
@@ -99,51 +99,51 @@ class SymbolNamespace:
         return cur
 
     @classmethod
-    def auto_date(cls) -> 'Symbol':
+    def auto_date(cls) -> 'Kind':
         iso = datetime.date.today().isoformat()
         return cls(iso)
 
     @classmethod
-    def auto_datetime(cls) -> 'Symbol':
+    def auto_datetime(cls) -> 'Kind':
         iso = datetime.datetime.now().isoformat()
         return cls(iso)
 
     @classmethod
-    def auto_time(cls) -> 'Symbol':
+    def auto_time(cls) -> 'Kind':
         iso = datetime.datetime.now().time().isoformat()
         return cls(iso)
 
     @classmethod
-    def next(cls) -> 'Symbol':
+    def next(cls) -> 'Kind':
         with cls._lock:
             last = cls.last()
-            name = f"sym_{cls._auto_counter}"
-            sym = cls(name)
-            sym._position = cls._auto_counter  # Set position for AVLTree
-            cls._numbered.insert(cls._numbered.root, sym, sym._position) # Insert into AVLTree
+            name = f"kind_{cls._auto_counter}"
+            kind = cls(name)
+            kind._position = cls._auto_counter  # Set position for AVLTree
+            cls._numbered.insert(cls._numbered.root, kind, kind._position) # Insert into AVLTree
             if last:
-                last._next = sym
-                sym._prev = last
+                last._next = kind
+                kind._prev = last
             cls._auto_counter += 1
-        return sym
+        return kind
 
     @classmethod
-    def prev(cls) -> Optional['Symbol']:
+    def prev(cls) -> Optional['Kind']:
         with cls._lock:
             if cls._auto_counter <= 0:
                 return None
             cls._auto_counter -= 1
-            # Search for the symb at the decremented position
+            # Search for the kind at the decremented position
             node = cls._numbered.search(cls._auto_counter)
-            return node.symb if node else None
+            return node.kind if node else None
 
     @classmethod
-    def first(cls) -> Optional['Symbol']:
+    def first(cls) -> Optional['Kind']:
         node = cls._numbered.min_node()
         return node.value if node else None
 
     @classmethod
-    def last(cls) -> Optional['Symbol']:
+    def last(cls) -> Optional['Kind']:
         node = cls._numbered.max_node()
         return node.value if node else None
 
@@ -152,40 +152,40 @@ class SymbolNamespace:
         return cls._numbered.size()
 
     @classmethod
-    def from_object(cls, obj: Any) -> 'Symbol':
-        """Converts an object to a Symbol, acting as a central router."""
-        if isinstance(obj, Symbol):
+    def from_object(cls, obj: Any) -> 'Kind':
+        """Converts an object to a Kind, acting as a central router."""
+        if isinstance(obj, Kind):
             return obj
-        if isinstance(obj, LazySymbol):
-            return obj._symb
+        if isinstance(obj, LazyKind):
+            return obj._kind
 
         # Conversion functions for different types
-        def from_list(value: list) -> 'Symbol':
-            sym = cls('list', origin=value)
+        def from_list(value: list) -> 'Kind':
+            kind = cls('list', origin=value)
             for item in value:
-                sym.append(LazySymbol(item))
-            return sym
+                kind.append(LazyKind(item))
+            return kind
 
-        def from_dict(value: dict) -> 'Symbol':
-            sym = cls('dict', origin=value)
+        def from_dict(value: dict) -> 'Kind':
+            kind = cls('dict', origin=value)
             for k, v in value.items():
-                key_sym = LazySymbol(k)
-                val_sym = LazySymbol(v)
-                sym.append(key_sym)
-                key_sym.append(val_sym)
-            return sym
+                key_kind = LazyKind(k)
+                val_kind = LazyKind(v)
+                kind.append(key_kind)
+                key_kind.append(val_kind)
+            return kind
 
-        def from_tuple(value: tuple) -> 'Symbol':
-            sym = cls('tuple', origin=value)
+        def from_tuple(value: tuple) -> 'Kind':
+            kind = cls('tuple', origin=value)
             for item in value:
-                sym.append(LazySymbol(item))
-            return sym
+                kind.append(LazyKind(item))
+            return kind
 
-        def from_set(value: set) -> 'Symbol':
-            sym = cls('set', origin=value)
+        def from_set(value: set) -> 'Kind':
+            kind = cls('set', origin=value)
             for item in value:
-                sym.append(LazySymbol(item))
-            return sym
+                kind.append(LazyKind(item))
+            return kind
 
         type_map = {
             list: from_list,
@@ -209,35 +209,35 @@ class SymbolNamespace:
                 return cls(name, origin=obj)
             except (TypeError, orjson.JSONEncodeError) as e:
                 import logging
-                logging.error(f"Cannot convert {obj_type} to Symbol: {repr(e)}", exc_info=True)
-                raise TypeError(f"Cannot convert {obj_type} to Symbol: {repr(e)}")
+                logging.error(f"Cannot convert {obj_type} to Kind: {repr(e)}", exc_info=True)
+                raise TypeError(f"Cannot convert {obj_type} to Kind: {repr(e)}")
 
     @classmethod
-    def seek(cls, pos: float) -> Optional['Symbol']:
+    def seek(cls, pos: float) -> Optional['Kind']:
         node = cls._numbered.search(pos)
         return node.value if node else None
 
     @classmethod
-    def each(cls, start: Union[float, 'Symbol', None] = None) -> Iterator['Symbol']:
+    def each(cls, start: Union[float, 'Kind', None] = None) -> Iterator['Kind']:
         if start is None:
-            # Iterate through all symbs in order
+            # Iterate through all kinds in order
             for node in cls._numbered.inorder_traverse():
                 yield node.value
         elif isinstance(start, (int, float)):
-            # Find the symb at or after the given position and iterate from there
+            # Find the kind at or after the given position and iterate from there
             for node in cls._numbered.inorder_traverse(start_key=start):
                 yield node.value
-        elif isinstance(start, Symbol):
-            # Find the starting symb and iterate from there
+        elif isinstance(start, Kind):
+            # Find the starting kind and iterate from there
             for node in cls._numbered.inorder_traverse(start_key=start._position):
                 yield node.value
         else:
             raise TypeError(f"Invalid start parameter {repr(start)} instance of {type(start)} in each")
 
-    def each_parents(self) -> Iterator['Symbol']:
+    def each_parents(self) -> Iterator['Kind']:
         return iter(self.parents)
 
-    def each_children(self) -> Iterator['Symbol']:
+    def each_children(self) -> Iterator['Kind']:
         return iter(self.children)
 
     def __enter__(self):
@@ -249,7 +249,7 @@ class SymbolNamespace:
     def elevate(self, merge_strategy: Literal['overwrite', 'patch', 'copy', 'deepcopy', 'pipe', 'update', 'extend', 'smooth'] = 'smooth') -> Set[str]:
         """Elevates metadata entries to instance attributes/methods based on a merge strategy."""
         if is_frozen():
-            warnings.warn(f"Cannot elevate on frozen Symbol {self.name}")
+            warnings.warn(f"Cannot elevate on frozen Kind {self.name}")
             return set()
 
         elevated_keys = set()
@@ -260,14 +260,14 @@ class SymbolNamespace:
                 # This means it's an existing attribute not in slots, likely from a mixin or dynamic assignment
                 current_value = getattr(self, key)
                 if key.startswith('__') or inspect.ismethod(current_value) or inspect.isfunction(current_value):
-                    warnings.warn(f"Overwriting internal attribute/method '{key}' on Symbol {self.name}")
+                    warnings.warn(f"Overwriting internal attribute/method '{key}' on Kind {self.name}")
                 merged_value = _apply_merge_strategy(current_value, value, merge_strategy)
                 setattr(self, key, merged_value)
             elif key in self.__slots__ or key in self.__class__.__bases__[0].__slots__:
                 # Attribute is part of __slots__, directly set it
                 current_value = getattr(self, key)
                 if key.startswith('__') or inspect.ismethod(current_value) or inspect.isfunction(current_value):
-                    warnings.warn(f"Overwriting internal attribute/method '{key}' on Symbol {self.name}")
+                    warnings.warn(f"Overwriting internal attribute/method '{key}' on Kind {self.name}")
                 merged_value = _apply_merge_strategy(current_value, value, merge_strategy)
                 setattr(self, key, merged_value)
             else:
@@ -284,7 +284,7 @@ class SymbolNamespace:
     def slim(self, protected_attributes: Optional[Set[str]] = None) -> None:
         """Removes dynamically applied attributes/methods that are not explicitly protected."""
         if is_frozen():
-            warnings.warn(f"Cannot slim on frozen Symbol {self.name}")
+            warnings.warn(f"Cannot slim on frozen Kind {self.name}")
             return
 
         if protected_attributes is None:
@@ -314,9 +314,9 @@ class SymbolNamespace:
         gc.collect()  # Explicitly call garbage collector after deletions
 
     def immute(self, merge_strategy: Literal['overwrite', 'patch', 'copy', 'deepcopy', 'pipe', 'update', 'extend', 'smooth'] = 'smooth') -> None:
-        """Orchestrates the maturing process: elevates metadata, slims down, and freezes the Symbol."""
+        """Orchestrates the maturing process: elevates metadata, slims down, and freezes the Kind."""
         if is_frozen():
-            warnings.warn(f"Symbol {self.name} is already frozen. No action taken.")
+            warnings.warn(f"Kind {self.name} is already frozen. No action taken.")
             return
 
         # 1. Elevate metadata
@@ -325,13 +325,13 @@ class SymbolNamespace:
         # 2. Slim down
         self.slim(protected_attributes=elevated_keys)
 
-        # 3. Freeze the Symbol class (global state)
+        # 3. Freeze the Kind class (global state)
         freeze()
 
     def clear_context(self) -> None:
         """Clears the context DefDict, performing memory-aware deletion of its contents."""
         if is_frozen():
-            warnings.warn(f"Cannot clear context on frozen Symbol {self.name}")
+            warnings.warn(f"Cannot clear context on frozen Kind {self.name}")
             return
 
         # Iterate over a copy of keys to allow modification during iteration
@@ -340,25 +340,25 @@ class SymbolNamespace:
             del self.context[key]
 
     def to(self, target_type: Type[T]) -> T:
-        """Converts the Symbol to an object of the specified type."""
+        """Converts the Kind to an object of the specified type."""
         try:
             return orjson.loads(self.name)
         except orjson.JSONDecodeError:
-            raise TypeError(f"Cannot convert Symbol '{self.name}' to {target_type}")
+            raise TypeError(f"Cannot convert Kind '{self.name}' to {target_type}")
 
     @classmethod
     def ps(cls):
-        """Lists all loaded symbs with their name, footprint, and origin."""
+        """Lists all loaded kinds with their name, footprint, and origin."""
         total_footprint = 0
         output = ["{:<30} {:<15} {:<50}".format("Name", "Footprint (b)", "Origin")]
         output.append("-" * 95)
 
-        for name, symb in sorted(cls._pool.items()):
-            footprint = symb.footprint()
+        for name, kind in sorted(cls._pool.items()):
+            footprint = kind.footprint()
             total_footprint += footprint
-            origin = symb.origin
+            origin = kind.origin
             if origin is None:
-                origin_str = f"{symb.__class__.__module__}.{symb.__class__.__name__}"
+                origin_str = f"{kind.__class__.__module__}.{kind.__class__.__name__}"
             else:
                 origin_str = str(origin)
             output.append("{:<30} {:<15} {:<50}".format(name, footprint, origin_str))
@@ -376,10 +376,10 @@ class SymbolNamespace:
             print(f"- {name}")
 
     def stat(self):
-        """Provides detailed statistics about the symb and its mixins."""
+        """Provides detailed statistics about the kind and its mixins."""
 
         all_mixins = _get_available_mixins()
-        output = [f"Statistics for Symbol: '{self.name}'"]
+        output = [f"Statistics for Kind: '{self.name}'"]
         output.append("\n--- Mixin Analysis ---")
         output.append("{:<30} {:<15} {:<15}".format("Mixin Name", "Footprint (b)", "Slim Tag"))
         output.append("-" * 60)
@@ -391,18 +391,18 @@ class SymbolNamespace:
         for name, mixin_cls in sorted(all_mixins.items()):
             is_slim_tag = False
 
-            # Create a temporary dummy symb to measure mixin size
-            dummy_symb = Symbol(f"dummy_for_{name}")
-            apply_mixin_to_instance(dummy_symb, mixin_cls)
+            # Create a temporary dummy kind to measure mixin size
+            dummy_kind = Kind(f"dummy_for_{name}")
+            apply_mixin_to_instance(dummy_kind, mixin_cls)
 
-            footprint = dummy_symb.footprint()
+            footprint = dummy_kind.footprint()
             footprint_all_loaded += footprint
 
             # Check for non-sentinel values to determine slim tag
-            for attr_name in dir(dummy_symb):
-                if not attr_name.startswith('__') and not callable(getattr(dummy_symb, attr_name)):
+            for attr_name in dir(dummy_kind):
+                if not attr_name.startswith('__') and not callable(getattr(dummy_kind, attr_name)):
                     try:
-                        value = getattr(dummy_symb, attr_name)
+                        value = getattr(dummy_kind, attr_name)
                         if value is not SENTINEL:
                             is_slim_tag = True
                             break
@@ -421,7 +421,7 @@ class SymbolNamespace:
 
         # 2. Self stats
         current_footprint = self.footprint()
-        output.append("\n--- Symbol Footprint ---")
+        output.append("\n--- Kind Footprint ---")
         output.append(f"Current Footprint: {current_footprint} bytes")
         output.append(f"Footprint after .slim(): {footprint_after_slim} bytes")
         output.append(f"  (Would remove: {', '.join(slim_mixins)})")
@@ -430,7 +430,7 @@ class SymbolNamespace:
         print("\n".join(output))
 
     def footprint(self) -> int:
-        """Calculates the memory footprint of the symb and its descendants in bytes."""
+        """Calculates the memory footprint of the kind and its descendants in bytes."""
 
         memo = set()
 
@@ -450,9 +450,9 @@ class SymbolNamespace:
             if hasattr(obj, '__slots__'):
                 size += sum(get_size(getattr(obj, s)) for s in obj.__slots__ if hasattr(obj, s))
 
-            # Special handling for Symbol children to avoid recounting
-            if isinstance(obj, Symbol):
-                # The size of the symb object itself is already counted.
+            # Special handling for Kind children to avoid recounting
+            if isinstance(obj, Kind):
+                # The size of the kind object itself is already counted.
                 # Now, add the sizes of its direct attributes and mixins.
                 if obj._index is not SENTINEL:
                     size += get_size(obj._index)
@@ -472,4 +472,4 @@ class SymbolNamespace:
         return get_size(self)
 
 
-s = SymbolNamespace()
+k = KindNamespace()

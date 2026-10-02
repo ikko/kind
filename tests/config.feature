@@ -1,6 +1,6 @@
 Feature: Configuration Management
 
-  As a developer using the Symbol library
+  As a developer using the Kind library
   I want to manage application configurations
   So that I can customize behavior and persist settings
 

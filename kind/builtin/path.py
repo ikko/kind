@@ -1,19 +1,19 @@
-"""This module provides pathfinding capabilities for Symbol objects.
+"""This module provides pathfinding capabilities for Kind objects.
 
-It includes a mixin that adds methods for finding paths between Symbols
-and for matching Symbols based on a predicate.
+It includes a mixin that adds methods for finding paths between Kinds
+and for matching Kinds based on a predicate.
 """
 from __future__ import annotations
 from typing import Callable, Iterator, List
 
-from core.protocols import SymbolPathProtocol
+from core.protocols import KindPathProtocol
 
-class SymbolPathMixin(SymbolPathProtocol):
-    def path_to(self, target: 'Symbol') -> list['Symbol']:
+class KindPathMixin(KindPathProtocol):
+    def path_to(self, target: 'Kind') -> list['Kind']:
         visited = set()
         path = []
 
-        def dfs(node: 'Symbol') -> bool:
+        def dfs(node: 'Kind') -> bool:
             if node in visited:
                 return False
             visited.add(node)
@@ -30,10 +30,10 @@ class SymbolPathMixin(SymbolPathProtocol):
             return path
         return []
 
-    def match(self, predicate: Callable[['Symbol'], bool], traversal: str = 'dfs') -> Iterator['Symbol']:
+    def match(self, predicate: Callable[['Kind'], bool], traversal: str = 'dfs') -> Iterator['Kind']:
         visited = set()
 
-        def dfs(node: 'Symbol'):
+        def dfs(node: 'Kind'):
             if node in visited:
                 return
             visited.add(node)
@@ -42,7 +42,7 @@ class SymbolPathMixin(SymbolPathProtocol):
             for child in node.children:
                 yield from dfs(child)
 
-        def bfs(start: 'Symbol'):
+        def bfs(start: 'Kind'):
             queue = [start]
             while queue:
                 node = queue.pop(0)
@@ -59,5 +59,5 @@ class SymbolPathMixin(SymbolPathProtocol):
             yield from dfs(self)
 
 # Attach at runtime:
-# Symbol.path_to = SymbolPathMixin.path_to
-# Symbol.match = SymbolPathMixin.match
+# Kind.path_to = KindPathMixin.path_to
+# Kind.match = KindPathMixin.match

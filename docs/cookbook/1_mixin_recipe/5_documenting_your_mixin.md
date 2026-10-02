@@ -1,4 +1,4 @@
-# [`«symb»`](https://github.com/ikko/symb) cookbook
+# [`«kind»`](https://github.com/ikko/kind) cookbook
 
 **Recipes for Symbolic Mastery**
 
@@ -8,7 +8,7 @@ _Recipe 1: How to Create a Mixin?_
 
 # 1.5 Documenting Your Mixin: Clarity and Usability
 
-Effective documentation is paramount for the usability and maintainability of your mixins. Clear and comprehensive documentation helps other developers (and your future self) understand what your mixin does, how to use it, and any specific considerations. This section outlines key aspects of documenting your `symb` mixins.
+Effective documentation is paramount for the usability and maintainability of your mixins. Clear and comprehensive documentation helps other developers (and your future self) understand what your mixin does, how to use it, and any specific considerations. This section outlines key aspects of documenting your `kind` mixins.
 
 ## Why Document Mixins?
 
@@ -23,34 +23,34 @@ Effective documentation is paramount for the usability and maintainability of yo
 
 Every mixin class, its methods, and properties should have clear and concise docstrings. Follow a consistent style (e.g., reStructuredText, Google, or NumPy style) for your docstrings. They should explain:
 
-*   **Class Docstring:** The overall purpose of the mixin, what functionality it adds, and to which `Symbol` objects it is intended to be applied.
+*   **Class Docstring:** The overall purpose of the mixin, what functionality it adds, and to which `Kind` objects it is intended to be applied.
 *   **Method/Property Docstring:** A brief description of what the method/property does, its parameters (with types and descriptions), what it returns, and any exceptions it might raise.
 
 **Example Docstring for `DescendantCounterMixin`:**
 
 ```python
 class DescendantCounterMixin:
-    """A mixin for Symbol objects that provides methods to count their descendants.
+    """A mixin for Kind objects that provides methods to count their descendants.
 
     This mixin adds both synchronous and asynchronous methods to traverse
-    the symb's graph and determine the total number of unique descendant symbs.
+    the kind's graph and determine the total number of unique descendant kinds.
     """
-    def __init__(self, symb_instance: Symbol):
+    def __init__(self, kind_instance: Kind):
         """Initializes the DescendantCounterMixin.
 
         Args:
-            symb_instance: The Symbol instance to which this mixin is applied.
+            kind_instance: The Kind instance to which this mixin is applied.
         """
-        self.symb = symb_instance
+        self.kind = kind_instance
 
     def count_descendants(self) -> int:
-        """Counts the total number of unique descendants for this symb.
+        """Counts the total number of unique descendants for this kind.
 
-        Performs a breadth-first search starting from the symb's children
-        to identify all unique symbs reachable within its sub-graph.
+        Performs a breadth-first search starting from the kind's children
+        to identify all unique kinds reachable within its sub-graph.
 
         Returns:
-            The total count of unique descendant symbs.
+            The total count of unique descendant kinds.
         """
         # ... implementation ...
 
@@ -62,7 +62,7 @@ class DescendantCounterMixin:
         it would leverage async I/O or offload CPU-bound tasks.
 
         Returns:
-            The total count of unique descendant symbs.
+            The total count of unique descendant kinds.
         """
         # ... implementation ...
 ```
@@ -86,8 +86,8 @@ For more complex mixins or collections of related mixins, consider creating a de
 *   Design considerations or architectural notes.
 *   Contribution guidelines.
 
-### 5. Integration with `symb` Documentation
+### 5. Integration with `kind` Documentation
 
-Finally, ensure your mixin is referenced and explained within the main `symb` project documentation (e.g., in the API reference, user manual, or cookbook). This provides a centralized location for users to discover and learn about available mixins.
+Finally, ensure your mixin is referenced and explained within the main `kind` project documentation (e.g., in the API reference, user manual, or cookbook). This provides a centralized location for users to discover and learn about available mixins.
 
-By consistently applying these documentation practices, you contribute to a more accessible, understandable, and robust `symb` ecosystem.
+By consistently applying these documentation practices, you contribute to a more accessible, understandable, and robust `kind` ecosystem.

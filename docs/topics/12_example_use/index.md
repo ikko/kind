@@ -1,18 +1,18 @@
-# Example Use: Practical Applications of the Symbol Framework
+# Example Use: Practical Applications of the Kind Framework
 
-The `Symbol` framework is designed to be versatile, providing a powerful foundation for a wide range of applications that benefit from graph-based data structures and symbic manipulation. This section illustrates several practical use cases, demonstrating how `Symbol`'s core features can be leveraged to solve real-world problems.
+The `Kind` framework is designed to be versatile, providing a powerful foundation for a wide range of applications that benefit from graph-based data structures and symbolic manipulation. This section illustrates several practical use cases, demonstrating how `Kind`'s core features can be leveraged to solve real-world problems.
 
-## Basic Symbol Creation and Relationships
+## Basic Kind Creation and Relationships
 
-This example demonstrates the fundamental operations of creating `Symbol` instances and establishing basic parent-child relationships. It showcases the simplicity of defining a graph structure using `Symbol` and the `add()` method.
+This example demonstrates the fundamental operations of creating `Kind` instances and establishing basic parent-child relationships. It showcases the simplicity of defining a graph structure using `Kind` and the `add()` method.
 
 ### Code Example
 ```python
-from symb import s, Symbol
+from kind import k, Kind
 
-# --- Basic Symbol creation and relationships ---
-hello = Symbol('hello')
-world = s.world
+# --- Basic Kind creation and relationships ---
+hello = Kind('hello')
+world = k.world
 hello.add(world)
 print(hello.tree())
 ```
@@ -20,15 +20,15 @@ print(hello.tree())
 <summary>Outcome</summary>
 
 ```text
-[<Symbol: hello>, <Symbol: world>]
+[<Kind: hello>, <Kind: world>]
 ```
 </details>
 
 ### Explanation
-- `Symbol('hello')`: Creates a `Symbol` instance named 'hello'. Due to the interning mechanism, if 'hello' already exists, the existing instance is returned.
-- `s.world`: Utilizes the `SymbolNamespace` (`s`) for a more concise way to create a `Symbol` named 'world'. This is syntactic sugar for `Symbol('world')`.
+- `Kind('hello')`: Creates a `Kind` instance named 'hello'. Due to the interning mechanism, if 'hello' already exists, the existing instance is returned.
+- `k.world`: Utilizes the `KindNamespace` (`k`) for a more concise way to create a `Kind` named 'world'. This is syntactic sugar for `Kind('world')`.
 - `hello.add(world)`: Establishes a directed relationship from `hello` to `world`, making `world` a child of `hello`. If the relationship already exists, it's idempotent.
-- `print(hello.tree())`: Performs a depth-first traversal starting from `hello` and prints the names of all reachable symbs in a tree-like structure.
+- `print(hello.tree())`: Performs a depth-first traversal starting from `hello` and prints the names of all reachable kinds in a tree-like structure.
 
 ### Diagram
 ```mermaid
@@ -40,56 +40,56 @@ graph TD
 ```
 ## ESG Example: Tracking Deforestation in a Supply Chain
 
-This example illustrates how `Symbol` can model complex supply chain relationships and track specific events, such as deforestation. It demonstrates the ability to build a graph representing entities and their connections, and then query this graph to identify paths that lead to undesirable events.
+This example illustrates how `Kind` can model complex supply chain relationships and track specific events, such as deforestation. It demonstrates the ability to build a graph representing entities and their connections, and then query this graph to identify paths that lead to undesirable events.
 
 ### Code Example
 
 ```python
-from symb import s, Symbol
-from symb.core.mixinability import register_mixin
-from symb.core.protocols import SymbolProtocol
-from symb.builtin import apply_builtins
+from kind import k, Kind
+from kind.core.mixinability import register_mixin
+from kind.core.protocols import KindProtocol
+from kind.builtin import apply_builtins
 
 
-class SupplyChainMixin(SymbolProtocol):
-    def buys_from(self, supplier: Symbol):
+class SupplyChainMixin(KindProtocol):
+    def buys_from(self, supplier: Kind):
         self.add(supplier)
 
-    def sources_from(self, source: Symbol):
+    def sources_from(self, source: Kind):
         self.add(source)
 
 
 register_mixin(SupplyChainMixin, expand=True)
 apply_builtins()
 
-s.Global_Goods_Inc.buys_from(s.Palm_Oil_Processor)
-s.Palm_Oil_Processor.buys_from(s.Supplier_A)
-s.Palm_Oil_Processor.buys_from(s.Supplier_B)
-s.Supplier_A.sources_from(s.Plantation_X)
-s.Supplier_B.sources_from(s.Plantation_Y)
-s.Plantation_Y.add(s.deforestation_event_2024_Q4)
+k.Global_Goods_Inc.buys_from(k.Palm_Oil_Processor)
+k.Palm_Oil_Processor.buys_from(k.Supplier_A)
+k.Palm_Oil_Processor.buys_from(k.Supplier_B)
+k.Supplier_A.sources_from(k.Plantation_X)
+k.Supplier_B.sources_from(k.Plantation_Y)
+k.Plantation_Y.add(k.deforestation_event_2024_Q4)
 
 
-def has_deforestation(symb):
-    return 'deforestation' in symb.name
+def has_deforestation(kind):
+    return 'deforestation' in kind.name
 
 
-for path in s.Global_Goods_Inc.match(has_deforestation):
-    print(f"Deforestation Link Found: {path.path_to(s.deforestation_event_2024_Q4)}")
+for path in k.Global_Goods_Inc.match(has_deforestation):
+    print(f"Deforestation Link Found: {path.path_to(k.deforestation_event_2024_Q4)}")
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
-Deforestation Link Found: ['<Symbol: Global_Goods_Inc>', '<Symbol: Palm_Oil_Processor>', '<Symbol: Supplier_B>', '<Symbol: Plantation_Y>', '<Symbol: deforestation_event_2024_Q4>']
+Deforestation Link Found: ['<Kind: Global_Goods_Inc>', '<Kind: Palm_Oil_Processor>', '<Kind: Supplier_B>', '<Kind: Plantation_Y>', '<Kind: deforestation_event_2024_Q4>']
 ```
 </details>
 
 ### Explanation
-- **Supply Chain Modeling**: Each entity (e.g., `Global_Goods_Inc`, `Palm_Oil_Processor`, `Plantation_X`) is represented as a `Symbol`. Relationships like `buys_from` and `sources_from` are established using custom methods (which would internally use `add()` or `relate_to()`).
-- **Event Representation**: `s.deforestation_event_2024_Q4` is a `Symbol` representing a specific event, linked to `Plantation_Y`.
-- **Graph Querying**: The `has_deforestation` function acts as a predicate to identify symbs related to deforestation. `s.Global_Goods_Inc.match(has_deforestation)` performs a graph traversal (likely a depth-first search or breadth-first search) to find all paths from `Global_Goods_Inc` to any symb satisfying the predicate.
-- `path.path_to(s.deforestation_event_2024_Q4)`: Once a path is found, this method reconstructs the sequence of symbs from the starting point to the deforestation event, providing traceability.
+- **Supply Chain Modeling**: Each entity (e.g., `Global_Goods_Inc`, `Palm_Oil_Processor`, `Plantation_X`) is represented as a `Kind`. Relationships like `buys_from` and `sources_from` are established using custom methods (which would internally use `add()` or `relate_to()`).
+- **Event Representation**: `k.deforestation_event_2024_Q4` is a `Kind` representing a specific event, linked to `Plantation_Y`.
+- **Graph Querying**: The `has_deforestation` function acts as a predicate to identify kinds related to deforestation. `k.Global_Goods_Inc.match(has_deforestation)` performs a graph traversal (likely a depth-first search or breadth-first search) to find all paths from `Global_Goods_Inc` to any kind satisfying the predicate.
+- `path.path_to(k.deforestation_event_2024_Q4)`: Once a path is found, this method reconstructs the sequence of kinds from the starting point to the deforestation event, providing traceability.
 
 ### Diagram
 ```mermaid
@@ -111,12 +111,12 @@ graph TD
 ```
 ## Timeline Example
 
-This example showcases the use of `symb.builtins.timeline` to manage and analyze temporal data. It demonstrates how to create timelines, add time periods, and perform operations like finding overlaps between different timelines.
+This example showcases the use of `kind.builtins.timeline` to manage and analyze temporal data. It demonstrates how to create timelines, add time periods, and perform operations like finding overlaps between different timelines.
 
 ### Code Example
 
 ```python
-from symb.builtin.timeline import Timeline
+from kind.builtin.timeline import Timeline
 import datetime
 
 timeline1 = Timeline()
@@ -140,9 +140,9 @@ Overlap periods: []
 </details>
 
 ### Explanation
-- `Timeline()`: Instantiates a `Timeline` object, which is a specialized `Symbol` for managing time intervals.
-- `add_period()`: Adds a time period (defined by start and end `datetime.datetime` objects) to the timeline. These periods are internally represented as `Symbol` instances.
-- `overlap()`: A method provided by the `Timeline` class that calculates the overlapping periods between two timelines. This demonstrates `Symbol`'s ability to extend its core functionality for domain-specific operations.
+- `Timeline()`: Instantiates a `Timeline` object, which is a specialized `Kind` for managing time intervals.
+- `add_period()`: Adds a time period (defined by start and end `datetime.datetime` objects) to the timeline. These periods are internally represented as `Kind` instances.
+- `overlap()`: A method provided by the `Timeline` class that calculates the overlapping periods between two timelines. This demonstrates `Kind`'s ability to extend its core functionality for domain-specific operations.
 - `to_ascii()`: Visualizes the timeline using ASCII art, providing a quick textual representation of the time periods.
 
 ### Diagram
@@ -162,11 +162,11 @@ graph TD
 ```
 ## Batch Processing Example
 
-This example demonstrates a simple batch processing utility, showcasing how `Symbol` can be used in conjunction with functional programming paradigms to apply a given function to a collection of inputs. While `Symbol` itself is not a batch processing engine, its extensibility allows for the integration of such utilities.
+This example demonstrates a simple batch processing utility, showcasing how `Kind` can be used in conjunction with functional programming paradigms to apply a given function to a collection of inputs. While `Kind` itself is not a batch processing engine, its extensibility allows for the integration of such utilities.
 
 ### Code Example
 ```python
-from symb.core.batch_processing import process_batch
+from kind.core.batch_processing import process_batch
 
 def square(x): return x * x
 results = process_batch([1, 2, 3, 4], square)
@@ -181,7 +181,7 @@ Batch processing results: [1, 4, 9, 16]
 </details>
 
 ### Explanation
-- `process_batch()`: A utility function (likely part of `symb.core.batch_processing`) that takes a list of inputs and a function, applying the function to each input in a batch. This highlights how `Symbol` can be part of a larger system, where its symbic representations can be processed by external functions.
+- `process_batch()`: A utility function (likely part of `kind.core.batch_processing`) that takes a list of inputs and a function, applying the function to each input in a batch. This highlights how `Kind` can be part of a larger system, where its symbolic representations can be processed by external functions.
 - `square()`: A simple function demonstrating the type of operation that can be applied in a batch.
 
 ### Diagram
@@ -198,11 +198,11 @@ graph LR
 ```
 ## Scheduler Example
 
-This example demonstrates the use of `symb.core.schedule` to schedule and execute tasks at specified times. It showcases the `Scheduler` and `ScheduledJob` classes, allowing for the automation of functions based on time dimension objects.
+This example demonstrates the use of `kind.core.schedule` to schedule and execute tasks at specified times. It showcases the `Scheduler` and `ScheduledJob` classes, allowing for the automation of functions based on time dimension objects.
 
 ### Code Example
 ```python
-from symb.core.schedule import Scheduler, ScheduledJob
+from kind.core.schedule import Scheduler, ScheduledJob
 import time
 import datetime
 
@@ -250,6 +250,6 @@ graph TD
 ```
 ## Conclusion
 
-These examples collectively demonstrate the versatility and power of the `Symbol` framework. From basic graph construction to complex supply chain analysis, temporal data management, batch processing, and task scheduling, `Symbol` provides a flexible and efficient foundation for building sophisticated applications. Its modular design and extensibility allow developers to tailor its capabilities to specific domain requirements, making it a valuable tool for a wide array of symbic data manipulation tasks.
+These examples collectively demonstrate the versatility and power of the `Kind` framework. From basic graph construction to complex supply chain analysis, temporal data management, batch processing, and task scheduling, `Kind` provides a flexible and efficient foundation for building sophisticated applications. Its modular design and extensibility allow developers to tailor its capabilities to specific domain requirements, making it a valuable tool for a wide array of symbolic data manipulation tasks.
 
 ---

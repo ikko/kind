@@ -1,6 +1,6 @@
-"""This module defines the foundational Symbol class and its core instantiation logic.
+"""This module defines the foundational Kind class and its core instantiation logic.
 
-It serves as a base for the more extensive Symbol functionality defined elsewhere,
+It serves as a base for the more extensive Kind functionality defined elsewhere,
 specifically designed to prevent circular import dependencies.
 """
 import threading
@@ -12,7 +12,7 @@ from builtin.avl_tree import AVLTree
 
 T = TypeVar("T")
 
-class BaseSymbol:
+class BaseKind:
     __slots__ = (
         'name',
         'origin',
@@ -28,7 +28,7 @@ class BaseSymbol:
         'node_shape',
     )
 
-    _pool: WeakValueDictionary[str, 'BaseSymbol'] = WeakValueDictionary()
+    _pool: WeakValueDictionary[str, 'BaseKind'] = WeakValueDictionary()
     _numbered: AVLTree = AVLTree()
     _auto_counter: int = 0
     _read_cursor: float = 0.0
@@ -38,12 +38,12 @@ class BaseSymbol:
     def __new__(cls, name: str, origin: Optional[Any] = None):
         with cls._lock:
             if not isinstance(name, str):
-                raise TypeError("BaseSymbol name must be a string")
+                raise TypeError("BaseKind name must be a string")
             
-            # Only intern BaseSymbol instances if the requested class is exactly BaseSymbol.
+            # Only intern BaseKind instances if the requested class is exactly BaseKind.
             # Subclasses will handle their own pooling logic.
-            if cls is BaseSymbol and name in BaseSymbol._pool:
-                return BaseSymbol._pool[name]
+            if cls is BaseKind and name in BaseKind._pool:
+                return BaseKind._pool[name]
 
             obj = super().__new__(cls)
             object.__setattr__(obj, 'name', name)
@@ -58,47 +58,47 @@ class BaseSymbol:
             object.__setattr__(obj, 'node_shape', None) # Initialize node_shape
             cls._write_cursor += 1.0
             
-            # Only add to BaseSymbol's pool if it's a BaseSymbol instance being created
+            # Only add to BaseKind's pool if it's a BaseKind instance being created
             # Subclasses will manage their own pool entries.
-            if cls is BaseSymbol:
-                BaseSymbol._pool[name] = obj
-                BaseSymbol._numbered.root = BaseSymbol._numbered.insert(BaseSymbol._numbered.root, obj, obj._position)
+            if cls is BaseKind:
+                BaseKind._pool[name] = obj
+                BaseKind._numbered.root = BaseKind._numbered.insert(BaseKind._numbered.root, obj, obj._position)
             
             return obj
 
     def __repr__(self):
-        return f"BaseSymbol('{self.name}')"
+        return f"BaseKind('{self.name}')"
 
     def __str__(self):
         return self.name
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, BaseSymbol) and self.name == other.name
+        return isinstance(other, BaseKind) and self.name == other.name
 
     def __hash__(self) -> int:
         return hash(self.name)
 
-    # Basic comparison for numbered symbs, more complex logic in symb.py
+    # Basic comparison for numbered kinds, more complex logic in kind.py
     def __lt__(self, other):
-        # Check if both symbs are in the numbered tree by searching for their positions
-        if isinstance(other, BaseSymbol) and \
+        # Check if both kinds are in the numbered tree by searching for their positions
+        if isinstance(other, BaseKind) and \
            self._numbered.search(self._position) is not None and \
            other._numbered.search(other._position) is not None:
             return self._position < other._position
-        raise TypeError("Unordered comparison not supported for non-numbered symbs")
+        raise TypeError("Unordered comparison not supported for non-numbered kinds")
 
-    # Basic JSON serialization, more complex logic in symb.py
+    # Basic JSON serialization, more complex logic in kind.py
     def __orjson__(self):
         return self.name
 
-def _to_symb(x: Any) -> 'BaseSymbol':
-    """Converts an object to a BaseSymbol instance."""
-    if isinstance(x, BaseSymbol):
+def _to_kind(x: Any) -> 'BaseKind':
+    """Converts an object to a BaseKind instance."""
+    if isinstance(x, BaseKind):
         return x
     elif isinstance(x, str):
-        return BaseSymbol(x)
+        return BaseKind(x)
     elif hasattr(x, 'name'):
-        return BaseSymbol(x.name)
-    raise TypeError(f"Cannot convert {repr(x)} instance of {type(x)} to BaseSymbol")
+        return BaseKind(x.name)
+    raise TypeError(f"Cannot convert {repr(x)} instance of {type(x)} to BaseKind")
 
 

@@ -1,45 +1,45 @@
-# `«symb»` Quick Guide
+# `«kind»` Quick Guide
 
 ## A Foundational Primitive for Symbolic Systems
 
 ### Abstract
 
-This document serves as a rapid introduction to `Symbol`, a Python library designed as a foundational primitive for constructing sophisticated symbic systems. Leveraging principles of interning, graph theory, and dynamic mixin-based extensibility, `Symbol` facilitates the creation of highly modular, performant, and semantically rich data models. This guide is tailored for researchers and practitioners with a strong background in computer science, formal methods, or knowledge representation, aiming to provide a high-level understanding and immediate utility.
+This document serves as a rapid introduction to `Kind`, a Python library designed as a foundational primitive for constructing sophisticated symbolic systems. Leveraging principles of interning, graph theory, and dynamic mixin-based extensibility, `Kind` facilitates the creation of highly modular, performant, and semantically rich data models. This guide is tailored for researchers and practitioners with a strong background in computer science, formal methods, or knowledge representation, aiming to provide a high-level understanding and immediate utility.
 
 ### 1. Core Concepts
 
-#### 1.1. Symbol Interning (Flyweight Pattern)
+#### 1.1. Kind Interning (Flyweight Pattern)
 
-At its core, `Symbol` implements a stringent interning mechanism. Every unique string name corresponds to precisely one `Symbol` instance. This ensures referential equality (`is`) for semantically equivalent entities, optimizing memory usage and enabling O(1) lookup for symbic identities.
+At its core, `Kind` implements a stringent interning mechanism. Every unique string name corresponds to precisely one `Kind` instance. This ensures referential equality (`is`) for semantically equivalent entities, optimizing memory usage and enabling O(1) lookup for symbolic identities.
 
 ```python
 
-from core.symbol_namespace import s
-from symb.core.symbol import Symbol
+from core.kind_namespace import k
+from kind.core.kind import Kind
 
 # Direct instantiation: Interning ensures uniqueness
-sym_a = Symbol("concept_A")
-sym_b = Symbol("concept_A")
-assert sym_a is sym_b  # True: Same instance
+kind_a = Kind("concept_A")
+kind_b = Kind("concept_A")
+assert kind_a is kind_b  # True: Same instance
 
 # Namespace access: Convenient interning
-sym_c = s.concept_C
-sym_d = s.concept_C
-assert sym_c is sym_d  # True: Same instance
+kind_c = k.concept_C
+kind_d = k.concept_C
+assert kind_c is kind_d  # True: Same instance
 ```
 
 #### 1.2. Graph-based Representation
 
-`Symbol` instances inherently function as nodes in a directed acyclic graph (DAG), or more generally, a directed graph. Relationships are established through explicit `append` or `add` operations, forming parent-child connections. This structure is fundamental for modeling hierarchical data, dependencies, and complex networks.
+`Kind` instances inherently function as nodes in a directed acyclic graph (DAG), or more generally, a directed graph. Relationships are established through explicit `append` or `add` operations, forming parent-child connections. This structure is fundamental for modeling hierarchical data, dependencies, and complex networks.
 
 ```python
 
-from core.symbol_namespace import s
+from core.kind_namespace import k
 
 # Building a simple hierarchy
-root_node = s.SystemRoot
-sub_system_1 = s.SubSystem1
-sub_system_2 = s.SubSystem2
+root_node = k.SystemRoot
+sub_system_1 = k.SubSystem1
+sub_system_2 = k.SubSystem2
 
 root_node.append(sub_system_1)
 root_node.append(sub_system_2)
@@ -51,15 +51,15 @@ assert root_node in sub_system_1.parents
 
 #### 1.3. Mixin-based Extensibility
 
-`Symbol`'s architecture supports dynamic runtime extension via mixins. This allows for the modular injection of domain-specific behaviors (e.g., time dimension parsing, pathfinding, indexing) without modifying the core `Symbol` class. This pattern promotes a highly composable design, enabling researchers to tailor `Symbol`'s capabilities precisely to their problem domain.
+`Kind`'s architecture supports dynamic runtime extension via mixins. This allows for the modular injection of domain-specific behaviors (e.g., time dimension parsing, pathfinding, indexing) without modifying the core `Kind` class. This pattern promotes a highly composable design, enabling researchers to tailor `Kind`'s capabilities precisely to their problem domain.
 
 ```python
 
-from symb.core.symbol import Symbol
+from kind.core.kind import Kind
 
 # Time dimension mixin example
-event_start = Symbol("2023-10-26T10:00:00Z")
-event_end = Symbol("2023-10-26T11:30:00Z")
+event_start = Kind("2023-10-26T10:00:00Z")
+event_end = Kind("2023-10-26T11:30:00Z")
 
 assert event_start.as_datetime.hour == 10
 assert event_end.as_datetime.minute == 30
@@ -68,7 +68,7 @@ assert (event_end.as_datetime - event_start.as_datetime).total_seconds() == 5400
 
 #### 1.4. Lazy Evaluation & Performance Characteristics
 
-Certain `Symbol` operations, particularly those involving complex graph traversals or computations on large datasets, are designed with lazy evaluation principles. This defers computation until results are explicitly required, optimizing performance for scenarios where only subsets of data are accessed.
+Certain `Kind` operations, particularly those involving complex graph traversals or computations on large datasets, are designed with lazy evaluation principles. This defers computation until results are explicitly required, optimizing performance for scenarios where only subsets of data are accessed.
 
 *   **O(1) Lookup:** Due to interning.
 *   **O(1) Linking:** Appending/adding children.
@@ -76,12 +76,12 @@ Certain `Symbol` operations, particularly those involving complex graph traversa
 
 ### 2. Illustrative Architecture: Knowledge Graph Foundation
 
-Consider `Symbol` as the foundational layer for a dynamic knowledge graph. Each `Symbol` represents an entity or concept, and their interconnections form the graph's structure. Mixins can then imbue these entities with domain-specific semantics and behaviors.
+Consider `Kind` as the foundational layer for a dynamic knowledge graph. Each `Kind` represents an entity or concept, and their interconnections form the graph's structure. Mixins can then imbue these entities with domain-specific semantics and behaviors.
 
 ```mermaid
 graph TD
-    subgraph Symbol_Core
-        A[Symbol Interning] --> B(Graph_Structure)
+    subgraph Kind_Core
+        A[Kind Interning] --> B(Graph_Structure)
         B --> C{Mixinability}
     end
 
@@ -114,14 +114,14 @@ graph TD
     style K fill:#32CD32,stroke:#333,stroke-width:2px,color:#000000;
 ```
 
-*   **Symbol Core (Red):** Represents the fundamental, immutable aspects of `Symbol` instances.
-*   **Domain-Specific Layers (Steel Blue):** Illustrates how mixins extend `Symbol` with specialized capabilities relevant to particular domains.
-*   **Applications (Lime Green):** Shows how these extended `Symbol` instances can be leveraged to build concrete applications.
+*   **Kind Core (Red):** Represents the fundamental, immutable aspects of `Kind` instances.
+*   **Domain-Specific Layers (Steel Blue):** Illustrates how mixins extend `Kind` with specialized capabilities relevant to particular domains.
+*   **Applications (Lime Green):** Shows how these extended `Kind` instances can be leveraged to build concrete applications.
 
 ### 3. Considerations for Researchers
 
-*   **Formal Verification:** The immutability of `Symbol` instances (once interned) and the explicit graph structure lend themselves well to formal verification techniques for system properties.
-*   **Semantic Web Integration:** `Symbol` can serve as a lightweight, in-memory RDF-like store, where `Symbol` names are URIs and relationships form triples.
+*   **Formal Verification:** The immutability of `Kind` instances (once interned) and the explicit graph structure lend themselves well to formal verification techniques for system properties.
+*   **Semantic Web Integration:** `Kind` can serve as a lightweight, in-memory RDF-like store, where `Kind` names are URIs and relationships form triples.
 *   **Dynamic Systems Modeling:** The mixin architecture enables runtime adaptation of system behavior, crucial for simulating adaptive or self-organizing systems.
 *   **Memory Footprint:** While interning optimizes for unique names, be mindful of the graph's overall memory consumption for extremely large-scale graphs. The `MEMORY_AWARE_DELETE` flag offers control over garbage collection behavior.
 
@@ -133,4 +133,4 @@ graph TD
 
 ### Conclusion
 
-`Symbol` provides a robust and flexible foundation for building complex symbic systems. Its design principles promote clarity, efficiency, and extensibility, making it an ideal tool for academic exploration and practical application in areas requiring sophisticated knowledge representation and graph-based reasoning. For deeper engagement, consult the detailed tutorials and API documentation.
+`Kind` provides a robust and flexible foundation for building complex symbolic systems. Its design principles promote clarity, efficiency, and extensibility, making it an ideal tool for academic exploration and practical application in areas requiring sophisticated knowledge representation and graph-based reasoning. For deeper engagement, consult the detailed tutorials and API documentation.

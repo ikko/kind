@@ -1,37 +1,37 @@
 
 from typing import Any
 
-class LazySymbol:
-    __slots__ = ('_obj', '_symb')
+class LazyKind:
+    __slots__ = ('_obj', '_kind')
 
     def __init__(self, obj: Any):
         self._obj = obj
-        self._symb = None
+        self._kind = None
 
     def __getattr__(self, name: str) -> Any:
-        if self._symb is None:
-            from .symbol import Symbol
-            self._symb = Symbol.from_object(self._obj)
-        return getattr(self._symb, name)
+        if self._kind is None:
+            from .kind import Kind
+            self._kind = Kind.from_object(self._obj)
+        return getattr(self._kind, name)
 
     def __repr__(self) -> str:
-        if self._symb is None:
-            return f"LazySymbol(unevaluated: {self._obj!r})"
-        return repr(self._symb)
+        if self._kind is None:
+            return f"LazyKind(unevaluated: {self._obj!r})"
+        return repr(self._kind)
 
     def __str__(self) -> str:
-        if self._symb is None:
-            return f"LazySymbol(unevaluated: {self._obj!s})"
-        return str(self._symb)
+        if self._kind is None:
+            return f"LazyKind(unevaluated: {self._obj!s})"
+        return str(self._kind)
 
     def __eq__(self, other: Any) -> bool:
-        if self._symb is None:
-            from .symbol import Symbol
-            self._symb = Symbol.from_object(self._obj)
-        return self._symb == other
+        if self._kind is None:
+            from .kind import Kind
+            self._kind = Kind.from_object(self._obj)
+        return self._kind == other
 
     def __hash__(self) -> int:
-        if self._symb is None:
-            from .symbol import Symbol
-            self._symb = Symbol.from_object(self._obj)
-        return hash(self._symb)
+        if self._kind is None:
+            from .kind import Kind
+            self._kind = Kind.from_object(self._obj)
+        return hash(self._kind)

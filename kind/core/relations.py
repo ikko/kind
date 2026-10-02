@@ -17,41 +17,41 @@ class Relations:
             # Handle positional arguments
             for arg in args:
                 try:
-                    sym_arg = self._owner.from_object(arg) # Convert to Symbol
+                    kind_arg = self._owner.from_object(arg) # Convert to Kind
                 except TypeError:
-                    raise TypeError(f"Cannot convert positional argument '{arg}' to Symbol for '{how}' relation.")
-                self._owner.relate(sym_arg, how=how)
+                    raise TypeError(f"Cannot convert positional argument '{arg}' to Kind for '{how}' relation.")
+                self._owner.relate(kind_arg, how=how)
 
             # Handle keyword arguments
             for key, value in kwargs.items():
                 if isinstance(value, list):
                     for item in value:
                         try:
-                            sym_item = self._owner.from_object(item) # Convert to Symbol
+                            kind_item = self._owner.from_object(item) # Convert to Kind
                         except TypeError:
-                            raise TypeError(f"Cannot convert list item '{item}' to Symbol for '{key}' relation.")
-                        self._owner.relate(sym_item, how=key)
+                            raise TypeError(f"Cannot convert list item '{item}' to Kind for '{key}' relation.")
+                        self._owner.relate(kind_item, how=key)
                 else:
                     try:
-                        sym_value = self._owner.from_object(value) # Convert to Symbol
+                        kind_value = self._owner.from_object(value) # Convert to Kind
                     except TypeError:
-                        raise TypeError(f"Cannot convert keyword argument value '{value}' to Symbol for '{key}' relation.")
-                    self._owner.relate(sym_value, how=key)
+                        raise TypeError(f"Cannot convert keyword argument value '{value}' to Kind for '{key}' relation.")
+                    self._owner.relate(kind_value, how=key)
             return self._owner
 
         return relation_proxy
 
-    def add(self, how, related_symbol):
+    def add(self, how, related_kind):
         if how not in self._relations:
             self._relations[how] = WeakSet()
-        self._relations[how].add(related_symbol)
+        self._relations[how].add(related_kind)
 
     def get(self, how):
         return self._relations.get(how, WeakSet())
 
-    def remove(self, how, related_symbol):
-        if how in self._relations and related_symbol in self._relations[how]:
-            self._relations[how].remove(related_symbol)
+    def remove(self, how, related_kind):
+        if how in self._relations and related_kind in self._relations[how]:
+            self._relations[how].remove(related_kind)
             if not self._relations[how]:
                 del self._relations[how]
 

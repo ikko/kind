@@ -1,12 +1,12 @@
 graph LR
     subgraph "Per-Instance Indexing"
-        A[Symbol Instance #40;Owner#41;] --> B{Private SymbolIndex};
+        A[Kind Instance #40;Owner#41;] --> B{Private KindIndex};
         B -- "contains" --> C[IndexNode 1];
         B -- "contains" --> D[IndexNode 2];
         B -- "contains" --> E[...];
 
-        C -- "references" --> F[Indexed Symbol 1];
-        D -- "references" --> G[Indexed Symbol 2];
+        C -- "references" --> F[Indexed Kind 1];
+        D -- "references" --> G[Indexed Kind 2];
 
         C -- "has" --> C_W[Weight/Metadata];
         D -- "has" --> D_W[Weight/Metadata];

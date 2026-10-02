@@ -1,4 +1,4 @@
-"""This module implements the "maturing" process for Symbol objects.
+"""This module implements the "maturing" process for Kind objects.
 
 This process involves elevating metadata to first-class attributes and methods,
 slimming down the object by removing unnecessary attributes, and freezing it to prevent further modifications.
@@ -53,7 +53,7 @@ class DefDict(defaultdict):
             # We don't call deep_del directly here on value_to_delete
             # because deep_del is designed for object attributes.
             # Instead, we rely on Python's GC for the value itself, but log the intent.
-            # The primary deep_del is for attributes of the Symbol instance.
+            # The primary deep_del is for attributes of the Kind instance.
         else:
             raise KeyError(f"Key '{key}' not found in DefDict.")
 
@@ -89,13 +89,13 @@ def _apply_merge_strategy(current_value: Any, new_value: Any, strategy: MergeStr
     elif strategy == 'deepcopy':
         return copy.deepcopy(new_value)
     elif strategy == 'patch':
-        # This assumes current_value is a Symbol and new_value is a Symbol
-        # We need to import Symbol here to avoid circular dependency if Symbol is not yet defined
-        from core.symbol import Symbol 
-        if isinstance(current_value, Symbol) and isinstance(new_value, Symbol):
+        # This assumes current_value is a Kind and new_value is a Kind
+        # We need to import Kind here to avoid circular dependency if Kind is not yet defined
+        from core.kind import Kind 
+        if isinstance(current_value, Kind) and isinstance(new_value, Kind):
             return current_value.patch(new_value)
         else:
-            log.warning(f"Patch strategy only applies to Symbol objects. Overwriting instead.")
+            log.warning(f"Patch strategy only applies to Kind objects. Overwriting instead.")
             return new_value
     elif strategy == 'pipe':
         # Assumes new_value is a callable that takes current_value as input

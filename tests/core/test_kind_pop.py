@@ -1,5 +1,5 @@
 
 import pytest
-from symb import Symbol
+from kind import Kind
 
 

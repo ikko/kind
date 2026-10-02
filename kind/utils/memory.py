@@ -3,7 +3,7 @@ import inspect
 from collections import defaultdict
 from typing import Dict, List, Any, Tuple
 
-from core.symbol import Symbol 
+from core.kind import Kind 
 
 def get_object_size(obj: Any) -> int:
     """Recursively calculates the size of an object in bytes."""
@@ -70,12 +70,12 @@ def get_public_methods_by_module(target_class: type) -> Dict[str, List[str]]:
 
     return dict(sorted(methods_by_module.items()))
 
-def analyze_symb_memory_and_methods(symb_instance: Symbol) -> Tuple[int, Dict[str, List[str]]]:
+def analyze_kind_memory_and_methods(kind_instance: Kind) -> Tuple[int, Dict[str, List[str]]]:
     """
-    Analyzes the memory footprint of a Symbol instance and lists its public methods by module.
+    Analyzes the memory footprint of a Kind instance and lists its public methods by module.
     """
-    memory_size = get_object_size(symb_instance)
-    public_methods = get_public_methods_by_module(symb_instance.__class__)
+    memory_size = get_object_size(kind_instance)
+    public_methods = get_public_methods_by_module(kind_instance.__class__)
     return memory_size, public_methods
 
 def print_analysis_report(title: str, memory_size: int, public_methods: Dict[str, List[str]]):

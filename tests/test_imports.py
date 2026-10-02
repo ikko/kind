@@ -4,15 +4,15 @@ import sys
 def test_direct_imports_skip_time_dim():
     # Attempt to import modules that should not directly import time_dim
     # This test relies on the fact that time_dim is a builtin and should be accessed via apply_builtins()
-    # or through the top-level symb package aliases.
+    # or through the top-level kind package aliases.
 
     # Temporarily remove time_dim from sys.modules to ensure a fresh import
-    if 'symb.builtin.time_dim' in sys.modules:
-        del sys.modules['symb.builtin.time_dim']
+    if 'kind.builtin.time_dim' in sys.modules:
+        del sys.modules['kind.builtin.time_dim']
 
     # These imports should succeed without pulling in time_dim directly
     try:
-        from core import symb
+        from core import kind
         from core import schedule
         from core import protocols
         from core import time_arithmetics
@@ -23,7 +23,7 @@ def test_direct_imports_skip_time_dim():
         from builtin import timeline
 
         # Assert that time_dim was NOT imported directly by these modules
-        assert 'symb.builtin.time_dim' not in sys.modules
+        assert 'kind.builtin.time_dim' not in sys.modules
 
     except ImportError as e:
         import logging
@@ -32,53 +32,53 @@ def test_direct_imports_skip_time_dim():
 
 def test_direct_imports_skip_core_and_builtins():
     # Temporarily remove core and builtin from sys.modules to ensure fresh imports
-    if 'symb.core' in sys.modules:
-        del sys.modules['symb.core']
-    if 'symb.builtin' in sys.modules:
-        del sys.modules['symb.builtin']
+    if 'kind.core' in sys.modules:
+        del sys.modules['kind.core']
+    if 'kind.builtin' in sys.modules:
+        del sys.modules['kind.builtin']
 
     # Remove specific submodules if they were already loaded
     for module_name in [
-        'symb.core.symb',
-        'symb.builtin.time_dim',
-        'symb.builtin.collections',
-        'symb.builtin.index',
-        'symb.builtin.path',
-        'symb.builtin.visual',
-        'symb.builtin.timeline',
+        'kind.core.kind',
+        'kind.builtin.time_dim',
+        'kind.builtin.collections',
+        'kind.builtin.index',
+        'kind.builtin.path',
+        'kind.builtin.visual',
+        'kind.builtin.timeline',
     ]:
         if module_name in sys.modules:
             del sys.modules[module_name]
 
     try:
-        import symb
+        import kind
 
         # Assert that core and builtin were NOT imported directly at the top level
-        assert 'symb.core' not in sys.modules
-        assert 'symb.builtin' not in sys.modules
+        assert 'kind.core' not in sys.modules
+        assert 'kind.builtin' not in sys.modules
 
         # Accessing aliases should trigger their import, but not necessarily the top-level package
-        # symb.s, symb.Symbol, and symb.GraphTraversal are now directly imported in symb/__init__.py
+        # kind.s, kind.Kind, and kind.GraphTraversal are now directly imported in kind/__init__.py
         # so they will always be present.
 
         # TODO:
-        # _ = symb.time_dim
-        # assert 'symb.builtin.time_dim' in sys.modules
+        # _ = kind.time_dim
+        # assert 'kind.builtin.time_dim' in sys.modules
         #
-        # _ = symb.collections
-        # assert 'symb.builtin.collections' in sys.modules
+        # _ = kind.collections
+        # assert 'kind.builtin.collections' in sys.modules
         #
-        # _ = symb.index
-        # assert 'symb.builtin.index' in sys.modules
+        # _ = kind.index
+        # assert 'kind.builtin.index' in sys.modules
         #
-        # _ = symb.path
-        # assert 'symb.builtin.path' in sys.modules
+        # _ = kind.path
+        # assert 'kind.builtin.path' in sys.modules
         #
-        # _ = symb.visual
-        # assert 'symb.builtin.visual' in sys.modules
+        # _ = kind.visual
+        # assert 'kind.builtin.visual' in sys.modules
         #
-        # _ = symb.timeline
-        # assert 'symb.builtin.timeline' in sys.modules
+        # _ = kind.timeline
+        # assert 'kind.builtin.timeline' in sys.modules
 
     except ImportError as e:
         import logging

@@ -1,4 +1,4 @@
-# [`«symb»`](https://github.com/ikko/symb) cookbook
+# [`«kind»`](https://github.com/ikko/kind) cookbook
 
 **Recipes for Symbolic Mastery**
 
@@ -13,7 +13,7 @@ _Recipe 1: How to Create a Mixin?_
  
 
 
-Once you've developed, tested, and documented your `symb` mixin, the next step is to make it available to others. This section outlines the process of publishing your mixin, from sharing it as a third-party package to potentially integrating it into the `symb` standard library.
+Once you've developed, tested, and documented your `kind` mixin, the next step is to make it available to others. This section outlines the process of publishing your mixin, from sharing it as a third-party package to potentially integrating it into the `kind` standard library.
 
 ## 1. As a Third-Party Package
 
@@ -24,8 +24,8 @@ The most common way to share your mixin is by packaging it as an independent Pyt
 1.  **Project Structure:** Organize your mixin code within a standard Python package structure. For example:
 
     ```
-    my_symb_mixins/
-    ├── my_symb_mixins/
+    my_kind_mixins/
+    ├── my_kind_mixins/
     │   ├── __init__.py
     │   └── descendant_counter.py  # Your mixin code
     └── pyproject.toml             # Or setup.py
@@ -33,17 +33,17 @@ The most common way to share your mixin is by packaging it as an independent Pyt
     └── LICENSE
     ```
 
-2.  **`pyproject.toml` (Recommended):** Use `pyproject.toml` for modern Python packaging. Define your project metadata, dependencies (e.g., `symb`, `anyio`, `pytest` for testing), and package information.
+2.  **`pyproject.toml` (Recommended):** Use `pyproject.toml` for modern Python packaging. Define your project metadata, dependencies (e.g., `kind`, `anyio`, `pytest` for testing), and package information.
 
     ```toml
     # pyproject.toml example
     [project]
-    name = "my-symb-mixins"
+    name = "my-kind-mixins"
     version = "0.1.0"
-    description = "Useful mixins for the symb framework"
+    description = "Useful mixins for the kind framework"
     authors = [{name = "Your Name", email = "your.email@example.com"}]
     dependencies = [
-        "symb",
+        "kind",
         "anyio",
     ]
 
@@ -74,25 +74,25 @@ The most common way to share your mixin is by packaging it as an independent Pyt
     twine upload dist/*
     ```
 
-    Your mixin will then be installable via `pip install my-symb-mixins`.
+    Your mixin will then be installable via `pip install my-kind-mixins`.
 
-## 2. Contributing to the `symb` Standard Library
+## 2. Contributing to the `kind` Standard Library
 
-If your mixin provides fundamental functionality, is widely applicable, and meets the high quality standards of the `symb` project, you might consider contributing it to the `symb` standard library (e.g., `symb.builtins`).
+If your mixin provides fundamental functionality, is widely applicable, and meets the high quality standards of the `kind` project, you might consider contributing it to the `kind` standard library (e.g., `kind.builtins`).
 
 ### Criteria for Standard Library Inclusion:
 
-*   **Broad Utility:** The mixin addresses a common need and is useful across a wide range of `symb` applications.
-*   **High Quality:** Adheres to `symb`'s coding standards, includes comprehensive tests, and is well-documented.
+*   **Broad Utility:** The mixin addresses a common need and is useful across a wide range of `kind` applications.
+*   **High Quality:** Adheres to `kind`'s coding standards, includes comprehensive tests, and is well-documented.
 *   **Performance:** Is optimized for performance and does not introduce significant overhead.
-*   **Maintainability:** Is easy to understand, extend, and maintain by the core `symb` development team.
-*   **No External Dependencies:** Ideally, standard library mixins should have minimal or no external dependencies beyond those already used by `symb` itself.
+*   **Maintainability:** Is easy to understand, extend, and maintain by the core `kind` development team.
+*   **No External Dependencies:** Ideally, standard library mixins should have minimal or no external dependencies beyond those already used by `kind` itself.
 
 ### Process for Contribution:
 
-1.  **Open an Issue:** Start by opening an issue on the `symb` project's GitHub repository to discuss your proposed mixin and its potential inclusion. This allows for early feedback and alignment with the project's roadmap.
-2.  **Develop and Test:** Ensure your mixin is fully developed, thoroughly tested, and well-documented, following all `symb` project guidelines.
-3.  **Submit a Pull Request:** Create a pull request (PR) with your changes. The PR will undergo code review by the `symb` maintainers.
+1.  **Open an Issue:** Start by opening an issue on the `kind` project's GitHub repository to discuss your proposed mixin and its potential inclusion. This allows for early feedback and alignment with the project's roadmap.
+2.  **Develop and Test:** Ensure your mixin is fully developed, thoroughly tested, and well-documented, following all `kind` project guidelines.
+3.  **Submit a Pull Request:** Create a pull request (PR) with your changes. The PR will undergo code review by the `kind` maintainers.
 4.  **Address Feedback:** Be prepared to address feedback and make revisions based on the review process.
 
-Contributing to the standard library is a significant way to impact the `symb` ecosystem and provide direct value to its users. Whether you publish as a third-party package or contribute to the core, sharing your mixins fosters a vibrant and collaborative community around the `symb` framework.
+Contributing to the standard library is a significant way to impact the `kind` ecosystem and provide direct value to its users. Whether you publish as a third-party package or contribute to the core, sharing your mixins fosters a vibrant and collaborative community around the `kind` framework.

@@ -11,7 +11,7 @@ def test_config_default_path(tmp_path):
     os.environ['XDG_CONFIG_HOME'] = str(tmp_path)
 
     config = Config(file_path=None) # Test with default path
-    expected_path = tmp_path / 'symb' / 'config.toml'
+    expected_path = tmp_path / 'kind' / 'config.toml'
     assert config.file_path == expected_path
 
     # Restore original XDG_CONFIG_HOME

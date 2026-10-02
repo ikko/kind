@@ -10,8 +10,8 @@ RED = True
 BLACK = False
 
 class RedBlackNode:
-    def __init__(self, symb: 'Symbol', weight: Union[float, Callable[[Any], float]], color=RED):
-        self.symb = symb
+    def __init__(self, kind: 'Kind', weight: Union[float, Callable[[Any], float]], color=RED):
+        self.kind = kind
         self.weight = weight
         self.color = color
         self.left: Optional['RedBlackNode'] = None
@@ -19,15 +19,15 @@ class RedBlackNode:
         self.parent: Optional['RedBlackNode'] = None
 
     def eval_weight(self, *args, **kwargs) -> float:
-        return self.weight(self.symb) if callable(self.weight) else self.weight
+        return self.weight(self.kind) if callable(self.weight) else self.weight
 
 
 class RedBlackTree:
     def __init__(self):
         self.root: Optional[RedBlackNode] = None
 
-    def insert(self, symb: 'Symbol', weight: Union[float, Callable]):
-        node = RedBlackNode(symb, weight)
+    def insert(self, kind: 'Kind', weight: Union[float, Callable]):
+        node = RedBlackNode(kind, weight)
         self._bst_insert(node)
         self._fix_insert(node)
 
@@ -234,7 +234,7 @@ class RedBlackTree:
                     x = self.root
         x.color = BLACK
 
-    def traverse_inorder(self, node: Optional[RedBlackNode] = None) -> list['Symbol']:
+    def traverse_inorder(self, node: Optional[RedBlackNode] = None) -> list['Kind']:
         if node is None:
             node = self.root
         result = []
@@ -243,7 +243,7 @@ class RedBlackTree:
             if not n:
                 return
             _walk(n.left)
-            result.append(n.symb)
+            result.append(n.kind)
             _walk(n.right)
 
         _walk(node)
@@ -256,7 +256,7 @@ class RedBlackTree:
             if node is None:
                 return
             _walk_ascii(node.right, indent + "  ")
-            lines.append(f"{indent}- {node.symb.name} ({'R' if node.color else 'B'})")
+            lines.append(f"{indent}- {node.kind.name} ({'R' if node.color else 'B'})")
             _walk_ascii(node.left, indent + "  ")
 
         _walk_ascii(self.root)

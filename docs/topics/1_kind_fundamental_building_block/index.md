@@ -1,29 +1,29 @@
-# `«symb»`
+# `«kind»`
 
-> - Imagine `symb` like a pointer that does not point to anything. 
-> - Imagine `symbs` as a knowledge meta-network layer that represent semantic information about your entities and objects.
+> - Imagine `kind` like a pointer that does not point to anything. 
+> - Imagine `kinds` as a knowledge meta-network layer that represent semantic information about your entities and objects.
 
-# 1.1 Symbol: The Fundamental Building Block
+# 1.1 Kind: The Fundamental Building Block
 
-The `Symbol` object serves as the atomic unit within the framework, embodying a node in a dynamic, directed acyclic graph (DAG). Its design prioritizes uniqueness, efficient relationship management, and extensibility, making it a versatile primitive for diverse symbic data manipulation tasks.
+The `Kind` object serves as the atomic unit within the framework, embodying a node in a dynamic, directed acyclic graph (DAG). Its design prioritizes uniqueness, efficient relationship management, and extensibility, making it a versatile primitive for diverse symbolic data manipulation tasks.
 
 ## Uniqueness and Interning
 
-Each `Symbol` instance is uniquely identified by its `name` attribute. This uniqueness is enforced through an interning mechanism, ensuring that `Symbol('A')` will always return the same object in memory as any subsequent call to `Symbol('A')`. This design choice offers significant advantages:
+Each `Kind` instance is uniquely identified by its `name` attribute. This uniqueness is enforced through an interning mechanism, ensuring that `Kind('A')` will always return the same object in memory as any subsequent call to `Kind('A')`. This design choice offers significant advantages:
 
--   **Memory Efficiency**: Prevents redundant object creation, reducing memory footprint, especially in large graphs with many identical symbic representations.
--   **Consistency**: Guarantees that operations on a symb consistently refer to the same underlying entity, simplifying identity checks and graph integrity.
+-   **Memory Efficiency**: Prevents redundant object creation, reducing memory footprint, especially in large graphs with many identical symbolic representations.
+-   **Consistency**: Guarantees that operations on a kind consistently refer to the same underlying entity, simplifying identity checks and graph integrity.
 -   **Performance**: Accelerates lookups and comparisons, as identity can often be checked by memory address rather than content comparison.
 
 ```mermaid
 graph TD
-    A[Symbol#40;'A'#41;] --> B{Interning Pool};
-    B --> C[Existing Symbol 'A'];
-    D[Symbol#40;'A'#41;] --> B;
-    E[Symbol#40;'B'#41;] --> B;
-    B --> F[New Symbol 'B'];
+    A[Kind#40;'A'#41;] --> B{Interning Pool};
+    B --> C[Existing Kind 'A'];
+    D[Kind#40;'A'#41;] --> B;
+    E[Kind#40;'B'#41;] --> B;
+    B --> F[New Kind 'B'];
 
-    %% Symbol creation requests - use warm gold/amber
+    %% Kind creation requests - use warm gold/amber
     style A fill:#e63946,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style D fill:#e63946,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style E fill:#e76f51,stroke:#333,stroke-width:2px,color:#FFFFFF;
@@ -31,24 +31,24 @@ graph TD
     %% Interning pool - central component
     style B fill:#9c6644,stroke:#333,stroke-width:2px,color:#FFFFFF;
     
-    %% Symbol instances - results
+    %% Kind instances - results
     style C fill:#f9c74f,stroke:#333,stroke-width:2px,color:#000000;
     style F fill:#f8961e,stroke:#333,stroke-width:2px,color:#000000;
 ```
 
 ## Complex Relationships and Graph Structure
 
-`Symbol` objects are designed to form complex relationships, acting as nodes in a directed acyclic graph (DAG). Each `Symbol` maintains references to its `children` (symbs it points to) and `parents` (symbs that point to it). This bidirectional linking facilitates efficient traversal and manipulation of the graph structure.
+`Kind` objects are designed to form complex relationships, acting as nodes in a directed acyclic graph (DAG). Each `Kind` maintains references to its `children` (kinds it points to) and `parents` (kinds that point to it). This bidirectional linking facilitates efficient traversal and manipulation of the graph structure.
 
 The framework provides intuitive methods for establishing and managing these relationships:
 
--   `symb.add(child)`: Establishes a directed relationship from `symb` to `child`. If the relationship already exists, it is idempotent.
--   `symb.append(child)`: Similar to `add`, but ensures the child is added to the end of the children list if not already present.
--   `symb.delete()`: Removes a symb from the graph, severing its connections to parents and children.
+-   `kind.add(child)`: Establishes a directed relationship from `kind` to `child`. If the relationship already exists, it is idempotent.
+-   `kind.append(child)`: Similar to `add`, but ensures the child is added to the end of the children list if not already present.
+-   `kind.delete()`: Removes a kind from the graph, severing its connections to parents and children.
 
 ### Illustrative Example: Supply Chain Modeling
 
-Consider a supply chain where raw materials are transformed into finished goods. Each entity (e.g., "Supplier", "Manufacturer", "Product") can be represented as a `Symbol`. Relationships like "supplies", "manufactures", or "contains" can be modeled by connecting these symbs.
+Consider a supply chain where raw materials are transformed into finished goods. Each entity (e.g., "Supplier", "Manufacturer", "Product") can be represented as a `Kind`. Relationships like "supplies", "manufactures", or "contains" can be modeled by connecting these kinds.
 
 ```mermaid
 graph TD
@@ -71,20 +71,20 @@ graph TD
 ### Code Example: Building a Simple Knowledge Graph
 
 ```python
-from symb import Symbol, s
+from kind import Kind, k
 
-# Create symbs for entities
-person = Symbol('Person')
-organization = Symbol('Organization')
-event = Symbol('Event')
-location = Symbol('Location')
+# Create kinds for entities
+person = Kind('Person')
+organization = Kind('Organization')
+event = Kind('Event')
+location = Kind('Location')
 
 # Create specific instances
-alice = s.Alice
-bob = s.Bob
-google = s.Google
-conference = s.Tech_Conference_2025
-london = s.London
+alice = k.Alice
+bob = k.Bob
+google = k.Google
+conference = k.Tech_Conference_2025
+london = k.London
 
 # Establish relationships
 alice.add(person)
@@ -137,26 +137,26 @@ graph TD
 **High-Tech: Semantic Web and Knowledge Graphs**
 
 ```python
-from symb import s, Symbol
-from symb.core.mixinability import register_mixin
-from symb.core.protocols import SymbolProtocol
-from symb.builtin import apply_builtins
+from kind import k, Kind
+from kind.core.mixinability import register_mixin
+from kind.core.protocols import KindProtocol
+from kind.builtin import apply_builtins
 
 
-class KnowledgeGraphMixin(SymbolProtocol):
-    def has_title(self, title: Symbol):
+class KnowledgeGraphMixin(KindProtocol):
+    def has_title(self, title: Kind):
         self.add(title)
 
-    def has_author(self, author: Symbol):
+    def has_author(self, author: Kind):
         self.add(author)
 
-    def published_in(self, journal: Symbol):
+    def published_in(self, journal: Kind):
         self.add(journal)
 
-    def affiliated_with(self, organization: Symbol):
+    def affiliated_with(self, organization: Kind):
         self.add(organization)
 
-    def contains(self, component: Symbol):
+    def contains(self, component: Kind):
         self.add(component)
 
 
@@ -164,13 +164,13 @@ register_mixin(KnowledgeGraphMixin, expand=True)
 apply_builtins()
 
 # Representing a research paper and its attributes
-s.Paper_A.has_title(s.The_Future_of_AI)
-s.Paper_A.has_author(s.Alice_Smith)
-s.Paper_A.published_in(s.Journal_of_AI_Research)
-s.Alice_Smith.affiliated_with(s.University_X)
+k.Paper_A.has_title(k.The_Future_of_AI)
+k.Paper_A.has_author(k.Alice_Smith)
+k.Paper_A.published_in(k.Journal_of_AI_Research)
+k.Alice_Smith.affiliated_with(k.University_X)
 
-print(f"Paper A title: {s.Paper_A.children[0].name}")
-print(f"Author of Paper A: {s.Paper_A.children[1].name}")
+print(f"Paper A title: {k.Paper_A.children[0].name}")
+print(f"Author of Paper A: {k.Paper_A.children[1].name}")
 ```
 <details>
 <summary>Outcome</summary>
@@ -184,26 +184,26 @@ Author of Paper A: Alice_Smith
 **Low-Tech: Inventory Management and Bill of Materials (BOM)**
 
 ```python
-from symb import s, Symbol
-from symb.core.mixinability import register_mixin
-from symb.core.protocols import SymbolProtocol
-from symb.builtin import apply_builtins
+from kind import k, Kind
+from kind.core.mixinability import register_mixin
+from kind.core.protocols import KindProtocol
+from kind.builtin import apply_builtins
 
 
-class KnowledgeGraphMixin(SymbolProtocol):
-    def has_title(self, title: Symbol):
+class KnowledgeGraphMixin(KindProtocol):
+    def has_title(self, title: Kind):
         self.add(title)
 
-    def has_author(self, author: Symbol):
+    def has_author(self, author: Kind):
         self.add(author)
 
-    def published_in(self, journal: Symbol):
+    def published_in(self, journal: Kind):
         self.add(journal)
 
-    def affiliated_with(self, organization: Symbol):
+    def affiliated_with(self, organization: Kind):
         self.add(organization)
 
-    def contains(self, component: Symbol):
+    def contains(self, component: Kind):
         self.add(component)
 
 
@@ -211,15 +211,15 @@ register_mixin(KnowledgeGraphMixin, expand=True)
 apply_builtins()
 
 # Modeling a bicycle BOM
-s.Bicycle.contains(s.Frame)
-s.Bicycle.contains(s.Wheel_Assembly)
-s.Bicycle.contains(s.Handlebars)
-s.Wheel_Assembly.contains(s.Rim)
-s.Wheel_Assembly.contains(s.Spokes)
-s.Wheel_Assembly.contains(s.Tire)
+k.Bicycle.contains(k.Frame)
+k.Bicycle.contains(k.Wheel_Assembly)
+k.Bicycle.contains(k.Handlebars)
+k.Wheel_Assembly.contains(k.Rim)
+k.Wheel_Assembly.contains(k.Spokes)
+k.Wheel_Assembly.contains(k.Tire)
 
-print(f"Bicycle components: {[c.name for c in s.Bicycle.children]}")
-print(f"Wheel Assembly components: {[c.name for c in s.Wheel_Assembly.children]}")
+print(f"Bicycle components: {[c.name for c in k.Bicycle.children]}")
+print(f"Wheel Assembly components: {[c.name for c in k.Wheel_Assembly.children]}")
 ```
 <details>
 <summary>Outcome</summary>
@@ -232,6 +232,6 @@ Wheel Assembly components: ['Rim', 'Spokes', 'Tire']
 
 ## Conclusion
 
-The `Symbol` object, with its inherent uniqueness and robust mechanisms for establishing and managing relationships, provides a powerful and flexible foundation for representing and manipulating complex, graph-based data structures across a wide spectrum of applications. Its lean design and extensibility ensure adaptability to evolving domain requirements.
+The `Kind` object, with its inherent uniqueness and robust mechanisms for establishing and managing relationships, provides a powerful and flexible foundation for representing and manipulating complex, graph-based data structures across a wide spectrum of applications. Its lean design and extensibility ensure adaptability to evolving domain requirements.
 
 ---

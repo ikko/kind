@@ -8,11 +8,11 @@
 - [x] Modify `GraphTraversal.__init__` to accept `traverse_mode`, `family_mode`, `graph_mode`.
 - [x] Refactor `GraphTraversal.traverse` to implement DFS/BFS for family and general relations.
 - [x] Update `GraphTraversal.to_ascii` to format output with relations as explicit `Source --relation_type--> Target` lines.
-- [x] Update `Symbol.to_ascii` to pass new parameters.
+- [x] Update `Kind.to_ascii` to pass new parameters.
 
 ## Phase 3: Implement `.from_ascii`
-- [x] Implement `Symbol.from_ascii` class method based on the new `to_ascii` relation format.
-- [x] Implement parsing logic for symbol identification and hierarchy.
+- [x] Implement `Kind.from_ascii` class method based on the new `to_ascii` relation format.
+- [x] Implement parsing logic for kind identification and hierarchy.
 - [x] Implement parsing logic for relationship reconstruction.
 
 ## Phase 4: Testing

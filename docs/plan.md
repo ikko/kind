@@ -1,10 +1,10 @@
-# Implementation Plan: Enhanced .to_ascii and New .from_ascii for Symbol Graph Serialization
+# Implementation Plan: Enhanced .to_ascii and New .from_ascii for Kind Graph Serialization
 
 ## 1. Introduction
-This document outlines the plan to enhance the existing `.to_ascii` method within the `Symbol` class for more comprehensive graph export, and to implement a new `.from_ascii` class method for reconstructing `Symbol` graphs from their ASCII representation. The focus is on providing flexible traversal options for export and robust parsing for import, adhering to the "happy path" for initial implementation.
+This document outlines the plan to enhance the existing `.to_ascii` method within the `Kind` class for more comprehensive graph export, and to implement a new `.from_ascii` class method for reconstructing `Kind` graphs from their ASCII representation. The focus is on providing flexible traversal options for export and robust parsing for import, adhering to the "happy path" for initial implementation.
 
 ## 2. Current State Analysis of `.to_ascii`
-The current `Symbol.to_ascii()` method delegates to `GraphTraversal.to_ascii()`, which performs a depth-first traversal of the `children` hierarchy only. It does not account for general `relations` or offer configurable traversal strategies (e.g., breadth-first, different family traversal orders).
+The current `Kind.to_ascii()` method delegates to `GraphTraversal.to_ascii()`, which performs a depth-first traversal of the `children` hierarchy only. It does not account for general `relations` or offer configurable traversal strategies (e.g., breadth-first, different family traversal orders).
 
 ## 3. Proposed Enhancements to `.to_ascii`
 
@@ -18,26 +18,26 @@ To provide flexibility, the `GraphTraversal.to_ascii` method will be extended wi
 ### 3.2. Enhanced Content Export
 The ASCII output will be augmented to include:
 *   **Family Hierarchy:** Continue to represent the parent-child relationships with indentation.
-*   **General Relations:** Clearly indicate relationships defined via `sym.relate(other, how='...')`. This might involve a separate section for relations or inline notation, depending on readability.
-*   **Nested Elements:** The traversal logic will ensure that all connected symbols are included, preventing infinite loops by tracking visited nodes. The export will stop traversing a path when it encounters an already exported symbol.
+*   **General Relations:** Clearly indicate relationships defined via `kind.relate(other, how='...')`. This might involve a separate section for relations or inline notation, depending on readability.
+*   **Nested Elements:** The traversal logic will ensure that all connected kinds are included, preventing infinite loops by tracking visited nodes. The export will stop traversing a path when it encounters an already exported kind.
 
 ### 3.3. Implementation Details
 *   Modify `GraphTraversal.__init__` to accept the new `traverse_mode`, `family_mode`, and `graph_mode` parameters.
 *   Refactor `GraphTraversal.traverse` (or create new internal methods) to implement DFS and BFS logic, considering both family and general graph relations.
 *   Update `GraphTraversal.to_ascii` to utilize the chosen traversal modes and to format the output to include relation information.
-*   Update `Symbol.to_ascii` to accept and pass these new parameters to `GraphTraversal.to_ascii`.
+*   Update `Kind.to_ascii` to accept and pass these new parameters to `GraphTraversal.to_ascii`.
 
 ## 4. New Implementation: `.from_ascii`
 
 ### 4.1. Class Method Signature
-A new class method `Symbol.from_ascii(ascii_string: str) -> 'Symbol'` will be implemented. This method will reconstruct a `Symbol` graph from its ASCII string representation.
+A new class method `Kind.from_ascii(ascii_string: str) -> 'Kind'` will be implemented. This method will reconstruct a `Kind` graph from its ASCII string representation.
 
 ### 4.2. Parsing Logic
 The parsing process will involve:
 *   **Line-by-Line Processing:** Iterate through the ASCII string line by line.
-*   **Symbol Identification:** Extract symbol names and determine their hierarchical level (indentation).
-*   **Relationship Reconstruction:** Based on the parsed structure, re-establish parent-child relationships and general relations using `Symbol.append()` and `Symbol.relate()`.
-*   **Visited Tracking:** Maintain a mapping of symbol names to `Symbol` instances to handle references and avoid creating duplicate symbols.
+*   **Kind Identification:** Extract kind names and determine their hierarchical level (indentation).
+*   **Relationship Reconstruction:** Based on the parsed structure, re-establish parent-child relationships and general relations using `Kind.append()` and `Kind.relate()`.
+*   **Visited Tracking:** Maintain a mapping of kind names to `Kind` instances to handle references and avoid creating duplicate kinds.
 
 ### 4.3. Happy Path Focus
 The initial implementation will focus solely on the "happy path," assuming a well-formed ASCII input generated by the enhanced `.to_ascii` method. Error handling for malformed input will be considered in future iterations.
@@ -50,15 +50,15 @@ The initial implementation will focus solely on the "happy path," assuming a wel
 *   Ensure correct indentation and representation of relations.
 
 ### 5.2. Unit Tests for `.from_ascii`
-*   Create test cases to verify that `.from_ascii` correctly reconstructs `Symbol` graphs from valid ASCII strings.
+*   Create test cases to verify that `.from_ascii` correctly reconstructs `Kind` graphs from valid ASCII strings.
 *   Test with ASCII strings representing different graph complexities.
 
 ### 5.3. Roundtrip Tests
-*   Implement tests that perform a roundtrip: `symbol_graph -> to_ascii() -> from_ascii() -> reconstructed_symbol_graph`.
-*   Verify that the `reconstructed_symbol_graph` is structurally and relationally equivalent to the original `symbol_graph`.
+*   Implement tests that perform a roundtrip: `kind_graph -> to_ascii() -> from_ascii() -> reconstructed_kind_graph`.
+*   Verify that the `reconstructed_kind_graph` is structurally and relationally equivalent to the original `kind_graph`.
 
 ## 6. Deliverables
-*   Modified `symb/core/symb.py` with enhanced `GraphTraversal.to_ascii` and new `Symbol.from_ascii`.
-*   Updated test files (e.g., `tests/core/test_symbol.py`) with new test cases.
+*   Modified `kind/core/kind.py` with enhanced `GraphTraversal.to_ascii` and new `Kind.from_ascii`.
+*   Updated test files (e.g., `tests/core/test_kind.py`) with new test cases.
 *   This `docs/plan.md` document.
 *   `docs/todo.md` for tracking progress.

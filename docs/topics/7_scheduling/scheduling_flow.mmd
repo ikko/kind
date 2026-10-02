@@ -1,5 +1,5 @@
 graph
-    subgraph "Symbol Scheduling Mechanism"
+    subgraph "Kind Scheduling Mechanism"
         A[ScheduledJob] --> B{Scheduler.add_job#40#41};
         B -- "Adds to" --> C[Min-Heap #40_schedule#41];
         C -- "Stores in" --> D[Job Map #40job_map#41];
@@ -18,7 +18,7 @@ graph
     subgraph "Job Definition #40ScheduledJob#41"
         L[Callable Function] --> M[func];
         N[Arguments] --> O[args, kwargs];
-        P[Schedule #40cron, datetime, Symbol#41] --> Q[schedule];
+        P[Schedule #40cron, datetime, Kind#41] --> Q[schedule];
         Q -- "Calculates" --> R[next_run];
     end
 

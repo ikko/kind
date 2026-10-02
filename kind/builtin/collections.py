@@ -1,11 +1,11 @@
-"""This module provides custom collection classes for Symbol objects.
+"""This module provides custom collection classes for Kind objects.
 
-It includes an OrderedSymbolSet, which is a set of Symbols that maintains insertion order.
+It includes an OrderedKindSet, which is a set of Kinds that maintains insertion order.
 """
 import threading
 
 
-class OrderedSymbolSet:
+class OrderedKindSet:
     def __init__(self, items=None):
         self._dict = dict()
         self._lock = threading.RLock()
@@ -14,13 +14,13 @@ class OrderedSymbolSet:
             for item in items:
                 self.add(item)
 
-    def add(self, sym: 'Symbol'):
+    def add(self, kind: 'Kind'):
         with self._lock:
-            if sym.name not in self._dict:
-                self._dict[sym.name] = sym
+            if kind.name not in self._dict:
+                self._dict[kind.name] = kind
                 self._length += 1
             else:
-                self._dict[sym.name].patch(sym)
+                self._dict[kind.name].patch(kind)
 
     def __iter__(self):
         return iter(self._dict.values())
@@ -28,5 +28,5 @@ class OrderedSymbolSet:
     def __len__(self):
         return self._length
 
-    def __contains__(self, sym):
-        return sym.name in self._dict
+    def __contains__(self, kind):
+        return kind.name in self._dict

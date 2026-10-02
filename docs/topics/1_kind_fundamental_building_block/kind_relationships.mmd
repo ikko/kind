@@ -1,6 +1,6 @@
 graph TD
     subgraph "Symbolic Data Representation"
-        A[Symbol: Unique Node]
+        A[Kind: Unique Node]
         B[Relationship: Directed Edge]
         C[Graph: Collection of Nodes and Edges]
     end
@@ -12,9 +12,9 @@ graph TD
     end
 
     subgraph "Relationship Types"
-        A -- "parent of" --> E[Child Symbol]
+        A -- "parent of" --> E[Child Kind]
         E -- "child of" --> A
-        A -- "related to [generic]" --> F[Other Symbol]
+        A -- "related to [generic]" --> F[Other Kind]
     end
 
     subgraph "Example: Project Management"
@@ -27,7 +27,7 @@ graph TD
         M[Resource Y] --> J
     end
 
-    %% Core symb elements - green/teal warm tones
+    %% Core kind elements - green/teal warm tones
     style A fill:#e63946,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style B fill:#f4a261,stroke:#333,stroke-width:2px,color:#000000;
     style C fill:#e9c46a,stroke:#333,stroke-width:2px,color:#000000;

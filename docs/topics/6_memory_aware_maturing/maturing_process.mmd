@@ -1,11 +1,11 @@
 graph TD
     subgraph "Memory-Aware Maturing Process #40;immute#40;#41;#41;"
-        A[Initial Symbol Instance] --> B{1. Elevate Metadata #40;elevate#40;#41;#41;};
+        A[Initial Kind Instance] --> B{1. Elevate Metadata #40;elevate#40;#41;#41;};
         B -- "Metadata in .metadata" --> C[Promoted to Attributes/Methods];
         C --> D{2. Slim Down #40;slim#40;#41;#41;};
         D -- "Removes Dynamic Mixins" --> E[Optimized Memory Footprint];
-        E --> F{3. Freeze Symbol Class #40;freeze#40;#41;#41;};
-        F -- "Prevents Further Changes" --> G[Immutable, Production-Ready Symbol];
+        E --> F{3. Freeze Kind Class #40;freeze#40;#41;#41;};
+        F -- "Prevents Further Changes" --> G[Immutable, Production-Ready Kind];
     end
 
     %% State nodes - orange gradient from lighter to darker

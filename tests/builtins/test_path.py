@@ -1,20 +1,20 @@
 import pytest
-from symb import Symbol
-from builtin.path import SymbolPathMixin
+from kind import Kind
+from builtin.path import KindPathMixin
 
-# Apply the mixin to Symbol for testing purposes
+# Apply the mixin to Kind for testing purposes
 # In a real application, this would be handled by apply_builtins
-Symbol.path_to = SymbolPathMixin.path_to
-Symbol.match = SymbolPathMixin.match
+Kind.path_to = KindPathMixin.path_to
+Kind.match = KindPathMixin.match
 
 @pytest.fixture
 def simple_graph():
     # A -> B -> C
     # A -> D
-    a = Symbol("A")
-    b = Symbol("B")
-    c = Symbol("C")
-    d = Symbol("D")
+    a = Kind("A")
+    b = Kind("B")
+    c = Kind("C")
+    d = Kind("D")
 
     a.append(b)
     b.append(c)
@@ -23,18 +23,18 @@ def simple_graph():
 
 @pytest.fixture
 def disconnected_graph():
-    # These symbs are not connected to each other, nor to simple_graph
-    x = Symbol("X_disconnected")
-    y = Symbol("Y_disconnected")
-    z = Symbol("Z_disconnected")
+    # These kinds are not connected to each other, nor to simple_graph
+    x = Kind("X_disconnected")
+    y = Kind("Y_disconnected")
+    z = Kind("Z_disconnected")
     return x, y, z
 
 @pytest.fixture
 def cyclic_graph():
     # A -> B -> C -> A (cycle)
-    a = Symbol("A_cycle")
-    b = Symbol("B_cycle")
-    c = Symbol("C_cycle")
+    a = Kind("A_cycle")
+    b = Kind("B_cycle")
+    c = Kind("C_cycle")
 
     a.append(b)
     b.append(c)
@@ -66,27 +66,27 @@ def test_path_to_with_cycle(cyclic_graph):
 def test_match_dfs(simple_graph):
     a, b, c, d = simple_graph
     # Predicate: name starts with 'B' or 'C'
-    predicate = lambda sym: sym.name.startswith("B") or sym.name.startswith("C")
-    matched_symbs = list(a.match(predicate, traversal='dfs'))
+    predicate = lambda kind: kind.name.startswith("B") or kind.name.startswith("C")
+    matched_kinds = list(a.match(predicate, traversal='dfs'))
     # DFS order: A, B, C, D. Matches: B, C
-    assert matched_symbs == [b, c]
+    assert matched_kinds == [b, c]
 
 def test_match_bfs(simple_graph):
     a, b, c, d = simple_graph
     # Predicate: name starts with 'B' or 'D'
-    predicate = lambda sym: sym.name.startswith("B") or sym.name.startswith("D")
-    matched_symbs = list(a.match(predicate, traversal='bfs'))
+    predicate = lambda kind: kind.name.startswith("B") or kind.name.startswith("D")
+    matched_kinds = list(a.match(predicate, traversal='bfs'))
     # BFS order: A, B, D, C. Matches: B, D
-    assert matched_symbs == [b, d]
+    assert matched_kinds == [b, d]
 
 def test_match_no_match(simple_graph):
     a, _, _, _ = simple_graph
-    predicate = lambda sym: sym.name == "Z"
-    matched_symbs = list(a.match(predicate))
-    assert matched_symbs == []
+    predicate = lambda kind: kind.name == "Z"
+    matched_kinds = list(a.match(predicate))
+    assert matched_kinds == []
 
 def test_match_all_match(simple_graph):
     a, b, c, d = simple_graph
-    predicate = lambda sym: True
-    matched_symbs = list(a.match(predicate, traversal='dfs'))
-    assert set(matched_symbs) == {a, b, c, d}
+    predicate = lambda kind: True
+    matched_kinds = list(a.match(predicate, traversal='dfs'))
+    assert set(matched_kinds) == {a, b, c, d}

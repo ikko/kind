@@ -6,7 +6,7 @@ from typing import List, Tuple, Optional, Iterator
 import datetime
 
 class Timeline:
-    """Represents a series of periods, typically associated with a Symbol."""
+    """Represents a series of periods, typically associated with a Kind."""
     def __init__(self, periods: Optional[List[Tuple[datetime.datetime, datetime.datetime]]] = None):
         self._periods = []
         if periods:

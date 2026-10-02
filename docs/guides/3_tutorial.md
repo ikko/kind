@@ -1,14 +1,14 @@
-# `«symb»` Tutorial
+# `«kind»` Tutorial
 
 ## Symbolic Modeling and Applications
 
 ### Abstract
 
-This advanced tutorial delves into the sophisticated capabilities of the `Symbol` library, showcasing its versatility in addressing complex modeling challenges across a wide spectrum of industries. We will explore advanced features such as custom mixin development, intricate graph manipulations, and strategic application of `Symbol` for domain-specific language (DSL) construction. Through diverse, real-world inspired examples, this guide aims to empower experienced developers and researchers to unlock the full potential of `Symbol` for highly specialized and performant symbic systems.
+This advanced tutorial delves into the sophisticated capabilities of the `Kind` library, showcasing its versatility in addressing complex modeling challenges across a wide spectrum of industries. We will explore advanced features such as custom mixin development, intricate graph manipulations, and strategic application of `Kind` for domain-specific language (DSL) construction. Through diverse, real-world inspired examples, this guide aims to empower experienced developers and researchers to unlock the full potential of `Kind` for highly specialized and performant symbolic systems.
 
 ### 1. Deep Dive into Mixinability: Custom Behaviors and Protocols
 
-Beyond the built-in mixins, `Symbol` allows you to define and register your own custom behaviors, enabling truly domain-specific modeling. This is achieved by creating classes that implement `Symbol`'s protocols and registering them as mixins.
+Beyond the built-in mixins, `Kind` allows you to define and register your own custom behaviors, enabling truly domain-specific modeling. This is achieved by creating classes that implement `Kind`'s protocols and registering them as mixins.
 
 #### 1.1. Custom Mixin Development: Aerospace (Aircraft Maintenance Scheduling)
 
@@ -16,12 +16,12 @@ Imagine modeling aircraft components and their maintenance schedules. We can cre
 
 ```python
 import datetime
-from symb.core.symbol import Symbol
-from symb.core.mixinability import register_mixin
-from symb.core.protocols import SymbolProtocol
+from kind.core.kind import Kind
+from kind.core.mixinability import register_mixin
+from kind.core.protocols import KindProtocol
 
 
-class AircraftComponentMixin(SymbolProtocol):
+class AircraftComponentMixin(KindProtocol):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._last_inspected = None
@@ -46,7 +46,7 @@ class AircraftComponentMixin(SymbolProtocol):
 register_mixin(AircraftComponentMixin, expand=True)
 
 # Usage
-engine = Symbol("Engine_Turbofan_A320")
+engine = Kind("Engine_Turbofan_A320")
 engine.aircraft_component.last_inspected = datetime.datetime(2024, 1, 15)
 
 print(f"Engine last inspected: {engine.aircraft_component.last_inspected}")
@@ -63,21 +63,21 @@ Engine next inspection due: 2025-01-15 00:00:00
 
 ### 2. Complex Graph Manipulations and Traversal Strategies
 
-`Symbol`'s graph capabilities extend to modeling intricate relationships beyond simple parent-child hierarchies. You can represent complex networks and apply various traversal algorithms.
+`Kind`'s graph capabilities extend to modeling intricate relationships beyond simple parent-child hierarchies. You can represent complex networks and apply various traversal algorithms.
 
 #### 2.1. Modeling Dependencies: Software Architecture (Technology)
 
-Representing software modules and their dependencies is crucial for understanding system architecture. `Symbol` can model these relationships, and its traversal methods can identify critical paths or circular dependencies.
+Representing software modules and their dependencies is crucial for understanding system architecture. `Kind` can model these relationships, and its traversal methods can identify critical paths or circular dependencies.
 
 ```python
 
-from core.symbol_namespace import s
+from core.kind_namespace import k
 
 # Example: Microservices Architecture
-auth_service = s.AuthService
-user_service = s.UserService
-product_service = s.ProductService
-payment_service = s.PaymentService
+auth_service = k.AuthService
+user_service = k.UserService
+product_service = k.ProductService
+payment_service = k.PaymentService
 
 auth_service.append(user_service)  # Auth depends on User
 user_service.append(product_service)  # User depends on Product
@@ -102,8 +102,8 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph Symbol_Core
-        A[Symbol_Interning] --> B(Graph_Structure)
+    subgraph Kind_Core
+        A[Kind_Interning] --> B(Graph_Structure)
         B --> C{Mixinability}
     end
 
@@ -114,19 +114,19 @@ graph TD
 
 #### 2.2. Use Case Modeling: Healthcare (Patient Journey Mapping)
 
-Map a patient's journey through a healthcare system, from admission to discharge, including various medical procedures and consultations. Each step can be a `Symbol`, and their sequence forms a graph.
+Map a patient's journey through a healthcare system, from admission to discharge, including various medical procedures and consultations. Each step can be a `Kind`, and their sequence forms a graph.
 
 ```python
 
-from core.symbol_namespace import s
+from core.kind_namespace import k
 
 # Example: Patient Journey
-admission = s.Admission
-consultation_gp = s.Consultation_GP
-lab_tests = s.LabTests
-specialist_referral = s.SpecialistReferral
-treatment = s.Treatment
-discharge = s.Discharge
+admission = k.Admission
+consultation_gp = k.Consultation_GP
+lab_tests = k.LabTests
+specialist_referral = k.SpecialistReferral
+treatment = k.Treatment
+discharge = k.Discharge
 
 admission.append(consultation_gp)
 consultation_gp.append(lab_tests)
@@ -168,27 +168,27 @@ graph TD
 
 ### 3. Strategic Applications: DSLs and Semantic Modeling
 
-`Symbol` is an ideal foundation for building Domain-Specific Languages (DSLs) and for rich semantic modeling, enabling more expressive and maintainable code.
+`Kind` is an ideal foundation for building Domain-Specific Languages (DSLs) and for rich semantic modeling, enabling more expressive and maintainable code.
 
 #### 3.1. Building a Configuration DSL: Industrial Manufacturing (Assembly Line Configuration)
 
-Define an assembly line using a `Symbol`-based DSL, where each `Symbol` represents a station, a robot, or a process step. This allows for a highly readable and verifiable configuration.
+Define an assembly line using a `Kind`-based DSL, where each `Kind` represents a station, a robot, or a process step. This allows for a highly readable and verifiable configuration.
 
 ```python
 
-from core.symbol_namespace import s
+from core.kind_namespace import k
 
 # Example: Assembly Line DSL
-line_1 = s.AssemblyLine1
-station_1 = s.Station1
-robot_arm_a = s.RobotArmA
-process_weld = s.ProcessWeld
+line_1 = k.AssemblyLine1
+station_1 = k.Station1
+robot_arm_a = k.RobotArmA
+process_weld = k.ProcessWeld
 
 line_1.append(station_1)
 station_1.append(robot_arm_a)
 robot_arm_a.append(process_weld)
 
-# You could define custom methods on 'Station' or 'RobotArm' Symbols
+# You could define custom methods on 'Station' or 'RobotArm' Kinds
 # via mixins to validate configurations or simulate operations.
 
 # Visualize the assembly line configuration
@@ -219,21 +219,21 @@ graph TD
 
 #### 3.2. Semantic Data Modeling: Real Estate (Property Attributes and Relationships)
 
-Model real estate properties, their features, and relationships (e.g., `has_bedroom`, `located_in`). `Symbol` can represent both entities and their attributes, creating a rich semantic network.
+Model real estate properties, their features, and relationships (e.g., `has_bedroom`, `located_in`). `Kind` can represent both entities and their attributes, creating a rich semantic network.
 
 ```python
 
-from core.symbol_namespace import s
+from core.kind_namespace import k
 
 # Example: Property Listing
-property_123 = s.Property_123MainSt
-bedroom_sym = s.Bedroom
-bathroom_sym = s.Bathroom
-kitchen_sym = s.Kitchen
+property_123 = k.Property_123MainSt
+bedroom_kind = k.Bedroom
+bathroom_kind = k.Bathroom
+kitchen_kind = k.Kitchen
 
-property_123.append(bedroom_sym)
-property_123.append(bathroom_sym)
-property_123.append(kitchen_sym)
+property_123.append(bedroom_kind)
+property_123.append(bathroom_kind)
+property_123.append(kitchen_kind)
 
 # You could define custom mixins for property valuation, search filters, etc.
 
@@ -265,4 +265,4 @@ graph TD
 
 ### Conclusion
 
-This advanced tutorial has demonstrated `Symbol`'s capacity for sophisticated symbic modeling. By mastering custom mixins, complex graph structures, and strategic DSL design, you can leverage `Symbol` to build highly expressive, maintainable, and performant systems across a multitude of domains. The flexibility and extensibility of `Symbol` make it an invaluable tool for tackling challenging problems in knowledge representation, system design, and data analysis. For detailed technical specifications, refer to the API Documentation.
+This advanced tutorial has demonstrated `Kind`'s capacity for sophisticated symbolic modeling. By mastering custom mixins, complex graph structures, and strategic DSL design, you can leverage `Kind` to build highly expressive, maintainable, and performant systems across a multitude of domains. The flexibility and extensibility of `Kind` make it an invaluable tool for tackling challenging problems in knowledge representation, system design, and data analysis. For detailed technical specifications, refer to the API Documentation.

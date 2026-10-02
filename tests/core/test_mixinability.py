@@ -1,5 +1,5 @@
 import pytest
-from symb import Symbol
+from kind import Kind
 from core.mixinability import freeze, is_frozen, register_mixin, _reset_frozen_state_for_testing
 
 @pytest.fixture(autouse=True)
@@ -12,7 +12,7 @@ def test_freeze_and_is_frozen_states():
     # Ensure initial state is not frozen
     assert not is_frozen()
 
-    # Test freezing the Symbol class
+    # Test freezing the Kind class
     freeze()
     assert is_frozen()
 
@@ -29,11 +29,11 @@ def test_register_mixin_basic_application():
     success = register_mixin(my_mixin_function, "my_new_method")
     assert success is True
 
-    # Test that the mixin is applied to Symbol instances
-    s = Symbol("test_symb_for_mixin")
+    # Test that the mixin is applied to Kind instances
+    s = Kind("test_kind_for_mixin")
     assert hasattr(s, "my_new_method")
     assert callable(s.my_new_method)
-    assert s.my_new_method() == "Hello from test_symb_for_mixin"
+    assert s.my_new_method() == "Hello from test_kind_for_mixin"
 
     # Test registering another mixin that overwrites an existing one
     def my_overwriting_mixin(self):

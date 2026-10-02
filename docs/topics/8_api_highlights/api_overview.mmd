@@ -1,44 +1,44 @@
 
 graph
-    subgraph "Symbol API Highlights"
-        A[Symbol#40;name: str#41;] --> B[Globally Interned, Idempotent Constructor];
-        A --> C[Symbol.next#40;#41;];
-        C --> D[Creates Auto-Numbered Symbol];
-        A --> E[symb.append#40;child#41;];
-        A --> F[symb.relate_to#40;other, how#41;];
+    subgraph "Kind API Highlights"
+        A[Kind#40;name: str#41;] --> B[Globally Interned, Idempotent Constructor];
+        A --> C[Kind.next#40;#41;];
+        C --> D[Creates Auto-Numbered Kind];
+        A --> E[kind.append#40;child#41;];
+        A --> F[kind.relate_to#40;other, how#41;];
         E --> G[Link Construction];
         F --> G;
-        A --> H[symb.tree#40;#41;];
-        A --> I[symb.que#40;#41;];
-        A --> J[symb.relate#40;#41;];
+        A --> H[kind.tree#40;#41;];
+        A --> I[kind.que#40;#41;];
+        A --> J[kind.relate#40;#41;];
         H --> K[Lazy Traversal];
         I --> K;
         J --> K;
-        A --> L[symb.patch#40;other#41;];
+        A --> L[kind.patch#40;other#41;];
         L --> M[Recursive, Structural Deep Merge];
-        A --> N[symb.to_mmd#40;#41;];
+        A --> N[kind.to_mmd#40;#41;];
         N --> O[Outputs Mermaid Diagram Syntax];
-        A --> P[symb.to_ascii#40;#41;];
+        A --> P[kind.to_ascii#40;#41;];
         P --> Q[Outputs ASCII Art Representation];
-        A --> R[symb.delete#40;#41;];
+        A --> R[kind.delete#40;#41;];
         R --> S[Removes Node and Inverse References];
-        A --> T[symb.elevate#40;#41;];
+        A --> T[kind.elevate#40;#41;];
         T --> U[Promotes Metadata to Attributes/Methods];
-        A --> V[symb.slim#40;#41;];
+        A --> V[kind.slim#40;#41;];
         V --> W[Removes Unused Dynamically Applied Mixins];
-        A --> X[symb.immute#40;#41;];
+        A --> X[kind.immute#40;#41;];
         X --> Y[Orchestrates Maturing Process];
-        A --> Z[symb.ref];
-        Z --> AA[Alias for symb.origin];
+        A --> Z[kind.ref];
+        Z --> AA[Alias for kind.origin];
         A --> AB[Scheduler.add_job#40;job#41;];
         AB --> AC[Schedules a New Job for Execution];
     end
 
-    %% Main Symbol node
+    %% Main Kind node
     style A fill:#c4ed48,stroke:#333,stroke-width:2px,color:#000000;
     style B fill:#c4ed48,stroke:#333,stroke-width:1px,color:#000000;
 
-    %% Symbol creation group - light green
+    %% Kind creation group - light green
     style C fill:#a8e6a8,stroke:#333,stroke-width:1px,color:#000000;
     style D fill:#a8e6a8,stroke:#333,stroke-width:1px,color:#000000;
 

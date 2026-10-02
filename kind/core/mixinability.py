@@ -1,4 +1,4 @@
-"""This module provides the core functionality for mixin-based extensibility of the Symbol class.
+"""This module provides the core functionality for mixin-based extensibility of the Kind class.
 
 It allows for the dynamic registration and application of mixins,
 with support for freezing the class to prevent further modifications.
@@ -26,30 +26,30 @@ log = logging.getLogger(__name__)
 # --- Core Mixinability Functions ---
 
 def freeze() -> None:
-    """Freezes the Symbol class, preventing any further runtime modifications."""
+    """Freezes the Kind class, preventing any further runtime modifications."""
     global _is_frozen
     if _is_frozen:
         log.warning("Mixinability is already frozen. No action taken.")
         return
 
     _is_frozen = True
-    log.info("Symbol class has been frozen. No further modifications are allowed.")
+    log.info("Kind class has been frozen. No further modifications are allowed.")
 
 def is_frozen() -> bool:
-    """Returns True if the Symbol class is currently frozen.""" 
+    """Returns True if the Kind class is currently frozen.""" 
     return _is_frozen
 
 import re
 
 def register_mixin(value: Any, name: str = None, target_class: type = None, safe: bool = False, expand: bool = True) -> bool:
     if target_class is None:
-        from core.base_symb import BaseSymbol
-        target_class = BaseSymbol
+        from core.base_kind import BaseKind
+        target_class = BaseKind
     """Registers a mixin to be applied to the target class, with validation and error handling.
     Returns True if the mixin was successfully registered, False otherwise.
     """
     if _is_frozen:
-        log.error(f"Failed to register mixin '{name}': Symbol class is frozen.")
+        log.error(f"Failed to register mixin '{name}': Kind class is frozen.")
         return False
 
     def _to_snake_case(s: str) -> str:
@@ -156,8 +156,8 @@ def get_applied_mixins() -> Dict[str, Any]:
     """Returns a copy of the dictionary of applied mixins."""
     return _applied_mixins.copy()
 
-def apply_mixin_to_instance(instance: 'Symbol', mixin: Any):
-    """Applies a mixin to a single symb instance for isolated operations like stat calculations."""
+def apply_mixin_to_instance(instance: 'Kind', mixin: Any):
+    """Applies a mixin to a single kind instance for isolated operations like stat calculations."""
     if inspect.isclass(mixin):
         # Instantiate the mixin if it's a class
         mixin_instance = mixin()
@@ -176,4 +176,4 @@ def _reset_frozen_state_for_testing() -> None:
     """Resets the frozen state for testing purposes. DO NOT USE IN PRODUCTION."""
     global _is_frozen
     _is_frozen = False
-    log.warning("Symbol class frozen state has been reset for testing. DO NOT USE IN PRODUCTION.")
+    log.warning("Kind class frozen state has been reset for testing. DO NOT USE IN PRODUCTION.")

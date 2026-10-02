@@ -9,7 +9,7 @@ import core
 
 def _get_available_mixins():
     """
-    Discovers all available mixin classes in the symb.builtin and symb.core packages.
+    Discovers all available mixin classes in the kind.builtin and kind.core packages.
     """
     mixins = {}
 
@@ -25,12 +25,12 @@ def _get_available_mixins():
                     attr = getattr(module, attr_name)
                     if inspect.isclass(attr) and attr.__module__ == module_name:
                         # Heuristic to identify mixins: not a base class and not private
-                        if attr_name not in ['Symbol', 'BaseSymbol', 'LazySymbol', 'GraphTraversal'] and not attr_name.startswith('_'):
+                        if attr_name not in ['Kind', 'BaseKind', 'LazyKind', 'GraphTraversal'] and not attr_name.startswith('_'):
                             mixins[attr_name] = attr
             except Exception as e:
                 warnings.warn(f"Could not import module {module_name}: {repr(e)}")
 
-    find_mixins_in_path(builtin.__path__, 'symb.builtin')
-    find_mixins_in_path(core.__path__, 'symb.core')
+    find_mixins_in_path(builtin.__path__, 'kind.builtin')
+    find_mixins_in_path(core.__path__, 'kind.core')
 
     return mixins

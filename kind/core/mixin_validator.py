@@ -1,4 +1,4 @@
-"""This module provides a validator for Symbol mixins.
+"""This module provides a validator for Kind mixins.
 
 It uses static analysis with LibCST to ensure that mixins adhere to the expected interface
 and do not contain any potentially unsafe code.
@@ -36,7 +36,7 @@ class MixinValidationResult:
 
 
 def validate_mixin_callable(func: Callable[..., Any]) -> MixinValidationResult:
-    """Validates a mixin callable for adherence to the Symbol's mixin interface."""
+    """Validates a mixin callable for adherence to the Kind's mixin interface."""
     errors = []
     validation_warnings = []
 

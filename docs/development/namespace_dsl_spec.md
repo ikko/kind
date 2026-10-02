@@ -1,31 +1,31 @@
 ---
-title: Symbol DSL Core Library
+title: Kind DSL Core Library
 author: Miklós Béky, Symbolic Systems Lab
 tags: [DSL, Symbolic Computation, Graphs, Lazy Evaluation, Python]
 ---
 
 ## Overview
 
-`symb.py` implements a **lazy, graph-oriented, immutable symb system** designed as a foundational primitive for domain-specific languages (DSLs), graph transformations, and semantic metadata modeling.
+`kind.py` implements a **lazy, graph-oriented, immutable kind system** designed as a foundational primitive for domain-specific languages (DSLs), graph transformations, and semantic metadata modeling.
 
-It supports symbic interning, ordered chaining (`que`), DAG tree modeling (`tree`), and polymorphic cross-linking (`relate`), with efficient caching and memory-awareness.
+It supports symbolic interning, ordered chaining (`que`), DAG tree modeling (`tree`), and polymorphic cross-linking (`relate`), with efficient caching and memory-awareness.
 
 ## Motivation
 
-- Avoid string duplication in symbic identities
+- Avoid string duplication in symbolic identities
 - Enable semantic modeling via structural relationships
 - Design graph-based, introspectable DSLs
 - Support polymorphic relationship tagging (`related_how`)
 - Optimize evaluation lazily with O(1) reads and O(log n) inserts
-- Track symbic origin (`.origin`) and memory state
+- Track symbolic origin (`.origin`) and memory state
 
 ## Core Components
 
-- `Symbol`: atomic unit, uniquely interned string identity
-- `SymbolNamespace`: attribute-based creation (e.g. `s.user`)
-- `OrderedSymbolSet`: length-cached deduplicated set
+- `Kind`: atomic unit, uniquely interned string identity
+- `KindNamespace`: attribute-based creation (e.g. `k.user`)
+- `OrderedKindSet`: length-cached deduplicated set
 - `GraphTraversal`: lazy, cycle-safe traversal abstraction
-- `SymbolAdapter`: modular traversal and relation modeler
+- `KindAdapter`: modular traversal and relation modeler
 
 ## Relations
 
@@ -37,14 +37,14 @@ It supports symbic interning, ordered chaining (`que`), DAG tree modeling (`tree
 
 ```python
 
-from symb.core.symbol_namespace import SymbolNamespace
+from kind.core.kind_namespace import KindNamespace
 
-s = SymbolNamespace()
+k = KindNamespace()
 
-s.page.append(s.header).append(s.footer)
-s.backend.uses(s.database)
+k.page.append(k.header).append(k.footer)
+k.backend.uses(k.database)
 
-print(s.page.to_mmd())  # Mermaid.js format
+print(k.page.to_mmd())  # Mermaid.js format
 ```
 <details>
 <summary>Outcome</summary>
@@ -60,36 +60,36 @@ graph TD
 
 - `.to_mmd()` — Markdown/HTML embeddable [Mermaid](https://mermaid.js.org) output
 - `.to_svg()` / `.to_png()` — Graphviz-based visualization (via `graphviz` Python binding)
-- Requires optional extra: `symb[visual]`
+- Requires optional extra: `kind[visual]`
 
 ## Installation
 
 ```bash
-pip install symb
+pip install kind
 ```
 <details>
 
 ```text
-Collecting symb
+Collecting kind
 Installing collected packages
 ```
 </details>
 
 ## Performance
 
-- Symbol lookup: **O(1)** (intern pool)
+- Kind lookup: **O(1)** (intern pool)
 - Tree/graph linking: **O(1)**
 - Cache-aware traversal: amortized **O(1)** after first pass
 - Insert: **O(log n)** if using sorted/positional structure
 
 ## Memory Behavior
 
-- Controlled origin retention (`Symbol.origin`)
+- Controlled origin retention (`Kind.origin`)
 - GC-aware deletion (respecting `ENABLE_ORIGIN`, `MEMORY_AWARE_DELETE`)
 
 ## Extensibility
 
-- `SymbolAdapter` plugins for new traversal topologies
+- `KindAdapter` plugins for new traversal topologies
 - Async-ready traversal engine (planned)
 - Frontend-ready output formats (Mermaid, SVG, PNG)
 

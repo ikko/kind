@@ -6,8 +6,8 @@ import os
 import anyio
 
 from core.schedule import Scheduler, ScheduledJob
-from core.base_symb import BaseSymbol
-from symb.core.symbol import Symbol
+from core.base_kind import BaseKind
+from kind.core.kind import Kind
 
 # --- Helper functions for testing jobs ---
 
@@ -74,9 +74,9 @@ def test_scheduled_job_init_iso_string():
     job = ScheduledJob(sync_test_job, (), {}, iso_str)
     assert job.next_run == datetime.datetime.fromisoformat(iso_str)
 
-def test_scheduled_job_init_symb():
-    sym = Symbol("2025-01-01T00:00:00")
-    job = ScheduledJob(sync_test_job, (), {}, sym)
+def test_scheduled_job_init_kind():
+    kind = Kind("2025-01-01T00:00:00")
+    job = ScheduledJob(sync_test_job, (), {}, kind)
     assert job.next_run == datetime.datetime(2025, 1, 1, 0, 0, 0)
 
 def test_scheduled_job_init_unsupported_type():

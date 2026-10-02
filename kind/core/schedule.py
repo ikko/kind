@@ -1,4 +1,4 @@
-"""This module provides the core scheduling logic for the Symbol project.
+"""This module provides the core scheduling logic for the Kind project.
 
 It includes the Scheduler class, which is responsible for managing the schedule of jobs,
 and the ScheduledJob class, which represents a single scheduled job.
@@ -15,7 +15,7 @@ import logging
 import orjson
 from croniter import croniter
 
-from symb.core.symbol import Symbol
+from kind.core.kind import Kind
 
 
 class ScheduledJob:
@@ -26,7 +26,7 @@ class ScheduledJob:
         func: Callable[..., Any],
         args: tuple,
         kwargs: dict,
-        schedule: Union[str, datetime.datetime, datetime.date, datetime.time, "Symbol"],
+        schedule: Union[str, datetime.datetime, datetime.date, datetime.time, "Kind"],
         new_process: bool = False,
         new_thread: bool = True,
         id: Optional[str] = None,
@@ -68,12 +68,12 @@ class ScheduledJob:
             self.next_run = combined_datetime
             if self.next_run < now:
                 self.next_run += datetime.timedelta(days=1) # Schedule for next day if time has passed today
-        elif isinstance(self.schedule, Symbol):
+        elif isinstance(self.schedule, Kind):
             try:
                 parsed_time = datetime.datetime.fromisoformat(self.schedule.name)
                 self.next_run = parsed_time
             except ValueError:
-                raise ValueError(f"Symbol name '{self.schedule.name}' is not a valid ISO 8601 datetime string.")
+                raise ValueError(f"Kind name '{self.schedule.name}' is not a valid ISO 8601 datetime string.")
         else:
             raise TypeError(f"Unsupported schedule type: {type(self.schedule)}")
 

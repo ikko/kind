@@ -1,11 +1,11 @@
 ```mermaid
 graph TD
     subgraph Core Infrastructure
-        A[Symbol Creation & Management] --> B{Symbol Class};
-        B --> C[BaseSymbol];
-        B --> D[SymbolNamespace];
+        A[Kind Creation & Management] --> B{Kind Class};
+        B --> C[BaseKind];
+        B --> D[KindNamespace];
         C --> E[WeakValueDictionary for Pooling];
-        C --> F[AVLTree for Numbered Symbols];
+        C --> F[AVLTree for Numbered Kinds];
     end
 
     subgraph Relational System (Current)

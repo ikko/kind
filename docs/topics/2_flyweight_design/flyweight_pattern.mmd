@@ -1,10 +1,10 @@
 graph TB
-    subgraph "Flyweight Pattern for Symbol Instantiation"
-        A[Client] --> B[Symbol Factory: Symbol.__new__];
-        B -- "Request Symbol['Name']" --> C[Symbol Pool - Symbol._pool];
+    subgraph "Flyweight Pattern for Kind Instantiation"
+        A[Client] --> B[Kind Factory: Kind.__new__];
+        B -- "Request Kind['Name']" --> C[Kind Pool - Kind._pool];
         C -- "Check if 'Name' exists" --> D{Exists?};
-        D -- "Yes" --> E[Return Existing Symbol Instance];
-        D -- "No" --> F[Create New Symbol Instance];
+        D -- "Yes" --> E[Return Existing Kind Instance];
+        D -- "No" --> F[Create New Kind Instance];
         F --> G[Add New Instance to Pool];
         G --> E;
     end

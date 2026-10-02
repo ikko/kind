@@ -1,10 +1,10 @@
-Feature: Symbol Visual Functionality
+Feature: Kind Visual Functionality
 
-  As a developer visualizing Symbol graphs
-  I want to generate Mermaid diagrams from Symbol structures
+  As a developer visualizing Kind graphs
+  I want to generate Mermaid diagrams from Kind structures
   So that I can easily represent and understand complex relationships
 
-  Scenario: Generating a Mermaid diagram for a simple Symbol graph
-    Given a simple Symbol graph structure
-    When `to_mmd` is called on the root Symbol
+  Scenario: Generating a Mermaid diagram for a simple Kind graph
+    Given a simple Kind graph structure
+    When `to_mmd` is called on the root Kind
     Then a valid Mermaid diagram string representing the graph should be returned

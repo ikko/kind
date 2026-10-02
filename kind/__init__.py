@@ -1,6 +1,6 @@
 
-from core.symbol import Symbol
-from core.symbol_namespace import s
+from core.kind import Kind
+from core.kind_namespace import k
 from core.graph_traversal import GraphTraversal
 
 from builtin import apply_builtins
@@ -8,7 +8,7 @@ from core.time_arithmetics import add_time_objects, subtract_time_objects
 from core.batch_processing import a_process_batch, process_batch
 from . import builtin, core
 
-# Apply the mixins first to ensure the Symbol class is fully featured
+# Apply the mixins first to ensure the Kind class is fully featured
 # This call should ideally happen once at application startup, not on every import
 # For testing purposes, it's handled by conftest.py
 apply_builtins()

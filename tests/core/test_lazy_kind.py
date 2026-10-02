@@ -1,29 +1,29 @@
 import pytest
-from symb import Symbol
-from core.lazy_symb import LazySymbol
+from kind import Kind
+from core.lazy_kind import LazyKind
 
-def test_lazy_symb_evaluation():
-    # Create a list that will be converted to a Symbol with LazySymbol children
+def test_lazy_kind_evaluation():
+    # Create a list that will be converted to a Kind with LazyKind children
     my_list = [1, 2, 3]
 
-    # Convert the list to a Symbol. This should return a concrete Symbol.
-    list_symb = Symbol.from_object(my_list)
+    # Convert the list to a Kind. This should return a concrete Kind.
+    list_kind = Kind.from_object(my_list)
 
-    # The list_symb itself should be a Symbol instance
-    assert isinstance(list_symb, Symbol)
+    # The list_kind itself should be a Kind instance
+    assert isinstance(list_kind, Kind)
 
-    # Its children should be LazySymbol instances
-    assert len(list_symb.children) == 3
-    assert all(isinstance(child, LazySymbol) for child in list_symb.children)
+    # Its children should be LazyKind instances
+    assert len(list_kind.children) == 3
+    assert all(isinstance(child, LazyKind) for child in list_kind.children)
 
     # Access an attribute of the first child to trigger its evaluation
-    first_child_lazy = list_symb.children[0]
+    first_child_lazy = list_kind.children[0]
     _ = first_child_lazy.name
 
-    # Now, the first child should be a concrete Symbol instance
-    assert isinstance(first_child_lazy._symb, Symbol)
-    assert first_child_lazy._symb.name == "1"
+    # Now, the first child should be a concrete Kind instance
+    assert isinstance(first_child_lazy._kind, Kind)
+    assert first_child_lazy._kind.name == "1"
 
-    # The other children should still be LazySymbol instances
-    assert isinstance(list_symb.children[1], LazySymbol)
-    assert isinstance(list_symb.children[2], LazySymbol)
+    # The other children should still be LazyKind instances
+    assert isinstance(list_kind.children[1], LazyKind)
+    assert isinstance(list_kind.children[2], LazyKind)

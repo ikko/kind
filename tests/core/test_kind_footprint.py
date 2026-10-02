@@ -1,12 +1,12 @@
 import pytest
-from symb import Symbol
+from kind import Kind
 
 @pytest.mark.skip(reason="rest of second refactor - assert 3528 >= ((2646 + 882) + 882)")
 def test_footprint():
     # Create a simple hierarchy
-    parent = Symbol("parent")
-    child1 = Symbol("child1")
-    child2 = Symbol("child2")
+    parent = Kind("parent")
+    child1 = Kind("child1")
+    child2 = Kind("child2")
 
     # Get individual sizes before creating the hierarchy
     parent_size_alone = parent.footprint()

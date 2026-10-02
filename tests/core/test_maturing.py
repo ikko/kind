@@ -1,7 +1,7 @@
 import pytest
 from collections import defaultdict
 from core.maturing import DefDict, deep_del, _apply_merge_strategy
-from symb import Symbol
+from kind import Kind
 import copy
 
 # Fixture for DefDict
@@ -63,22 +63,22 @@ def test_merge_strategy_deepcopy(merge_data):
     assert result["b"] is not merge_data["new_dict"]["b"]
 
 def test_merge_strategy_patch(merge_data):
-    s1 = Symbol("sym1")
-    s2 = Symbol("sym2")
-    s1.append(Symbol("child1"))
-    s2.append(Symbol("child2"))
-    s2.append(Symbol("child3"))
+    s1 = Kind("kind1")
+    s2 = Kind("kind2")
+    s1.append(Kind("child1"))
+    s2.append(Kind("child2"))
+    s2.append(Kind("child3"))
 
     # Patching s1 with s2 should add s2's children to s1
     result = _apply_merge_strategy(s1, s2, 'patch')
     assert result is s1
-    assert Symbol("child2") in s1.children
-    assert Symbol("child3") in s1.children
+    assert Kind("child2") in s1.children
+    assert Kind("child3") in s1.children
 
-def test_merge_strategy_patch_non_symb(merge_data, caplog):
+def test_merge_strategy_patch_non_kind(merge_data, caplog):
     result = _apply_merge_strategy(merge_data["simple_value"], merge_data["new_simple_value"], 'patch')
     assert result == merge_data["new_simple_value"]
-    assert "Patch strategy only applies to Symbol objects. Overwriting instead." in caplog.text
+    assert "Patch strategy only applies to Kind objects. Overwriting instead." in caplog.text
 
 def test_merge_strategy_pipe(merge_data):
     current = 5

@@ -1,6 +1,6 @@
-"""This module provides index capabilities for Symbol objects.
+"""This module provides index capabilities for Kind objects.
 
-It allows for creating and managing indexes on Symbol attributes,
+It allows for creating and managing indexes on Kind attributes,
 and provides methods for rebalancing the index using different strategies.
 """
 from typing import Any, Union, Optional, Callable, Literal
@@ -11,26 +11,26 @@ from .avl_tree import AVLTree
 ENABLE_ORIGIN = True
 MEMORY_AWARE_DELETE = True
 
-class SymbolIndex:
-    def __init__(self, owner: 'Symbol'):
+class KindIndex:
+    def __init__(self, owner: 'Kind'):
         self.owner = owner
         self.tree: Optional[AVLTree] = AVLTree() # Use AVLTree for underlying storage
 
-    def insert(self, symb: 'Symbol', weight: Union[float, Callable]):
-        self.tree.root = self.tree.insert(self.tree.root, symb, weight)
+    def insert(self, kind: 'Kind', weight: Union[float, Callable]):
+        self.tree.root = self.tree.insert(self.tree.root, kind, weight)
 
-    def map(self, fn: Callable[['Symbol'], Any]) -> list[Any]:
-        return [fn(sym) for sym in self.traverse(order="in")]
+    def map(self, fn: Callable[['Kind'], Any]) -> list[Any]:
+        return [fn(kind) for kind in self.traverse(order="in")]
 
-    def filter(self, pred: Callable[['Symbol'], bool]) -> list['Symbol']:
-        return [sym for sym in self.traverse(order="in") if pred(sym)]
+    def filter(self, pred: Callable[['Kind'], bool]) -> list['Kind']:
+        return [kind for kind in self.traverse(order="in") if pred(kind)]
 
-    def traverse(self, order: Literal["in", "pre", "post"] = "in") -> list['Symbol']:
+    def traverse(self, order: Literal["in", "pre", "post"] = "in") -> list['Kind']:
         if order == "in":
             return self.tree.traverse_inorder()
         # Pre-order and Post-order traversals are not directly supported by AVLTree
         # For now, return in-order for other requests or raise an error
-        raise NotImplementedError(f"Traversal order '{order}' not implemented for SymbolIndex.")
+        raise NotImplementedError(f"Traversal order '{order}' not implemented for KindIndex.")
 
     def rebalance(self, strategy: Literal['avl', 'red_black', 'weight', 'hybrid'] = 'weight') -> None:
         # Rebalancing is handled by the underlying AVLTree on insertion
@@ -38,10 +38,10 @@ class SymbolIndex:
         if strategy == 'avl':
             pass # AVLTree is self-balancing
         else:
-            raise NotImplementedError(f"Rebalancing strategy '{strategy}' not implemented for SymbolIndex.")
+            raise NotImplementedError(f"Rebalancing strategy '{strategy}' not implemented for KindIndex.")
 
-    def remove(self, sym: 'Symbol') -> None:
-        self.tree.remove(sym._position)
+    def remove(self, kind: 'Kind') -> None:
+        self.tree.remove(kind._position)
 
     def ascii(self):
         return self.tree.to_ascii()

@@ -5,7 +5,7 @@ from pathlib import Path
 # Define the function with typer arguments
 def process_links(input_md: str = typer.Option("../../README.md", help="Input Markdown file path"),
                   output_md: str = typer.Option("README-linked.md", help="Output Markdown file path"),
-                  repo: str = typer.Option("https://github.com/ikko/symb/blob/master/", help="Base repository URL")):
+                  repo: str = typer.Option("https://github.com/ikko/kind/blob/master/", help="Base repository URL")):
     # Read the input file
     input_path = Path(input_md)
     output_path = Path(output_md)

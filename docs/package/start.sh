@@ -17,7 +17,7 @@ set -e
 set -x
 
 # replace relative links with absolute links pointing to the repository
-python update.py --input-md "../../README.md" --output-md "README-linked.md" --repo "https://github.com/ikko/symb/blob/master/"
+python update.py --input-md "../../README.md" --output-md "README-linked.md" --repo "https://github.com/ikko/kind/blob/master/"
 
 # replace mermaid diagrams with rendered SVG images
 # mmdc -i README-linked.md -o README.md -b transparent   # <- does not look good on dark theme

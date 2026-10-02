@@ -1,46 +1,46 @@
-# Symbol Architecture
+# Kind Architecture
 
 ## Introduction
 
-The `symb` library is a Python framework for creating, manipulating, and reasoning about symbic data structures. It is designed to be lightweight, extensible, and memory-aware, providing a powerful foundation for a wide range of applications, from data modeling and graph analysis to scheduling and metaprogramming.
+The `kind` library is a Python framework for creating, manipulating, and reasoning about symbolic data structures. It is designed to be lightweight, extensible, and memory-aware, providing a powerful foundation for a wide range of applications, from data modeling and graph analysis to scheduling and metaprogramming.
 
-At its core, the `symb` library is built upon a layered architecture that separates the fundamental `Symbol` class from its extended functionalities. This design promotes modularity, reduces complexity, and allows for a high degree of customization through mixins and builtin extensions.
+At its core, the `kind` library is built upon a layered architecture that separates the fundamental `Kind` class from its extended functionalities. This design promotes modularity, reduces complexity, and allows for a high degree of customization through mixins and builtin extensions.
 
-This document provides a detailed overview of the `symb` library's architecture, including its core components, builtin extensions, and the principles that guide its design.
+This document provides a detailed overview of the `kind` library's architecture, including its core components, builtin extensions, and the principles that guide its design.
 
 ## Core Architecture
 
-The core architecture of the `symb` library is divided into two main layers: the **Core Layer** and the **Builtin Extensions Layer**.
+The core architecture of the `kind` library is divided into two main layers: the **Core Layer** and the **Builtin Extensions Layer**.
 
 ```mermaid
 graph TD
-    subgraph "Symbol Package"
-        A[symb] --> B(symb.core)
-        A --> C(symb.builtins)
+    subgraph "Kind Package"
+        A[kind] --> B(kind.core)
+        A --> C(kind.builtins)
     end
 
-    subgraph "Core Layer (symb.core)"
-        B --> B1[symb.core.base_symb]
-        B --> B2[symb.core.symb]
-        B --> B4[symb.core.maturing]
-        B --> B5[symb.core.mixinability]
-        B --> B6[symb.core.mixin_validator]
-        B --> B7[symb.core.protocols]
-        B --> B8[symb.core.symbable]
-        B --> B9[symb.core.time_arithmetics]
-        B --> B10[symb.core.schedule]
-        B --> B11[symb.core.batch_processing]
+    subgraph "Core Layer (kind.core)"
+        B --> B1[kind.core.base_kind]
+        B --> B2[kind.core.kind]
+        B --> B4[kind.core.maturing]
+        B --> B5[kind.core.mixinability]
+        B --> B6[kind.core.mixin_validator]
+        B --> B7[kind.core.protocols]
+        B --> B8[kind.core.kindable]
+        B --> B9[kind.core.time_arithmetics]
+        B --> B10[kind.core.schedule]
+        B --> B11[kind.core.batch_processing]
     end
 
-    subgraph "Builtin Extensions Layer (symb.builtin)"
-        C --> C1[symb.builtins.collections]
-        C --> C2[symb.builtins.time_dim]
-        C --> C3[symb.builtins.index]
-        C --> C4[symb.builtins.path]
-        C --> C5[symb.builtins.visual]
-        C --> C6[symb.builtins.red_black_tree]
-        C --> C7[symb.builtins.avl_tree]
-        C --> C8[symb.builtins.timeline]
+    subgraph "Builtin Extensions Layer (kind.builtin)"
+        C --> C1[kind.builtins.collections]
+        C --> C2[kind.builtins.time_dim]
+        C --> C3[kind.builtins.index]
+        C --> C4[kind.builtins.path]
+        C --> C5[kind.builtins.visual]
+        C --> C6[kind.builtins.red_black_tree]
+        C --> C7[kind.builtins.avl_tree]
+        C --> C8[kind.builtins.timeline]
     end
 
     B2 -- uses --> B1
@@ -99,35 +99,35 @@ graph TD
 *   **Yellow Boxes**: Core architectural components.
 *   **Blue Boxes**: Core Layer modules.
 *   **Green Boxes**: Builtin extension modules.
-*   **Light Blue Boxes**: Modules within the `symb.core` layer.
-*   **Light Green Boxes**: Modules within the `symb.builtins` layer.
+*   **Light Blue Boxes**: Modules within the `kind.core` layer.
+*   **Light Green Boxes**: Modules within the `kind.builtins` layer.
 *   **Arrows**: Indicate dependencies between modules.
 
-### Core Layer (`symb.core`)
+### Core Layer (`kind.core`)
 
-The Core Layer provides the fundamental building blocks of the `symb` library. It includes the `Symbol` class itself, along with essential services for graph traversal, mixin-based extensibility, and memory management.
+The Core Layer provides the fundamental building blocks of the `kind` library. It includes the `Kind` class itself, along with essential services for graph traversal, mixin-based extensibility, and memory management.
 
-*   **`base_symb`**: Defines the foundational `Symbol` class and its core instantiation logic, preventing circular import dependencies.
-*   **`symb`**: Extends the `base_symb` with advanced features such as graph traversal, indexing, maturing, and serialization.
-*   **`graph`**: Provides graph traversal capabilities for `Symbol` objects.
-*   **`maturing`**: Implements the "maturing" process for `Symbol` objects, which involves elevating metadata to first-class attributes and methods.
-*   **`mixinability`**: Provides the core functionality for mixin-based extensibility of the `Symbol` class.
-*   **`mixin_validator`**: A validator for `Symbol` mixins, using static analysis to ensure adherence to the expected interface.
-*   **`protocols`**: Defines the protocols that govern the behavior of `Symbol` objects.
-*   **`symbable`**: Defines the `Symbolable` protocol, used to identify objects that can be integrated into a `Symbol` instance.
+*   **`base_kind`**: Defines the foundational `Kind` class and its core instantiation logic, preventing circular import dependencies.
+*   **`kind`**: Extends the `base_kind` with advanced features such as graph traversal, indexing, maturing, and serialization.
+*   **`graph`**: Provides graph traversal capabilities for `Kind` objects.
+*   **`maturing`**: Implements the "maturing" process for `Kind` objects, which involves elevating metadata to first-class attributes and methods.
+*   **`mixinability`**: Provides the core functionality for mixin-based extensibility of the `Kind` class.
+*   **`mixin_validator`**: A validator for `Kind` mixins, using static analysis to ensure adherence to the expected interface.
+*   **`protocols`**: Defines the protocols that govern the behavior of `Kind` objects.
+*   **`kindable`**: Defines the `Kindable` protocol, used to identify objects that can be integrated into a `Kind` instance.
 *   **`time_arithmetics`**: Provides functions for performing arithmetic operations on time-related objects.
-*   **`schedule`**: Provides the core scheduling logic for the `symb` project.
+*   **`schedule`**: Provides the core scheduling logic for the `kind` project.
 *   **`batch_processing`**: Provides functions for processing batches of items asynchronously and synchronously.
 
-### Builtin Extensions Layer (`symb.builtins`)
+### Builtin Extensions Layer (`kind.builtins`)
 
-The Builtin Extensions Layer provides a collection of optional modules that extend the functionality of the `Symbol` class. These modules are designed to be self-contained and can be used independently of one another.
+The Builtin Extensions Layer provides a collection of optional modules that extend the functionality of the `Kind` class. These modules are designed to be self-contained and can be used independently of one another.
 
-*   **`collections`**: Provides custom collection classes for `Symbol` objects, such as `OrderedSymbolSet`.
-*   **`time_dim`**: Provides time dimension-related functionality for `Symbol` objects.
-*   **`index`**: Provides index capabilities for `Symbol` objects.
-*   **`path`**: Provides pathfinding capabilities for `Symbol` objects.
-*   **`visual`**: Provides visualization capabilities for `Symbol` objects.
+*   **`collections`**: Provides custom collection classes for `Kind` objects, such as `OrderedKindSet`.
+*   **`time_dim`**: Provides time dimension-related functionality for `Kind` objects.
+*   **`index`**: Provides index capabilities for `Kind` objects.
+*   **`path`**: Provides pathfinding capabilities for `Kind` objects.
+*   **`visual`**: Provides visualization capabilities for `Kind` objects.
 *   **`red_black_tree`**: An implementation of a red-black tree.
 *   **`avl_tree`**: An implementation of an AVL tree.
 *   **`timeline`**: Provides a `Timeline` class for representing a series of time periods.

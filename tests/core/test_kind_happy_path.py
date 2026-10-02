@@ -1,26 +1,26 @@
 import pytest
-from symb import Symbol
-from core.symbol_namespace import SymbolNamespace
+from kind import Kind
+from core.kind_namespace import KindNamespace
 
 
-def test_symb_creation_and_interning():
+def test_kind_creation_and_interning():
     # Test basic creation
-    s1 = Symbol("test_symb_1")
-    assert isinstance(s1, Symbol)
-    assert s1.name == "test_symb_1"
+    s1 = Kind("test_kind_1")
+    assert isinstance(s1, Kind)
+    assert s1.name == "test_kind_1"
 
     # Test interning (same name should return the same instance)
-    s2 = Symbol("test_symb_1")
+    s2 = Kind("test_kind_1")
     assert s1 is s2
 
-    s3 = Symbol("test_symb_2")
+    s3 = Kind("test_kind_2")
     assert s1 is not s3
-    assert s3.name == "test_symb_2"
+    assert s3.name == "test_kind_2"
 
-def test_symb_equality_and_hashing():
-    s1 = Symbol("equal_symb")
-    s2 = Symbol("equal_symb")
-    s3 = Symbol("another_symb")
+def test_kind_equality_and_hashing():
+    s1 = Kind("equal_kind")
+    s2 = Kind("equal_kind")
+    s3 = Kind("another_kind")
 
     # Test equality
     assert s1 == s2
@@ -30,34 +30,34 @@ def test_symb_equality_and_hashing():
     assert hash(s1) == hash(s2)
     assert hash(s1) != hash(s3)
 
-def test_symb_string_representation():
-    s = Symbol("repr_symb")
-    assert str(s) == "repr_symb"
-    assert repr(s) == f"Symbol('{s.name}')"
+def test_kind_string_representation():
+    s = Kind("repr_kind")
+    assert str(s) == "repr_kind"
+    assert repr(s) == f"Kind('{s.name}')"
 
 import pytest
-from symb import Symbol
-from core.symbol_namespace import SymbolNamespace
+from kind import Kind
+from core.kind_namespace import KindNamespace
 
 
-def test_symb_creation_and_interning():
+def test_kind_creation_and_interning():
     # Test basic creation
-    s1 = Symbol("test_symb_1")
-    assert isinstance(s1, Symbol)
-    assert s1.name == "test_symb_1"
+    s1 = Kind("test_kind_1")
+    assert isinstance(s1, Kind)
+    assert s1.name == "test_kind_1"
 
     # Test interning (same name should return the same instance)
-    s2 = Symbol("test_symb_1")
+    s2 = Kind("test_kind_1")
     assert s1 is s2
 
-    s3 = Symbol("test_symb_2")
+    s3 = Kind("test_kind_2")
     assert s1 is not s3
-    assert s3.name == "test_symb_2"
+    assert s3.name == "test_kind_2"
 
-def test_symb_equality_and_hashing():
-    s1 = Symbol("equal_symb")
-    s2 = Symbol("equal_symb")
-    s3 = Symbol("another_symb")
+def test_kind_equality_and_hashing():
+    s1 = Kind("equal_kind")
+    s2 = Kind("equal_kind")
+    s3 = Kind("another_kind")
 
     # Test equality
     assert s1 == s2
@@ -67,16 +67,16 @@ def test_symb_equality_and_hashing():
     assert hash(s1) == hash(s2)
     assert hash(s1) != hash(s3)
 
-def test_symb_string_representation():
-    s = Symbol("repr_symb")
-    assert str(s) == "repr_symb"
-    assert repr(s) == f"Symbol('{s.name}')"
+def test_kind_string_representation():
+    s = Kind("repr_kind")
+    assert str(s) == "repr_kind"
+    assert repr(s) == f"Kind('{s.name}')"
 
 @pytest.mark.skip(reason="rest of second refactor - AssertionError: assert 3 == 1")
-def test_symb_basic_graph_operations():
-    parent = Symbol("parent")
-    child1 = Symbol("child1")
-    child2 = Symbol("child2")
+def test_kind_basic_graph_operations():
+    parent = Kind("parent")
+    child1 = Kind("child1")
+    child2 = Kind("child2")
 
     # Test append
     parent.append(child1)
@@ -92,18 +92,18 @@ def test_symb_basic_graph_operations():
     assert parent in child2.parents
     assert len(parent.children) == 2
 
-def test_symb_namespace():
+def test_kind_namespace():
     # Test attribute access
-    sym_attr = SymbolNamespace().my_attribute_symb
-    assert isinstance(sym_attr, Symbol)
-    assert sym_attr.name == "my_attribute_symb"
+    kind_attr = KindNamespace().my_attribute_kind
+    assert isinstance(kind_attr, Kind)
+    assert kind_attr.name == "my_attribute_kind"
 
     # Test item access
-    sym_item = SymbolNamespace()["my_item_symb"]
-    assert isinstance(sym_item, Symbol)
-    assert sym_item.name == "my_item_symb"
+    kind_item = KindNamespace()["my_item_kind"]
+    assert isinstance(kind_item, Kind)
+    assert kind_item.name == "my_item_kind"
 
     # Test that attribute and item access for the same name return the same instance
-    sym_attr_2 = SymbolNamespace().shared_symb
-    sym_item_2 = SymbolNamespace()["shared_symb"]
-    assert sym_attr_2 is sym_item_2
+    kind_attr_2 = KindNamespace().shared_kind
+    kind_item_2 = KindNamespace()["shared_kind"]
+    assert kind_attr_2 is kind_item_2

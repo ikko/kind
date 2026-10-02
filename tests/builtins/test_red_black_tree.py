@@ -1,6 +1,6 @@
 import pytest
 from builtin.red_black_tree import RedBlackTree, RedBlackNode, RED, BLACK
-from core.base_symb import BaseSymbol as Symbol
+from core.base_kind import BaseKind as Kind
 
 @pytest.fixture
 def empty_rb_tree():
@@ -9,13 +9,13 @@ def empty_rb_tree():
 @pytest.fixture
 def populated_rb_tree():
     tree = RedBlackTree()
-    s1 = Symbol("A")
-    s2 = Symbol("B")
-    s3 = Symbol("C")
-    s4 = Symbol("D")
-    s5 = Symbol("E")
-    s6 = Symbol("F")
-    s7 = Symbol("G")
+    s1 = Kind("A")
+    s2 = Kind("B")
+    s3 = Kind("C")
+    s4 = Kind("D")
+    s5 = Kind("E")
+    s6 = Kind("F")
+    s7 = Kind("G")
 
     # Insert in an order that creates a somewhat balanced tree
     tree.insert(s4, 40.0)
@@ -29,11 +29,11 @@ def populated_rb_tree():
 
 def test_rb_tree_insert_and_traverse_inorder(empty_rb_tree):
     tree = empty_rb_tree
-    s1 = Symbol("Node1")
-    s2 = Symbol("Node2")
-    s3 = Symbol("Node3")
-    s4 = Symbol("Node4")
-    s5 = Symbol("Node5")
+    s1 = Kind("Node1")
+    s2 = Kind("Node2")
+    s3 = Kind("Node3")
+    s4 = Kind("Node4")
+    s5 = Kind("Node5")
 
     tree.insert(s1, 10.0)
     tree.insert(s2, 20.0)
@@ -46,9 +46,9 @@ def test_rb_tree_insert_and_traverse_inorder(empty_rb_tree):
 
 def test_rb_tree_to_ascii(empty_rb_tree):
     tree = empty_rb_tree
-    s1 = Symbol("Node1")
-    s2 = Symbol("Node2")
-    s3 = Symbol("Node3")
+    s1 = Kind("Node1")
+    s2 = Kind("Node2")
+    s3 = Kind("Node3")
 
     tree.insert(s1, 10.0)
     tree.insert(s2, 20.0)
@@ -66,9 +66,9 @@ def test_rb_tree_to_ascii(empty_rb_tree):
 def test_rb_tree_search(populated_rb_tree):
     tree, s1, s2, s3, s4, s5, s6, s7 = populated_rb_tree
 
-    assert tree.search(40.0).symb is s4
-    assert tree.search(10.0).symb is s1
-    assert tree.search(70.0).symb is s7
+    assert tree.search(40.0).kind is s4
+    assert tree.search(10.0).kind is s1
+    assert tree.search(70.0).kind is s7
     assert tree.search(99.0) is None
 
 def test_rb_tree_remove_leaf_node(populated_rb_tree):
@@ -98,7 +98,7 @@ def test_rb_tree_remove_node_with_two_children(populated_rb_tree):
 def test_rb_tree_remove_root_node(populated_rb_tree):
     tree, s1, s2, s3, s4, s5, s6, s7 = populated_rb_tree
     tree.remove(40.0) # Remove s4 (root)
-    assert tree.root.symb is not s4
+    assert tree.root.kind is not s4
     assert tree.search(40.0) is None
 
 def test_rb_tree_remove_non_existent_node(populated_rb_tree):

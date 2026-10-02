@@ -1,6 +1,6 @@
 import pytest
 from builtin.avl_tree import AVLTree, AVLNode
-from core.base_symb import BaseSymbol as Symbol
+from core.base_kind import BaseKind as Kind
 
 @pytest.fixture
 def empty_avl_tree():
@@ -9,11 +9,11 @@ def empty_avl_tree():
 @pytest.fixture
 def populated_avl_tree():
     tree = AVLTree()
-    s1 = Symbol("A")
-    s2 = Symbol("B")
-    s3 = Symbol("C")
-    s4 = Symbol("D")
-    s5 = Symbol("E")
+    s1 = Kind("A")
+    s2 = Kind("B")
+    s3 = Kind("C")
+    s4 = Kind("D")
+    s5 = Kind("E")
     tree.root = tree.insert(tree.root, s1, 10.0)
     tree.root = tree.insert(tree.root, s2, 20.0)
     tree.root = tree.insert(tree.root, s3, 5.0)
@@ -23,18 +23,18 @@ def populated_avl_tree():
 
 def test_avl_tree_insert_and_traverse_inorder(empty_avl_tree):
     tree = empty_avl_tree
-    s1 = Symbol("Node1")
-    s2 = Symbol("Node2")
-    s3 = Symbol("Node3")
+    s1 = Kind("Node1")
+    s2 = Kind("Node2")
+    s3 = Kind("Node3")
 
     tree.root = tree.insert(tree.root, s1, 10.0)
-    assert tree.root.symb is s1
+    assert tree.root.kind is s1
     assert tree.root.eval_weight() == 10.0
 
     tree.root = tree.insert(tree.root, s2, 20.0)
     tree.root = tree.insert(tree.root, s3, 5.0)
 
-    # In-order traversal should return symbs sorted by weight
+    # In-order traversal should return kinds sorted by weight
     inorder = tree.traverse_inorder()
     assert inorder == [s3, s1, s2]
 
@@ -50,11 +50,11 @@ def test_avl_tree_search(populated_avl_tree):
 
 def test_avl_tree_rebalancing():
     tree = AVLTree()
-    s_a = Symbol("A")
-    s_b = Symbol("B")
-    s_c = Symbol("C")
-    s_d = Symbol("D")
-    s_e = Symbol("E")
+    s_a = Kind("A")
+    s_b = Kind("B")
+    s_c = Kind("C")
+    s_d = Kind("D")
+    s_e = Kind("E")
 
     # Insert in a way that causes rotations
     tree.root = tree.insert(tree.root, s_a, 10.0)
@@ -62,9 +62,9 @@ def test_avl_tree_rebalancing():
     tree.root = tree.insert(tree.root, s_c, 30.0) # Left rotation at A
 
     # After inserting 10, 20, 30, the tree should be balanced with 20 as root
-    assert tree.root.symb is s_b
-    assert tree.root.left.symb is s_a
-    assert tree.root.right.symb is s_c
+    assert tree.root.kind is s_b
+    assert tree.root.left.kind is s_a
+    assert tree.root.right.kind is s_c
 
     tree.root = tree.insert(tree.root, s_d, 5.0)
     tree.root = tree.insert(tree.root, s_e, 2.0) # Right rotation at D
@@ -85,9 +85,9 @@ def test_avl_tree_remove_node_with_one_child(populated_avl_tree):
     # Remove s4 (15.0), which has no children initially, but after removing s3, s1 will have s4 as right child
     # Let's re-populate to ensure a specific scenario
     tree_one_child = AVLTree()
-    s_root = Symbol("Root")
-    s_left = Symbol("Left")
-    s_right = Symbol("Right")
+    s_root = Kind("Root")
+    s_left = Kind("Left")
+    s_right = Kind("Right")
     tree_one_child.root = tree_one_child.insert(None, s_root, 10.0)
     tree_one_child.root = tree_one_child.insert(tree_one_child.root, s_left, 5.0)
     tree_one_child.root = tree_one_child.insert(tree_one_child.root, s_right, 15.0)
@@ -112,9 +112,9 @@ def test_avl_tree_remove_root_node(populated_avl_tree):
     # The root is s1 (10.0) initially, but after rebalancing it might be different
     # Let's ensure a simple root removal scenario
     simple_tree = AVLTree()
-    r1 = Symbol("R1")
-    r2 = Symbol("R2")
-    r3 = Symbol("R3")
+    r1 = Kind("R1")
+    r2 = Kind("R2")
+    r3 = Kind("R3")
     simple_tree.root = simple_tree.insert(None, r2, 20.0)
     simple_tree.root = simple_tree.insert(simple_tree.root, r1, 10.0)
     simple_tree.root = simple_tree.insert(simple_tree.root, r3, 30.0)
@@ -143,9 +143,9 @@ def test_avl_tree_empty_tree_remove():
 
 def test_avl_tree_insert_duplicate_weight():
     tree = AVLTree()
-    s1 = Symbol("A")
-    s2 = Symbol("B")
-    s3 = Symbol("C")
+    s1 = Kind("A")
+    s2 = Kind("B")
+    s3 = Kind("C")
 
     tree.root = tree.insert(tree.root, s1, 10.0)
     tree.root = tree.insert(tree.root, s2, 10.0) # Duplicate weight

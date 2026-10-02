@@ -2,23 +2,23 @@
 
 The project is organized into two main packages:
 
--   `symb.core`: Contains the essential `Symbol` class and graph traversal logic.
--   `symb.builtins`: Provides optional, high-level extensions for collections, date/time operations, index, pathfinding, and visualization.
+-   `kind.core`: Contains the essential `Kind` class and graph traversal logic.
+-   `kind.builtins`: Provides optional, high-level extensions for collections, date/time operations, index, pathfinding, and visualization.
 
 ```mermaid
 graph LR
-    A[User Application] --> B(symb)
-    B --> C{symb.core}
-    B --> D{symb.builtins}
-    C --> E[symb.core.symb]
-    C --> F[symb.core.graph]
-    C --> G[symb.core.schedule]
-    D --> H[symb.builtins.time_dim]
-    D --> I[symb.builtins.collections]
-    D --> J[symb.builtins.index]
-    D --> K[symb.builtins.path]
-    D --> L[symb.builtins.visual]
-    D --> M[symb.builtins.timeline]
+    A[User Application] --> B(kind)
+    B --> C{kind.core}
+    B --> D{kind.builtins}
+    C --> E[kind.core.kind]
+    C --> F[kind.core.graph]
+    C --> G[kind.core.schedule]
+    D --> H[kind.builtins.time_dim]
+    D --> I[kind.builtins.collections]
+    D --> J[kind.builtins.index]
+    D --> K[kind.builtins.path]
+    D --> L[kind.builtins.visual]
+    D --> M[kind.builtins.timeline]
     
     style A fill:#007BFF,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style B fill:#228B22,stroke:#333,stroke-width:2px,color:#FFFFFF;
@@ -39,33 +39,33 @@ graph LR
 
 ```mermaid
 graph LR
-    subgraph "Symbol Package"
-        A[symb] --> B(symb.core)
-        A --> C(symb.builtins)
+    subgraph "Kind Package"
+        A[kind] --> B(kind.core)
+        A --> C(kind.builtins)
     end
     style A fill:#228B22,stroke:#333,stroke-width:2px,color:#FFFFFF;
 
     subgraph "Core Modules"
-        B --> B1[symb.core.symb]
-        B --> B3[symb.core.maturing]
-        B --> B4[symb.core.mixinability]
-        B --> B5[symb.core.mixin_validator]
-        B --> B6[symb.core.protocols]
-        B --> B7[symb.core.symbable]
-        B --> B8[symb.core.time_arithmetics]
-        B --> B9[symb.core.schedule]
+        B --> B1[kind.core.kind]
+        B --> B3[kind.core.maturing]
+        B --> B4[kind.core.mixinability]
+        B --> B5[kind.core.mixin_validator]
+        B --> B6[kind.core.protocols]
+        B --> B7[kind.core.kindable]
+        B --> B8[kind.core.time_arithmetics]
+        B --> B9[kind.core.schedule]
     end
     style B fill:#FF8C00,stroke:#333,stroke-width:2px,color:#000000;
 
     subgraph "Builtin Extensions"
-        C --> C1[symb.builtins.collections]
-        C --> C2[symb.builtins.time_dim]
-        C --> C3[symb.builtins.index]
-        C --> C4[symb.builtins.path]
-        C --> C5[symb.builtins.visual]
-        C --> C6[symb.builtins.red_black_tree]
-        C --> C7[symb.builtins.avl_tree]
-        C --> C8[symb.builtins.timeline]
+        C --> C1[kind.builtins.collections]
+        C --> C2[kind.builtins.time_dim]
+        C --> C3[kind.builtins.index]
+        C --> C4[kind.builtins.path]
+        C --> C5[kind.builtins.visual]
+        C --> C6[kind.builtins.red_black_tree]
+        C --> C7[kind.builtins.avl_tree]
+        C --> C8[kind.builtins.timeline]
     end
     style C fill:#800080,stroke:#333,stroke-width:2px,color:#FFFFFF;
 

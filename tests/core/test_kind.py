@@ -1,7 +1,7 @@
 import pytest
-from core.symbol import Symbol
-from core.symbol_namespace import s
-from core.base_symb import BaseSymbol
+from core.kind import Kind
+from core.kind_namespace import k
+from core.base_kind import BaseKind
 from core.lazy import SENTINEL
 from builtin.avl_tree import AVLTree
 from weakref import WeakValueDictionary
@@ -11,147 +11,147 @@ import datetime
 class NonConvertibleObject:
     pass
 
-# Re-use the setup_and_teardown fixture from test_base_symb.py
-# This ensures a clean state for Symbol class-level attributes before each test
+# Re-use the setup_and_teardown fixture from test_base_kind.py
+# This ensures a clean state for Kind class-level attributes before each test
 @pytest.fixture(autouse=True)
-def setup_and_teardown_symb_class():
+def setup_and_teardown_kind_class():
     # Store original class-level attributes
-    original_pool = BaseSymbol._pool
-    original_numbered = BaseSymbol._numbered
-    original_auto_counter = BaseSymbol._auto_counter
-    original_read_cursor = BaseSymbol._read_cursor
-    original_write_cursor = BaseSymbol._write_cursor
-    original_lock = BaseSymbol._lock
+    original_pool = BaseKind._pool
+    original_numbered = BaseKind._numbered
+    original_auto_counter = BaseKind._auto_counter
+    original_read_cursor = BaseKind._read_cursor
+    original_write_cursor = BaseKind._write_cursor
+    original_lock = BaseKind._lock
 
     # Clear for predictable testing
-    BaseSymbol._pool = WeakValueDictionary()
-    BaseSymbol._numbered = AVLTree()
-    BaseSymbol._auto_counter = 0
-    BaseSymbol._read_cursor = 0.0
-    BaseSymbol._write_cursor = 0.0
-    BaseSymbol._lock = threading.RLock()
+    BaseKind._pool = WeakValueDictionary()
+    BaseKind._numbered = AVLTree()
+    BaseKind._auto_counter = 0
+    BaseKind._read_cursor = 0.0
+    BaseKind._write_cursor = 0.0
+    BaseKind._lock = threading.RLock()
 
     yield
 
     # Restore original class-level attributes after each test
-    BaseSymbol._pool = original_pool
-    BaseSymbol._numbered = original_numbered
-    BaseSymbol._auto_counter = original_auto_counter
-    BaseSymbol._read_cursor = original_read_cursor
-    BaseSymbol._write_cursor = original_write_cursor
-    BaseSymbol._lock = original_lock
+    BaseKind._pool = original_pool
+    BaseKind._numbered = original_numbered
+    BaseKind._auto_counter = original_auto_counter
+    BaseKind._read_cursor = original_read_cursor
+    BaseKind._write_cursor = original_write_cursor
+    BaseKind._lock = original_lock
 
-    # Clear any remaining symbs from the pool and numbered tree to ensure complete isolation
-    BaseSymbol._pool.clear()
-    BaseSymbol._numbered = AVLTree() # Reinitialize to ensure it's empty
-    BaseSymbol._auto_counter = 0
-    BaseSymbol._read_cursor = 0.0
-    BaseSymbol._write_cursor = 0.0
+    # Clear any remaining kinds from the pool and numbered tree to ensure complete isolation
+    BaseKind._pool.clear()
+    BaseKind._numbered = AVLTree() # Reinitialize to ensure it's empty
+    BaseKind._auto_counter = 0
+    BaseKind._read_cursor = 0.0
+    BaseKind._write_cursor = 0.0
 
 
-def test_symb_index_property():
-    sym = Symbol("test_index")
-    assert sym._index is SENTINEL
-    index_obj = sym.index
+def test_kind_index_property():
+    kind = Kind("test_index")
+    assert kind._index is SENTINEL
+    index_obj = kind.index
     assert index_obj is not SENTINEL
-    assert sym._index is index_obj
-    # Ensure it's a SymbolIndex instance (or its mock if mocked)
-    assert hasattr(index_obj, 'insert') # Basic check for SymbolIndex methods
+    assert kind._index is index_obj
+    # Ensure it's a KindIndex instance (or its mock if mocked)
+    assert hasattr(index_obj, 'insert') # Basic check for KindIndex methods
 
-def test_symb_metadata_property():
-    sym = Symbol("test_metadata")
-    assert sym._metadata is SENTINEL
-    metadata_obj = sym.metadata
+def test_kind_metadata_property():
+    kind = Kind("test_metadata")
+    assert kind._metadata is SENTINEL
+    metadata_obj = kind.metadata
     assert metadata_obj is not SENTINEL
-    assert sym._metadata is metadata_obj
+    assert kind._metadata is metadata_obj
     # Ensure it's a DefDict instance (or its mock if mocked)
     assert hasattr(metadata_obj, '__setitem__') # Basic check for DefDict methods
 
-def test_symb_context_property():
-    sym = Symbol("test_context")
-    assert sym._context is SENTINEL
-    context_obj = sym.context
+def test_kind_context_property():
+    kind = Kind("test_context")
+    assert kind._context is SENTINEL
+    context_obj = kind.context
     assert context_obj is not SENTINEL
-    assert sym._context is context_obj
+    assert kind._context is context_obj
     # Ensure it's a DefDict instance (or its mock if mocked)
     assert hasattr(context_obj, '__setitem__') # Basic check for DefDict methods
 
-def test_symb_elevated_attributes_set_and_get():
-    sym = Symbol("test_elevated_attrs")
-    sym.dynamic_attr = "value1"
-    assert sym.dynamic_attr == "value1"
-    assert sym._elevated_attributes["dynamic_attr"] == "value1"
+def test_kind_elevated_attributes_set_and_get():
+    kind = Kind("test_elevated_attrs")
+    kind.dynamic_attr = "value1"
+    assert kind.dynamic_attr == "value1"
+    assert kind._elevated_attributes["dynamic_attr"] == "value1"
 
-def test_symb_elevated_attributes_overwrite_existing():
-    sym = Symbol("test_elevated_attrs_overwrite")
-    sym.dynamic_attr = "original_value"
-    sym.dynamic_attr = "new_value"
-    assert sym.dynamic_attr == "new_value"
-    assert sym._elevated_attributes["dynamic_attr"] == "new_value"
+def test_kind_elevated_attributes_overwrite_existing():
+    kind = Kind("test_elevated_attrs_overwrite")
+    kind.dynamic_attr = "original_value"
+    kind.dynamic_attr = "new_value"
+    assert kind.dynamic_attr == "new_value"
+    assert kind._elevated_attributes["dynamic_attr"] == "new_value"
 
-def test_symb_elevated_attributes_delete():
-    sym = Symbol("test_elevated_attrs_delete")
-    sym.temp_attr = "to_delete"
-    assert sym.temp_attr == "to_delete"
-    del sym.temp_attr
-    assert "temp_attr" not in sym._elevated_attributes
-    assert callable(sym.temp_attr)
+def test_kind_elevated_attributes_delete():
+    kind = Kind("test_elevated_attrs_delete")
+    kind.temp_attr = "to_delete"
+    assert kind.temp_attr == "to_delete"
+    del kind.temp_attr
+    assert "temp_attr" not in kind._elevated_attributes
+    assert callable(kind.temp_attr)
 
-def test_symb_elevated_attributes_delete_non_existent():
-    sym = Symbol("test_elevated_attrs_delete_non_existent")
+def test_kind_elevated_attributes_delete_non_existent():
+    kind = Kind("test_elevated_attrs_delete_non_existent")
     with pytest.raises(AttributeError):
-        del sym.non_existent_attr
+        del kind.non_existent_attr
 
-def test_symb_append_child():
-    parent = Symbol("parent")
-    child = Symbol("child")
+def test_kind_append_child():
+    parent = Kind("parent")
+    child = Kind("child")
     parent.append(child)
     assert child in parent.children
     assert parent in child.parents
 
-def test_symb_append_lazy_symb_child():
-    from core.lazy_symb import LazySymbol
-    parent = Symbol("parent_lazy")
-    lazy_child = LazySymbol("lazy_child_name")
+def test_kind_append_lazy_kind_child():
+    from core.lazy_kind import LazyKind
+    parent = Kind("parent_lazy")
+    lazy_child = LazyKind("lazy_child_name")
     parent.append(lazy_child)
     assert lazy_child in parent.children
     assert parent in lazy_child.parents
 
-def test_symb_append_non_symb_object():
-    parent = Symbol("parent_non_symb")
-    non_symb_obj = "string_child"
-    child_sym = parent.append(non_symb_obj)
-    assert isinstance(child_sym, Symbol)
-    assert child_sym.name == "string_child"
-    assert child_sym in parent.children
-    assert parent in child_sym.parents
+def test_kind_append_non_kind_object():
+    parent = Kind("parent_non_kind")
+    non_kind_obj = "string_child"
+    child_kind = parent.append(non_kind_obj)
+    assert isinstance(child_kind, Kind)
+    assert child_kind.name == "string_child"
+    assert child_kind in parent.children
+    assert parent in child_kind.parents
 
-def test_symb_append_duplicate_child():
-    parent = Symbol("parent_duplicate")
-    child = Symbol("child_duplicate")
+def test_kind_append_duplicate_child():
+    parent = Kind("parent_duplicate")
+    child = Kind("child_duplicate")
     parent.append(child)
     initial_children_len = len(parent.children)
     parent.append(child) # Appending again should not add duplicate
     assert len(parent.children) == initial_children_len
 
-def test_symb_add_child():
-    parent = Symbol("parent_add")
-    child = Symbol("child_add")
+def test_kind_add_child():
+    parent = Kind("parent_add")
+    child = Kind("child_add")
     parent.add(child)
     assert child in parent.children
     assert parent in child.parents
 
-def test_symb_add_duplicate_child():
-    parent = Symbol("parent_add_duplicate")
-    child = Symbol("child_add_duplicate")
+def test_kind_add_duplicate_child():
+    parent = Kind("parent_add_duplicate")
+    child = Kind("child_add_duplicate")
     parent.add(child)
     initial_children_len = len(parent.children)
     parent.add(child) # Adding again should not add duplicate
     assert len(parent.children) == initial_children_len
 
-def test_symb_relate_unrelate():
-    s1 = Symbol("s1_relate")
-    s2 = Symbol("s2_relate")
+def test_kind_relate_unrelate():
+    s1 = Kind("s1_relate")
+    s2 = Kind("s2_relate")
 
     s1.relate(s2, how="friend")
     assert s2 in s1.relations.get("friend")
@@ -161,16 +161,16 @@ def test_symb_relate_unrelate():
     assert s2 not in s1.relations.get("friend")
     assert s1 not in s2.relations.get("_inverse_friend")
 
-def test_symb_relate_with_specific_how():
-    s1 = Symbol("s1_how")
-    s2 = Symbol("s2_how")
+def test_kind_relate_with_specific_how():
+    s1 = Kind("s1_how")
+    s2 = Kind("s2_how")
     s1.relate(s2, how="parent_of")
     assert s2 in s1.relations.get("parent_of")
     assert s1 in s2.relations.get("_inverse_parent_of")
 
-def test_symb_unrelate_with_specific_how():
-    s1 = Symbol("s1_unrelate_how")
-    s2 = Symbol("s2_unrelate_how")
+def test_kind_unrelate_with_specific_how():
+    s1 = Kind("s1_unrelate_how")
+    s2 = Kind("s2_unrelate_how")
     s1.relate(s2, how="knows")
     s1.relate(s2, how="likes") # Add another relationship
 
@@ -183,16 +183,16 @@ def test_symb_unrelate_with_specific_how():
     assert s1 in s2.relations.get("_inverse_likes")
 
 def test_dynamic_relation_single_arg():
-    s_person = s.person
-    s_car = s.car
+    s_person = k.person
+    s_car = k.car
     s_person.drives(s_car)
     assert s_car in s_person.relations.get("drives")
     assert s_person in s_car.relations.get("_inverse_drives")
 
 def test_dynamic_relation_multiple_args():
-    s_person = s.person
-    s_drums = s.drums
-    s_guitar = s.guitar
+    s_person = k.person
+    s_drums = k.drums
+    s_guitar = k.guitar
     s_person.interested_in(s_drums, s_guitar)
     assert s_drums in s_person.relations.get("interested_in")
     assert s_guitar in s_person.relations.get("interested_in")
@@ -200,16 +200,16 @@ def test_dynamic_relation_multiple_args():
     assert s_person in s_guitar.relations.get("_inverse_interested_in")
 
 def test_dynamic_relation_kwargs_single_value():
-    s_person = s.person
-    s_war_zones = s.war_zones
+    s_person = k.person
+    s_war_zones = k.war_zones
     s_person.avoids(war_zones=s_war_zones)
     assert s_war_zones in s_person.relations.get("war_zones")
     assert s_person in s_war_zones.relations.get("_inverse_war_zones")
 
 def test_dynamic_relation_kwargs_list_value():
-    s_musical_track = s.musical_track
-    s_musician_joe = s.musician_joe
-    s_song_writer_jane = s.song_writer_jane
+    s_musical_track = k.musical_track
+    s_musician_joe = k.musician_joe
+    s_song_writer_jane = k.song_writer_jane
     s_musical_track.authored_by(authors=[s_musician_joe, s_song_writer_jane])
     assert s_musician_joe in s_musical_track.relations.get("authors")
     assert s_song_writer_jane in s_musical_track.relations.get("authors")
@@ -217,12 +217,12 @@ def test_dynamic_relation_kwargs_list_value():
     assert s_musical_track in s_song_writer_jane.relations.get("_inverse_authors")
 
 def test_dynamic_relation_mixed_args_kwargs():
-    s_person = s.person
-    s_drums = s.drums
-    s_guitar = s.guitar
-    s_singing = s.singing
-    s_dancing = s.dancing
-    s_war_zones = s.war_zones
+    s_person = k.person
+    s_drums = k.drums
+    s_guitar = k.guitar
+    s_singing = k.singing
+    s_dancing = k.dancing
+    s_war_zones = k.war_zones
 
     s_person.interested_in(s_drums, s_guitar, likes=[s_singing, s_dancing], avoids=s_war_zones)
 
@@ -239,12 +239,12 @@ def test_dynamic_relation_mixed_args_kwargs():
     assert s_person in s_war_zones.relations.get("_inverse_avoids")
 
 def test_dynamic_relation_chained_calls():
-    s_person = s.person
-    s_drums = s.drums
-    s_guitar = s.guitar
-    s_singing = s.singing
-    s_dancing = s.dancing
-    s_war_zones = s.war_zones
+    s_person = k.person
+    s_drums = k.drums
+    s_guitar = k.guitar
+    s_singing = k.singing
+    s_dancing = k.dancing
+    s_war_zones = k.war_zones
 
     s_person.interested_in(s_drums, s_guitar).likes(s_singing, s_dancing).avoids(s_war_zones)
 
@@ -261,36 +261,36 @@ def test_dynamic_relation_chained_calls():
     assert s_person in s_war_zones.relations.get("_inverse_avoids")
 
 def test_dynamic_relation_no_args_raises_error():
-    s_person = s.person
+    s_person = k.person
     with pytest.raises(TypeError):
         s_person.some_relation()
 
-@pytest.mark.skip(reason="Skipping due to current limitations in Symbol.from_object for non-convertible types.")
-def test_dynamic_relation_non_symb_args_raises_error():
-    s_person = s.person
+@pytest.mark.skip(reason="Skipping due to current limitations in Kind.from_object for non-convertible types.")
+def test_dynamic_relation_non_kind_args_raises_error():
+    s_person = k.person
     non_convertible = NonConvertibleObject()
     with pytest.raises(TypeError):
         s_person.some_relation(non_convertible)
 
-def test_dynamic_relation_kwargs_non_symb_value_raises_error():
-    s_person = s.person
+def test_dynamic_relation_kwargs_non_kind_value_raises_error():
+    s_person = k.person
     non_convertible = NonConvertibleObject()
     with pytest.raises(TypeError):
         s_person.some_relation(item=non_convertible)
 
-@pytest.mark.skip(reason="Skipping due to current limitations in Symbol.from_object for non-convertible types.")
-def test_dynamic_relation_kwargs_list_non_symb_value_raises_error():
-    s_person = s.person
+@pytest.mark.skip(reason="Skipping due to current limitations in Kind.from_object for non-convertible types.")
+def test_dynamic_relation_kwargs_list_non_kind_value_raises_error():
+    s_person = k.person
     non_convertible = NonConvertibleObject()
     with pytest.raises(TypeError):
         s_person.some_relation(items=[non_convertible])
 
 def test_to_ascii_default_tree_traversal():
     # Create a simple tree structure
-    root = Symbol("Root")
-    child1 = Symbol("Child1")
-    child2 = Symbol("Child2")
-    grandchild1 = Symbol("Grandchild1")
+    root = Kind("Root")
+    child1 = Kind("Child1")
+    child2 = Kind("Child2")
+    grandchild1 = Kind("Grandchild1")
 
     root.append(child1)
     root.append(child2)
@@ -306,11 +306,11 @@ def test_to_ascii_default_tree_traversal():
     assert root.to_ascii() == expected_output
 
 def test_to_ascii_dfs_children_first():
-    root = Symbol("A")
-    b = Symbol("B")
-    c = Symbol("C")
-    d = Symbol("D")
-    e = Symbol("E")
+    root = Kind("A")
+    b = Kind("B")
+    c = Kind("C")
+    d = Kind("D")
+    e = Kind("E")
 
     root.append(b)
     root.append(c)
@@ -328,11 +328,11 @@ def test_to_ascii_dfs_children_first():
     assert root.to_ascii(traverse_mode="dfs", family_mode="children_first") == expected_output
 
 def test_to_ascii_bfs_children_first():
-    root = Symbol("A")
-    b = Symbol("B")
-    c = Symbol("C")
-    d = Symbol("D")
-    e = Symbol("E")
+    root = Kind("A")
+    b = Kind("B")
+    c = Kind("C")
+    d = Kind("D")
+    e = Kind("E")
 
     root.append(b)
     root.append(c)
@@ -353,10 +353,10 @@ import pytest
 
 @pytest.mark.skip(reason="rest of second refactor - AssertionError: assert '- S1\n  - S2...s_child--> S4' == '- S1\n  - S2...s_child--> S4'")
 def test_to_ascii_with_relations():
-    s1 = Symbol("S1")
-    s2 = Symbol("S2")
-    s3 = Symbol("S3")
-    s4 = Symbol("S4")
+    s1 = Kind("S1")
+    s2 = Kind("S2")
+    s3 = Kind("S3")
+    s4 = Kind("S4")
 
     s1.append(s2)
     s1.relate(s3, how="knows")
@@ -381,7 +381,7 @@ def test_from_ascii_simple_tree():
   - Child2
 """.strip()
     
-    reconstructed_root = Symbol.from_ascii(ascii_input)
+    reconstructed_root = Kind.from_ascii(ascii_input)
 
     assert reconstructed_root.name == "Root"
     assert len(reconstructed_root.children) == 2
@@ -402,7 +402,7 @@ S1 --knows--> S3
 S2 --has_child--> S4
 """.strip()
 
-    reconstructed_s1 = Symbol.from_ascii(ascii_input)
+    reconstructed_s1 = Kind.from_ascii(ascii_input)
 
     assert reconstructed_s1.name == "S1"
     assert len(reconstructed_s1.children) == 1
@@ -413,7 +413,7 @@ S2 --has_child--> S4
     assert reconstructed_s4.name == "S4"
 
     # Check relations
-    reconstructed_s3 = Symbol._pool.get("S3") # Relations are global, so retrieve from pool
+    reconstructed_s3 = Kind._pool.get("S3") # Relations are global, so retrieve from pool
     assert reconstructed_s3 is not None
     assert reconstructed_s3 in reconstructed_s1.relations.get("knows")
     assert reconstructed_s1 in reconstructed_s3.relations.get("_inverse_knows")
@@ -422,17 +422,17 @@ S2 --has_child--> S4
     assert reconstructed_s2 in reconstructed_s4.relations.get("_inverse_has_child")
 
 def test_roundtrip_simple_tree():
-    root = Symbol("Root")
-    child1 = Symbol("Child1")
-    child2 = Symbol("Child2")
-    grandchild1 = Symbol("Grandchild1")
+    root = Kind("Root")
+    child1 = Kind("Child1")
+    child2 = Kind("Child2")
+    grandchild1 = Kind("Grandchild1")
 
     root.append(child1)
     root.append(child2)
     child1.append(grandchild1)
 
     ascii_output = root.to_ascii()
-    reconstructed_root = Symbol.from_ascii(ascii_output)
+    reconstructed_root = Kind.from_ascii(ascii_output)
 
     assert reconstructed_root.name == root.name
     assert len(reconstructed_root.children) == len(root.children)
@@ -442,17 +442,17 @@ def test_roundtrip_simple_tree():
 
 @pytest.mark.skip(reason="rest of second refactor - IndexError: list index out of range")
 def test_roundtrip_with_relations():
-    s1 = Symbol("S1")
-    s2 = Symbol("S2")
-    s3 = Symbol("S3")
-    s4 = Symbol("S4")
+    s1 = Kind("S1")
+    s2 = Kind("S2")
+    s3 = Kind("S3")
+    s4 = Kind("S4")
 
     s1.append(s2)
     s1.relate(s3, how="knows")
     s2.relate(s4, how="has_child")
 
     ascii_output = s1.to_ascii()
-    reconstructed_s1 = Symbol.from_ascii(ascii_output)
+    reconstructed_s1 = Kind.from_ascii(ascii_output)
 
     assert reconstructed_s1.name == s1.name
     assert len(reconstructed_s1.children) == len(s1.children)
@@ -463,7 +463,7 @@ def test_roundtrip_with_relations():
     assert reconstructed_s4.name == s4.name
 
     # Check relations
-    reconstructed_s3 = Symbol._pool.get("S3")
+    reconstructed_s3 = Kind._pool.get("S3")
     assert reconstructed_s3 is not None
     assert reconstructed_s3 in reconstructed_s1.relations.get("knows")
     assert reconstructed_s1 in reconstructed_s3.relations.get("_inverse_knows")

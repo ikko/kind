@@ -1,6 +1,6 @@
 graph LR
-    subgraph "Symbol Performance Characteristics"
-        A["O(1) Symbol Instantiation"] --> B["Intern Pool [Flyweight Pattern]"];
+    subgraph "Kind Performance Characteristics"
+        A["O(1) Kind Instantiation"] --> B["Intern Pool [Flyweight Pattern]"];
         A --> C["Memory Efficiency"];
 
         D["O(1) Relationship Linking"] --> E["Direct List Appends"];
@@ -16,15 +16,15 @@ graph LR
     end
 
     subgraph "Underlying Mechanisms"
-        O["Symbol._pool"] --> B;
-        P["Symbol.children/parents"] --> E;
+        O["Kind._pool"] --> B;
+        P["Kind.children/parents"] --> E;
         Q["GraphTraversal"] --> H;
-        R["Symbol._write_cursor"] --> I;
-        S["SymbolIndex"] --> L;
+        R["Kind._write_cursor"] --> I;
+        S["KindIndex"] --> L;
         T["AVLTree/RedBlackTree"] --> M;
     end
 
-    %% O(1) Symbol Instantiation - Purple
+    %% O(1) Kind Instantiation - Purple
     style A fill:#8A2BE2,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style B fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;
     style C fill:#9370DB,stroke:#333,stroke-width:2px,color:#FFFFFF;

@@ -1,68 +1,68 @@
 # Performance Notations and Empirical Validation
 
-This document provides empirical validation of the Big O notations asserted for key operations within the `Symbol` framework. It includes detailed measurements and analysis of time and space complexity for various operations, along with a discussion of potentially slow callables.
+This document provides empirical validation of the Big O notations asserted for key operations within the `Kind` framework. It includes detailed measurements and analysis of time and space complexity for various operations, along with a discussion of potentially slow callables.
 
-## O(1) Symbol Instantiation
+## O(1) Kind Instantiation
 
-**Assertion**: Symbol instantiation (creation or retrieval from the interning pool) is an O(1) operation.
+**Assertion**: Kind instantiation (creation or retrieval from the interning pool) is an O(1) operation.
 
-**Methodology**: We measure the time taken to instantiate a large number of unique and repeated symbs. The expectation is that the time per instantiation remains constant regardless of the total number of symbs already interned.
+**Methodology**: We measure the time taken to instantiate a large number of unique and repeated kinds. The expectation is that the time per instantiation remains constant regardless of the total number of kinds already interned.
 
 **Empirical Results**:
 
 ```python
 import time
-from symb import Symbol, s
+from kind import Kind, k
 
-def measure_symb_instantiation(num_symbs):
+def measure_kind_instantiation(num_kinds):
     start_time = time.perf_counter_ns()
-    for i in range(num_symbs):
-        Symbol(f"test_symb_{i}") # Unique symbs
+    for i in range(num_kinds):
+        Kind(f"test_kind_{i}") # Unique kinds
     end_time = time.perf_counter_ns()
     time_unique = (end_time - start_time) / 1_000_000 # milliseconds
 
     start_time = time.perf_counter_ns()
-    for i in range(num_symbs):
-        Symbol("repeated_symb") # Repeated symb
+    for i in range(num_kinds):
+        Kind("repeated_kind") # Repeated kind
     end_time = time.perf_counter_ns()
     time_repeated = (end_time - start_time) / 1_000_000 # milliseconds
 
     return time_unique, time_repeated
 
-print("\n--- Symbol Instantiation Performance ---")
+print("\n--- Kind Instantiation Performance ---")
 for n in [1000, 10000, 100000]:
-    time_u, time_r = measure_symb_instantiation(n)
-    print(f"N={n}: Unique Symbols: {time_u:.4f} ms, Repeated Symbol: {time_r:.4f} ms")
+    time_u, time_r = measure_kind_instantiation(n)
+    print(f"N={n}: Unique Kinds: {time_u:.4f} ms, Repeated Kind: {time_r:.4f} ms")
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
 
---- Symbol Instantiation Performance ---
-N=1000: Unique Symbols: 1.0000 ms, Repeated Symbol: 0.0000 ms
-N=10000: Unique Symbols: 10.0000 ms, Repeated Symbol: 0.0000 ms
-N=100000: Unique Symbols: 100.0000 ms, Repeated Symbol: 0.0000 ms
+--- Kind Instantiation Performance ---
+N=1000: Unique Kinds: 1.0000 ms, Repeated Kind: 0.0000 ms
+N=10000: Unique Kinds: 10.0000 ms, Repeated Kind: 0.0000 ms
+N=100000: Unique Kinds: 100.0000 ms, Repeated Kind: 0.0000 ms
 ```
 </details>
 
-**Analysis**: The empirical results demonstrate that the time taken for both unique and repeated symb instantiation remains remarkably consistent, validating the O(1) complexity. The slight variations are attributable to system noise and Python's internal optimizations.
+**Analysis**: The empirical results demonstrate that the time taken for both unique and repeated kind instantiation remains remarkably consistent, validating the O(1) complexity. The slight variations are attributable to system noise and Python's internal optimizations.
 
 ## O(1) Relationship Linking
 
-**Assertion**: Establishing relationships between symbs (e.g., via `append()`) is an O(1) operation.
+**Assertion**: Establishing relationships between kinds (e.g., via `append()`) is an O(1) operation.
 
-**Methodology**: We measure the time taken to append a new child to a symb. This operation involves list appends, which are amortized O(1).
+**Methodology**: We measure the time taken to append a new child to a kind. This operation involves list appends, which are amortized O(1).
 
 **Empirical Results**:
 
 ```python
 import time
-from symb import Symbol, s
+from kind import Kind, k
 
 def measure_relationship_linking(num_links):
-    root = s.root_node
-    children = [getattr(s, f"child_{i}") for i in range(num_links)]
+    root = k.root_node
+    children = [getattr(k, f"child_{i}") for i in range(num_links)]
 
     start_time = time.perf_counter_ns()
     for child in children:
@@ -93,22 +93,22 @@ N=100000: Time to link 100000 children: 0.0000 ms
 
 ## O(log n) Insert/Search with Bisect-based Insertion Order
 
-**Assertion**: Insert and search operations within `SymbolIndex` (when using balanced tree implementations like AVL or Red-Black trees) are O(log n).
+**Assertion**: Insert and search operations within `KindIndex` (when using balanced tree implementations like AVL or Red-Black trees) are O(log n).
 
-**Methodology**: We measure the time taken to insert and search for elements in a `SymbolIndex` as the number of elements increases. The expectation is a logarithmic growth in time.
+**Methodology**: We measure the time taken to insert and search for elements in a `KindIndex` as the number of elements increases. The expectation is a logarithmic growth in time.
 
 **Empirical Results**:
 
 ```python
 import time
 import random
-from symb import s
-from symb.builtin.index import SymbolIndex
+from kind import k
+from kind.builtin.index import KindIndex
 
 
 def measure_index_performance(num_elements):
-    idx = SymbolIndex(s.index_root)
-    elements = [getattr(s, f"element_{i}") for i in range(num_elements)]
+    idx = KindIndex(k.index_root)
+    elements = [getattr(k, f"element_{i}") for i in range(num_elements)]
     random.shuffle(elements)
 
     # Measure insertion
@@ -121,8 +121,8 @@ def measure_index_performance(num_elements):
     # Measure search (for existing elements)
     search_start_time = time.perf_counter_ns()
     for element in elements:
-        # Assuming find by name, but SymbolIndex doesn't have a find method directly
-        # This part of the test needs to be adjusted based on actual SymbolIndex API
+        # Assuming find by name, but KindIndex doesn't have a find method directly
+        # This part of the test needs to be adjusted based on actual KindIndex API
         # For now, we'll just iterate through the elements to simulate search
         pass
     search_end_time = time.perf_counter_ns()
@@ -131,7 +131,7 @@ def measure_index_performance(num_elements):
     return insert_time, search_time
 
 
-print("\n--- SymbolIndex Performance (O(log n)) ---")
+print("\n--- KindIndex Performance (O(log n)) ---")
 for n in [1000, 10000, 100000]:
     insert_t, search_t = measure_index_performance(n)
     print(f"N={n}: Insert: {insert_t:.4f} ms, Search: {search_t:.4f} ms")
@@ -141,31 +141,31 @@ for n in [1000, 10000, 100000]:
 
 ```text
 
---- SymbolIndex Performance (O(log n)) ---
+--- KindIndex Performance (O(log n)) ---
 N=1000: Insert: 0.0000 ms, Search: 0.0000 ms
 N=10000: Insert: 0.0000 ms, Search: 0.0000 ms
 N=100000: Insert: 0.0000 ms, Search: 0.0000 ms
 ```
 </details>
 
-**Analysis**: The empirical results for `SymbolIndex` demonstrate a growth rate consistent with O(log n) for both insertion and search operations. As N increases by a factor of 10, the time taken increases by a smaller, roughly constant factor, characteristic of logarithmic complexity.
+**Analysis**: The empirical results for `KindIndex` demonstrate a growth rate consistent with O(log n) for both insertion and search operations. As N increases by a factor of 10, the time taken increases by a smaller, roughly constant factor, characteristic of logarithmic complexity.
 
 ## Potentially Slow Callables and Their Complexity
 
 This section identifies and analyzes operations that might exhibit higher time or space complexity, providing insights into their behavior and potential optimizations.
 
-### `Symbol.tree()` and `Symbol.graph()` (Graph Traversal)
+### `Kind.tree()` and `Kind.graph()` (Graph Traversal)
 
-**Complexity**: O(V + E), where V is the number of vertices (symbs) and E is the number of edges (relationships) reachable from the starting symb.
+**Complexity**: O(V + E), where V is the number of vertices (kinds) and E is the number of edges (relationships) reachable from the starting kind.
 
 **Analysis**: These methods perform a full traversal of the reachable graph. In the worst case (a dense graph), every vertex and every edge must be visited. While efficient for their purpose, their performance is directly proportional to the size and density of the traversed subgraph.
 
 ```python
 import time
-from symb import s, Symbol
+from kind import k, Kind
 
 def build_dense_graph(num_nodes):
-    nodes = [Symbol(f"node_{i}") for i in range(num_nodes)]
+    nodes = [Kind(f"node_{i}") for i in range(num_nodes)]
     for i in range(num_nodes):
         for j in range(i + 1, num_nodes):
             nodes[i].append(nodes[j])
@@ -196,33 +196,33 @@ N=400: Time for traversal: 0.0000 ms
 ```
 </details>
 
-### `Symbol.patch()` (Recursive Deep Merge)
+### `Kind.patch()` (Recursive Deep Merge)
 
-**Complexity**: O(D * (V + E)), where D is the depth of recursion, and V and E are the number of vertices and edges in the merged subgraphs. In the worst case, it can approach O(N) where N is the total number of elements in both symbs and their subgraphs.
+**Complexity**: O(D * (V + E)), where D is the depth of recursion, and V and E are the number of vertices and edges in the merged subgraphs. In the worst case, it can approach O(N) where N is the total number of elements in both kinds and their subgraphs.
 
-**Analysis**: The `patch()` method performs a deep merge, which involves traversing the structure of both symbs and their children. The complexity depends on the depth and breadth of the structures being merged. For very deep or wide graphs, this operation can be computationally intensive.
+**Analysis**: The `patch()` method performs a deep merge, which involves traversing the structure of both kinds and their children. The complexity depends on the depth and breadth of the structures being merged. For very deep or wide graphs, this operation can be computationally intensive.
 
 ```python
 import time
-from symb import s, Symbol
+from kind import k, Kind
 
 def build_linear_graph(num_nodes, prefix):
-    nodes = [Symbol(f"{prefix}_node_{i}") for i in range(num_nodes)]
+    nodes = [Kind(f"{prefix}_node_{i}") for i in range(num_nodes)]
     for i in range(num_nodes - 1):
         nodes[i].append(nodes[i+1])
     return nodes[0]
 
 def measure_patch_performance(num_nodes):
-    sym1 = build_linear_graph(num_nodes, "sym1")
-    sym2 = build_linear_graph(num_nodes, "sym2")
+    kind1 = build_linear_graph(num_nodes, "kind1")
+    kind2 = build_linear_graph(num_nodes, "kind2")
 
     start_time = time.perf_counter_ns()
-    sym1.patch(sym2)
+    kind1.patch(kind2)
     end_time = time.perf_counter_ns()
     time_taken = (end_time - start_time) / 1_000_000
     return time_taken
 
-print("\n--- Symbol.patch() Performance ---")
+print("\n--- Kind.patch() Performance ---")
 for n in [100, 200, 400]:
     time_t = measure_patch_performance(n)
     print(f"N={n}: Time for patch: {time_t:.4f} ms")
@@ -232,14 +232,14 @@ for n in [100, 200, 400]:
 
 ```text
 
---- Symbol.patch() Performance ---
+--- Kind.patch() Performance ---
 N=100: Time for patch: 0.0000 ms
 N=200: Time for patch: 0.0000 ms
 N=400: Time for patch: 0.0000 ms
 ```
 </details>
 
-### `Symbol.to_mmd()` and `Symbol.to_ascii()` (Visualization)
+### `Kind.to_mmd()` and `Kind.to_ascii()` (Visualization)
 
 **Complexity**: O(V + E) for generating the string representation, where V is the number of vertices and E is the number of edges in the visualized subgraph.
 
@@ -247,11 +247,11 @@ N=400: Time for patch: 0.0000 ms
 
 ```python
 import time
-from symb import s, Symbol
+from kind import k, Kind
 
 def measure_visualization_performance(num_nodes):
-    root = Symbol("viz_root")
-    nodes = [Symbol(f"viz_node_{i}") for i in range(num_nodes)]
+    root = Kind("viz_root")
+    nodes = [Kind(f"viz_node_{i}") for i in range(num_nodes)]
     for node in nodes:
         root.append(node)
 
@@ -286,4 +286,4 @@ N=10000: to_mmd: 0.0000 ms, to_ascii: 0.0000 ms
 
 ## Conclusion
 
-The empirical measurements largely validate the theoretical Big O notations for `Symbol` operations. Operations like instantiation and linking demonstrate constant time complexity, while indexed operations show logarithmic behavior. Graph traversal and visualization, as expected, scale with the size of the graph. The `patch()` operation, due to its deep merge nature, can be more resource-intensive for complex structures. Understanding these complexities is crucial for designing efficient applications leveraging the `Symbol` framework.
+The empirical measurements largely validate the theoretical Big O notations for `Kind` operations. Operations like instantiation and linking demonstrate constant time complexity, while indexed operations show logarithmic behavior. Graph traversal and visualization, as expected, scale with the size of the graph. The `patch()` operation, due to its deep merge nature, can be more resource-intensive for complex structures. Understanding these complexities is crucial for designing efficient applications leveraging the `Kind` framework.

@@ -1,6 +1,6 @@
 Feature: Scheduler Functionality
 
-  As a developer using the Symbol library's scheduling capabilities
+  As a developer using the Kind library's scheduling capabilities
   I want to ensure the scheduler can be instantiated
   So that I can utilize it for managing time-based operations
 

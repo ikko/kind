@@ -1,4 +1,4 @@
-## `symb.core.batch_processing` Module
+## `kind.core.batch_processing` Module
 
 
 > ⚠ _This module is under development and incomplete. Features may differ from what's written here. Should you use it, test comprehensively, especially before using `async batch` features_
@@ -36,15 +36,15 @@ def process_batch(batch: Iterable[T], func: Callable[[T], U], new_process: bool 
 
 ---
 
-## `symb.core.schedule` Module
+## `kind.core.schedule` Module
 
-This module provides the core scheduling logic for the Symbol project.
+This module provides the core scheduling logic for the Kind project.
 
 ### Class: `ScheduledJob`
 * **Description**: Represents a single scheduled job.
 * **Constructor**: `ScheduledJob()`
 ```
-def __init__(self, func: Callable[..., Any], args: tuple, kwargs: dict, schedule: Union[str, datetime.datetime, datetime.date, datetime.time, Symbol], new_process: bool = False, new_thread: bool = True, id: Optional[str] = None)
+def __init__(self, func: Callable[..., Any], args: tuple, kwargs: dict, schedule: Union[str, datetime.datetime, datetime.date, datetime.time, Kind], new_process: bool = False, new_thread: bool = True, id: Optional[str] = None)
 ```
 
 * **Description**: Initializes a new `ScheduledJob`.
@@ -52,7 +52,7 @@ def __init__(self, func: Callable[..., Any], args: tuple, kwargs: dict, schedule
     *   `func`: The function to execute.
     *   `args`: Positional arguments for the function.
     *   `kwargs`: Keyword arguments for the function.
-    *   `schedule`: The schedule for the job. Can be a cron string, a `datetime.datetime` object, a `datetime.date` object, a `datetime.time` object, or a `Symbol` with a name that can be parsed as an ISO 8601 datetime string.
+    *   `schedule`: The schedule for the job. Can be a cron string, a `datetime.datetime` object, a `datetime.date` object, a `datetime.time` object, or a `Kind` with a name that can be parsed as an ISO 8601 datetime string.
     *   `new_process`: Whether to run the job in a new process.
     *   `new_thread`: Whether to run the job in a new thread.
     *   `id`: An optional ID for the job.

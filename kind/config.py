@@ -1,4 +1,4 @@
-"""This module provides configuration management for the Symbol project using TOML files.
+"""This module provides configuration management for the Kind project using TOML files.
 
 It defines a Config class for loading, saving, and managing application settings.
 """
@@ -26,7 +26,7 @@ class Config:
             config_dir = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
         else:  # Windows
             config_dir = Path(os.environ.get('APPDATA', Path.home() / 'AppData' / 'Roaming'))
-        return config_dir / 'symb' / 'config.toml'
+        return config_dir / 'kind' / 'config.toml'
 
     def load(self) -> None:
         """Loads configuration from the TOML file."""
