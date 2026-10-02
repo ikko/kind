@@ -1,7 +1,11 @@
 # Changelog
 
 ## [Unreleased]
-- Nothing yet!
+### Changed
+- **Renamed from `symb` to `kind`**: the distribution, the package and the CLI. `Symbol` → `Kind`, `BaseSymbol` → `BaseKind`, `SymbolNamespace` → `KindNamespace`, `to_sym` → `to_kind`, and the namespace object `s` → `k` (`from kind import k`). The console script is `kind-scheduler`, because `kind` is the Kubernetes-in-Docker binary. Earlier entries below use the new names.
+### Fixed
+- **Installable package**: the `symb` 0.0.10 wheel installed top-level `core`, `builtin`, `bin` and `utils` packages, so `import symb` failed after `pip install`. All imports are now absolute (`kind.core…`), and the wheel contains only `kind/`.
+- **One copy of each module**: mixin discovery imported `symb.core.*` while the rest of the code used `core.*`, so two distinct `Symbol` classes were loaded.
 
 ## [v0.0.10] - 2025-07-13
 ### Added

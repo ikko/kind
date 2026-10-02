@@ -63,11 +63,11 @@ API Highlights
 --------------
 - **[Kind(name: str)](topics/8_api_highlights/index.md#kindname-str-globally-interned-idempotent-constructor)** — globally interned, idempotent constructor
 - **[Kind.next()](topics/8_api_highlights/index.md#kindnext-creates-and-chains-auto-numbered-kinds)** — creates and chains auto-numbered kind (`kind_0`, `kind_1`, …)
-- **[kind.append(child) / kind.relate_to(other, how)](topics/8_api_highlights/index.md#kindappendchild--symbrelate_toother-how-link-construction)** — link construction
-- **[kind.tree() / .que() / .relate()](topics/8_api_highlights/index.md#kindtree--que--relate-lazy-traversal)** — lazy traversal
+- **[kind.append(child) / kind.relate_to(other, how)](topics/8_api_highlights/index.md#kindappendchild-and-dynamic-relations-link-construction)** — link construction
+- **[kind.tree() / .que() / .relate()](topics/8_api_highlights/index.md#kindtree--que-lazy-traversal)** — lazy traversal
 - **[kind.patch(other)](topics/8_api_highlights/index.md#kindpatchother-recursive-structural-deep-merge)** — recursive, structural deep merge (PATCH-like semantics)
 - **[kind.to_mmd()](topics/8_api_highlights/index.md#kindto_mmd-outputs-tree-graph-in-mermaid-diagram-syntax)** — outputs tree graph in Mermaid diagram syntax
-- **[kind.to_ascii()](topics/8_api_highlights/index.md#kindto_ascii-outputs-ascii-art-representation-of-graphs)** — outputs ASCII art representation of graphs
+- **[kind.to_ascii()](topics/8_api_highlights/index.md#kindto_ascii-outputs-ascii-representation-of-graphs)** — outputs ASCII art representation of graphs
 - **[kind.delete()](topics/8_api_highlights/index.md#kinddelete-removes-node-and-its-inverse-references)** — removes node and its inverse references (parents/children)
 - **[kind.elevate()](topics/8_api_highlights/index.md#kindelevate-promotes-metadata-to-instance-attributesmethods)** — promotes metadata to instance attributes/methods
 - **[kind.slim()](topics/8_api_highlights/index.md#kindslim-removes-unused-dynamically-applied-mixins)** — removes unused dynamically applied mixins
@@ -77,7 +77,7 @@ API Highlights
 
 Performance
 -----------
-For detailed performance analysis and empirical validation of Big O notations, refer to the [Performance Notations and Empirical Validation](docs/notations.md) document.
+For detailed performance analysis and empirical validation of Big O notations, refer to the [Performance Notations and Empirical Validation](development/notations.md) document.
 
 - O(1) kind instantiation (intern pool)
 - O(1) relationship linking

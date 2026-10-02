@@ -5,10 +5,8 @@ SHELL := /bin/bash
 VENV_PATH := $(HOME)/.virtualenvs/kind
 
 install:
-	uv venv $(VENV_PATH)
-	source $(HOME)/.virtualenvs/kind/bin/activate
-	python -m ensurepip
-	python -m pip install -e .[dev]
+	uv venv --allow-existing $(VENV_PATH)
+	uv pip install --python $(VENV_PATH)/bin/python -e .[dev,visual]
 
 test:
 	PYTHONPATH=. $(VENV_PATH)/bin/python -m pytest
