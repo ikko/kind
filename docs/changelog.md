@@ -15,6 +15,7 @@
 - **Serialized input is shape-checked**: `from_json`/`from_yaml`/`from_toml` of input that is not a list of nodes raise `ValueError` with a hint, not `KeyError`.
 - **`Kind.to(T)`** reads back what `from_object` writes: JSON, else a Python literal (`ast.literal_eval`); no code is evaluated.
 - **`apply_mixin_to_instance`** binds `self` to the Kind.
+- **`head()`/`tail()`** return the first/last Kind of the `Kind.next()` chain by default. Before, their defaults were arbitrary (`head` stopped at position 5, `tail` with `-10.0` never moved), and the parameter names stated the opposite bound; now `head(not_before=None)` and `tail(not_after=None)`.
 ### Changed
 - `FrozenKindError` is exported from `kind`.
 - **Documentation restructured for engineers.** Pages: README; concepts (the contract); API reference; errors (every message checked by a test); performance (one complexity table); architecture; tutorial; how-to guides; examples; history. Gates check that every page is reachable from the README, that the API reference covers the public surface, and that claims are precise (no filler words, no "DAG", no unscoped "thread-safe").

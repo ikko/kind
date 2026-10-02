@@ -185,6 +185,16 @@ def test_next_chains_auto_numbered_kinds():
     assert k0._next is k2 and k2._prev is k0
 
 
+
+def test_head_and_tail_reach_the_ends_of_the_chain_unless_bounded():
+    chain = [Kind.next() for _ in range(4)]
+    first, second, third, last = chain
+    assert all(x.head() is first and x.tail() is last for x in chain)    # no bound: the ends
+    assert last.head(not_before=second._position) is second              # bounds are inclusive
+    assert first.tail(not_after=third._position) is third
+    assert third.head(not_before=last._position) is third                # cannot step: stays
+    assert second.tail(not_after=first._position) is second
+
 def test_creation_order_queries():
     a, b, c = Kind("a"), Kind("b"), Kind("c")
     assert Kind.first() is a and Kind.last() is c and Kind.len() == 3

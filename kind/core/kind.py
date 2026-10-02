@@ -586,15 +586,17 @@ class Kind(BaseKind):
 
     # --- the Kind.next() sequence and creation order -----------------------
 
-    def head(self, up_to_position: float = 5.0) -> 'BaseKind':
+    def head(self, not_before: Optional[float] = None) -> 'BaseKind':
+        """The first Kind of this Kind's Kind.next() chain, or the earliest one at or after `not_before`."""
         cur: BaseKind = self
-        while cur._prev and cur._prev._position >= up_to_position:
+        while cur._prev and (not_before is None or cur._prev._position >= not_before):
             cur = cur._prev
         return cur
 
-    def tail(self, from_position: float = -10.0) -> 'BaseKind':
+    def tail(self, not_after: Optional[float] = None) -> 'BaseKind':
+        """The last Kind of this Kind's Kind.next() chain, or the latest one at or before `not_after`."""
         cur: BaseKind = self
-        while cur._next and cur._next._position <= from_position:
+        while cur._next and (not_after is None or cur._next._position <= not_after):
             cur = cur._next
         return cur
 

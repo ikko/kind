@@ -476,15 +476,15 @@ shared --uses--> z
 
 ### `Kind.head`
 
-`head(self, up_to_position: float = 5.0) -> BaseKind`
+`head(self, not_before: float | None = None) -> BaseKind`
 
-Walks back along the [`Kind.next`](#kindnext) chain while the previous Kind's creation position is at least `up_to_position`, and returns where it stops (this Kind if it cannot step). **Cost:** O(steps).
+The first Kind of this Kind's [`Kind.next`](#kindnext) chain. With `not_before`, it stops at the earliest Kind whose creation position is at least `not_before` (this Kind if the previous one is earlier). **Cost:** O(steps).
 
 ### `Kind.tail`
 
-`tail(self, from_position: float = -10.0) -> BaseKind`
+`tail(self, not_after: float | None = None) -> BaseKind`
 
-Walks forward along the `Kind.next` chain while the next Kind's creation position is at most `from_position`, and returns where it stops. With the default `-10.0` it does not move. **Cost:** O(steps).
+The last Kind of this Kind's `Kind.next` chain. With `not_after`, it stops at the latest Kind whose creation position is at most `not_after`. **Cost:** O(steps).
 
 ## Kind: serialization
 
@@ -591,14 +591,14 @@ Creates `kind_0`, `kind_1`, ... (one counter per space) and links each to the pr
 from kind import Kind, KindSpace
 
 with KindSpace(name="sequence"):
-    first, second = Kind.next(), Kind.next()
-    print(first, second, second.head(up_to_position=0.0), Kind.len(), Kind.seek(1.0))
+    first, second, third = Kind.next(), Kind.next(), Kind.next()
+    print(third.head(), first.tail(), third.head(not_before=1.0), first.tail(not_after=1.0), Kind.len(), Kind.seek(1.0))
 ```
 <details>
 <summary>Outcome</summary>
 
 ```text
-kind_0 kind_1 kind_0 2 kind_1
+kind_0 kind_2 kind_1 kind_1 3 kind_1
 ```
 </details>
 
