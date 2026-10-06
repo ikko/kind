@@ -77,7 +77,15 @@ def to_png(self: 'Kind', mode: Mode = "tree") -> bytes:
 
 def from_mmd(mmd_string: str) -> 'Kind':
     """Rebuilds the graph described by Kind.to_mmd() output; returns its root."""
-    from kind.core.kind import DEFAULT_SHAPE, MERMAID_SHAPES, Kind
+    from kind.core.kind import DEFAULT_SHAPE, MERMAID_SHAPES, MMD_ESCAPES, Kind
+
+    def unquote(label: str) -> str:
+        if len(label) < 2 or not (label.startswith('"') and label.endswith('"')):
+            return label
+        label = label[1:-1]
+        for raw, code in reversed(MMD_ESCAPES):
+            label = label.replace(code, raw)
+        return label
 
     lines = [line.strip() for line in mmd_string.strip().split('\n') if line.strip()]
     if not lines or lines[0] not in ("graph LR", "graph TD"):
@@ -101,7 +109,7 @@ def from_mmd(mmd_string: str) -> 'Kind':
         rest = line[len(node_id):]
         for shape, (opening, closing) in shapes:
             if rest.startswith(opening) and rest.endswith(closing):
-                names[node_id] = rest[len(opening):len(rest) - len(closing)]
+                names[node_id] = unquote(rest[len(opening):len(rest) - len(closing)])
                 if shape:
                     node_shapes[node_id] = shape
                 break

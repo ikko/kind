@@ -72,6 +72,44 @@ def test_from_mmd_is_available_on_kind():
     assert Kind.from_mmd(mmd).children[0].name == "Y"
 
 
+def test_to_mmd_quotes_unsafe_names_with_stable_ids():
+    root = Kind("interactive/norm")
+    root.append(Kind('SIGN IN with password! (#1) "now"'))
+    mmd = root.to_mmd()
+    lines = mmd.splitlines()
+    assert any(line.endswith('["SIGN IN with password! (#35;1) #quot;now#quot;"]') for line in lines)
+    assert any(line.endswith('["interactive/norm"]') for line in lines)
+    for line in lines[1:]:  # every node id is [A-Za-z0-9_] only
+        assert line.strip().split("[")[0].split(" ")[0].replace("_", "").isalnum()
+    assert root.to_mmd() == mmd  # stable across calls (sha256 suffix, not hash())
+
+
+def test_to_mmd_separates_colliding_ids_and_the_reserved_word_end():
+    root = Kind("root")
+    root.append(Kind("A B"))
+    root.append(Kind("A_B"))
+    root.append(Kind("end"))
+    declarations = [line for line in root.to_mmd().splitlines()[1:] if "-->" not in line]
+    ids = [line.split("[")[0] for line in declarations]
+    assert len(set(ids)) == len(ids) == 4
+    assert "A_B[A_B]" in declarations  # the exact name keeps its plain id
+    assert "end" not in ids
+
+
+def test_from_mmd_round_trip_of_unsafe_names(reset_pool):
+    names = ['SIGN IN with password!', 'a "quoted" #tag', 'two\nlines', 'A B', 'A_B', 'end']
+    root = Kind("interactive/auth")
+    for name in names:
+        root.append(Kind(name))
+    mmd = root.to_mmd()
+    reset_pool()
+
+    rebuilt = from_mmd(mmd)
+    assert rebuilt.name == "interactive/auth"
+    assert [child.name for child in rebuilt.children] == names
+    assert rebuilt.to_mmd() == mmd
+
+
 def test_to_dot_escapes_quotes_and_backslashes():
     evil = Kind('x" [image="/etc/passwd"] "y\\')
     root = Kind("root")

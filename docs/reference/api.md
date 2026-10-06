@@ -422,7 +422,7 @@ print([kind.name for kind in b.tree()], [kind.name for kind in b.graph()])
 
 `to_mmd(self) -> str`
 
-Mermaid flowchart of everything reachable through children and forward relations: `graph LR`, then one sorted declaration per Kind with its [`node_shape`](#kindnode_shape), then the edges in depth-first order, `A --> B` for a child and `A -- how --> B` for a relation. Spaces in names become `_` in node ids. [`Kind.from_mmd`](#kindfrom_mmd) reads it back. **Cost:** O(V log V + E log d).
+Mermaid flowchart of everything reachable through children and forward relations: `graph LR`, then one sorted declaration per Kind with its [`node_shape`](#kindnode_shape), then the edges in depth-first order, `A --> B` for a child and `A -- how --> B` for a relation. A name of letters, digits, `_` and spaces keeps the id `name` with spaces as `_` and an unquoted label. Any other name, a plain name whose id is taken (`A B` next to `A_B`), and the reserved word `end` get a stable 6-hex suffix (sha256 of the name). Their labels are quoted, with `#`, `"` and newlines written as Mermaid entity codes (`#35;`, `#quot;`, `#10;`). The output parses in Mermaid 11 for any name. [`Kind.from_mmd`](#kindfrom_mmd) reads it back. **Cost:** O(V log V + E log d).
 
 ```python
 from kind import Kind
@@ -1305,7 +1305,7 @@ As `to_svg`, rendered to PNG bytes.
 
 `from_mmd(mmd_string: str) -> Kind`
 
-Rebuilds the graph described by `Kind.to_mmd()` output in the current space and returns its root (the first Kind by name that no edge points to): node declarations give names and shapes (a shape is set only where the Kind has none), `A --> B` appends, `A -- how --> B` relates. A node id without a declaration becomes the Kind named by the id with `_` read as a space. Names merge by interning. **Cost:** O(L log n) for L lines. **Raises:** [`ValueError`](errors.md#valueerror) for a header other than `graph LR`/`graph TD`, an unreadable line, or no Kinds.
+Rebuilds the graph described by `Kind.to_mmd()` output in the current space and returns its root (the first Kind by name that no edge points to): node declarations give names and shapes (quoted labels are unescaped; a shape is set only where the Kind has none), `A --> B` appends, `A -- how --> B` relates. A node id without a declaration becomes the Kind named by the id with `_` read as a space. Names merge by interning. **Cost:** O(L log n) for L lines. **Raises:** [`ValueError`](errors.md#valueerror) for a header other than `graph LR`/`graph TD`, an unreadable line, or no Kinds.
 
 ```python
 from kind import Kind, KindSpace

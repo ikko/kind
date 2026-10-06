@@ -6,6 +6,7 @@ metadata/context/index, attributes attached at runtime, and a per-instance freez
 """
 import ast
 import datetime
+import hashlib
 import inspect
 import re
 import sys
@@ -60,6 +61,41 @@ MERMAID_SHAPES = {
     "trapezoid_alt": ("[\\", "/]"),
 }
 DEFAULT_SHAPE = ("[", "]")
+
+# Mermaid ids and labels. A plain name (letters, digits, `_`, spaces) keeps the id `name` with
+# spaces as `_` and an unquoted label. Any other name, a plain name whose id is taken ("A B"
+# vs "A_B"), and the reserved word `end` get a stable hash suffix; unsafe labels are quoted with
+# `#`, `"` and newlines written as Mermaid entity codes.
+_MMD_PLAIN = re.compile(r'[A-Za-z0-9_ ]+')
+MMD_ESCAPES = (("#", "#35;"), ('"', "#quot;"), ("\n", "#10;"))
+
+
+def _mmd_ids(kinds: Iterable['Kind']) -> dict['Kind', str]:
+    """One Mermaid node id per Kind, unique and stable across runs."""
+    ids: dict['Kind', str] = {}
+    taken = {"end"}
+    exact_first = sorted(kinds, key=lambda kind: (kind.name.replace(" ", "_") != kind.name, kind.name))
+    for kind in exact_first:
+        node_id = kind.name.replace(" ", "_") if _MMD_PLAIN.fullmatch(kind.name) else ""
+        if not node_id or node_id in taken:
+            base = re.sub(r'\W', '_', kind.name, flags=re.ASCII)
+            digest = hashlib.sha256(kind.name.encode()).hexdigest()
+            length = 6
+            node_id = f"{base}_{digest[:length]}"
+            while node_id in taken:
+                length += 2
+                node_id = f"{base}_{digest[:length]}"
+        ids[kind] = node_id
+        taken.add(node_id)
+    return ids
+
+
+def _mmd_label(name: str) -> str:
+    if _MMD_PLAIN.fullmatch(name):
+        return name
+    for raw, code in MMD_ESCAPES:
+        name = name.replace(raw, code)
+    return f'"{name}"'
 
 # Slots that make up a Kind's identity and place in the graph: never set from metadata.
 STRUCTURAL_SLOTS = frozenset({'name', 'parents', 'children', '_position', '_next', '_prev', '_space'})
@@ -390,10 +426,8 @@ class Kind(BaseKind):
 
     def to_mmd(self) -> str:
         """Mermaid flowchart of everything reachable through children and relations."""
-        def node_id(kind: 'Kind') -> str:
-            return kind.name.replace(" ", "_")
-
-        edges, visited = [], {self}
+        links: list[tuple['Kind', str, 'Kind']] = []
+        visited = {self}
         stack = [self._outgoing()]
         owners = [self]
         while stack:
@@ -403,16 +437,19 @@ class Kind(BaseKind):
                 owners.pop()
                 continue
             target, how = edge
-            arrow = "-->" if not how else f"-- {how} -->"
-            edges.append(f"    {node_id(owners[-1])} {arrow} {node_id(target)}")
+            links.append((owners[-1], how, target))
             if target not in visited:
                 visited.add(target)
                 stack.append(target._outgoing())
                 owners.append(target)
 
+        ids = _mmd_ids(visited)
+        edges = [f"    {ids[owner]} {'-->' if not how else f'-- {how} -->'} {ids[target]}"
+                 for owner, how, target in links]
+
         def declaration(kind: 'Kind') -> str:
             opening, closing = MERMAID_SHAPES.get(kind.node_shape or "", DEFAULT_SHAPE)
-            return f"{node_id(kind)}{opening}{kind.name}{closing}"
+            return f"{ids[kind]}{opening}{_mmd_label(kind.name)}{closing}"
 
         declarations = sorted({declaration(kind) for kind in visited})
         return "\n".join(["graph LR", *declarations, *dict.fromkeys(edges)])

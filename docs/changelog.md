@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+### Fixed
+- **`to_mmd` output parses in Mermaid for any name.**
+  - Before, only spaces were replaced. A name with `/`, `!`, quotes, brackets or `#` broke the diagram, `A B` and `A_B` merged into one node, and a Kind named `end` broke the flowchart.
+  - Now an unsafe or colliding name gets a stable id suffix and a quoted label with entity codes. Plain names render as before.
+  - `from_mmd` reads quoted labels back exactly.
+  - Checked with the Mermaid 11.16 parser.
+
 ## [v0.3.0] - 2026-10-02
 ### Fixed (found by verifying the documentation against the code)
 - **Identity is fixed**: assigning `name`, `children`, `parents` or another identity or structure slot raises `AttributeError` with a hint. Before, `kind.name = 'z'` silently broke the pool and the hash.
