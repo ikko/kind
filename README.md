@@ -1,6 +1,16 @@
 # kind
 
-Interned, name-identified graph nodes for modelling categories as data.
+Interned, name-identified graph nodes for modelling symbols, categories as data.
+
+## TL;DR
+
+```python
+from kind import k
+
+k.girls.dream_about(k.world_peace)       # k.<name> is the one Kind of that name; any public name is a relation verb
+k.girls.dream_about(k.good_sleep)
+print(k.girls.to_mmd(direction="TD"))    # the same graph as a Mermaid flowchart ("LR" is the default)
+```
 
 `Kind('Stock')` returns the one object that stands for "Stock" in the current space. Kinds link
 into a directed graph: children and parents, plus named relations with inverses. Behaviour
