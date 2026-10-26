@@ -424,8 +424,10 @@ class Kind(BaseKind):
                 for related_kind in sorted(related_kinds, key=lambda k: k.name):
                     yield related_kind, how
 
-    def to_mmd(self) -> str:
-        """Mermaid flowchart of everything reachable through children and relations."""
+    def to_mmd(self, direction: Literal["LR", "TD"] = "LR") -> str:
+        """Mermaid flowchart of everything reachable through children and relations; `direction` is left-to-right or top-down."""
+        if direction not in ("LR", "TD"):
+            raise ValueError(f"direction must be 'LR' or 'TD', not {direction!r}")
         links: list[tuple['Kind', str, 'Kind']] = []
         visited = {self}
         stack = [self._outgoing()]
@@ -452,7 +454,7 @@ class Kind(BaseKind):
             return f"{ids[kind]}{opening}{_mmd_label(kind.name)}{closing}"
 
         declarations = sorted({declaration(kind) for kind in visited})
-        return "\n".join(["graph LR", *declarations, *dict.fromkeys(edges)])
+        return "\n".join([f"graph {direction}", *declarations, *dict.fromkeys(edges)])
 
     def to_ascii(self, traverse_mode: Literal["dfs", "bfs"] = "dfs",
                  family_mode: Literal["children_first", "parents_first"] = "children_first") -> str:

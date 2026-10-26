@@ -146,3 +146,14 @@ def test_to_svg_and_png(simple_kind_tree):
 async def test_a_to_svg(simple_kind_tree):
     a, *_ = simple_kind_tree
     assert "<svg" in await KindRender(a).a_to_svg()
+
+
+def test_to_mmd_direction_td_changes_only_the_header():
+    a = Kind("dir_a")
+    a.append(Kind("dir_b"))
+    left, down = a.to_mmd(), a.to_mmd(direction="TD")
+    assert left.startswith("graph LR\n") and down.startswith("graph TD\n")
+    assert left.split("\n", 1)[1] == down.split("\n", 1)[1]
+    assert from_mmd(down).to_mmd(direction="TD") == down
+    with pytest.raises(ValueError):
+        a.to_mmd(direction="RL")
